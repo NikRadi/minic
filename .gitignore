@@ -1,0 +1,9 @@
+# Files
+*.bat
+*.exe
+*.idb
+*.ilk
+*.pdb
+
+# Folders
+obj/
