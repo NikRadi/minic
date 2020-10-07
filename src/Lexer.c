@@ -1,27 +1,53 @@
+#pragma warning(disable : 4127)
 #include "Lexer.h"
 #include <stdio.h>
+#include "Common.h"
 
-#define IS_DIGIT(x) ('0' <= c && c <= '9')
+#define IS_DIGIT(x) ('0' <= x && x <= '9')
 
 
 static int ReadNumber(struct Lexer *lexer) {
-    return 0;
+    int result = 0;
+    while (TRUE) {
+        int digit = lexer->text[lexer->char_idx] - '0';
+        result = result * 10 + digit;
+        if (lexer->char_idx + 1 == lexer->text_size) {
+            break;
+        }
+
+        lexer->char_idx += 1;
+        if (!IS_DIGIT(lexer->text[lexer->char_idx])) {
+            break;
+        }
+    }
+
+    return result;
 }
 
 void ReadToken(struct Lexer *lexer) {
-    int c;
-    do {
-        c = fgetc(lexer->file);
+    while (TRUE) {
+        if (lexer->char_idx == lexer->text_size) {
+            lexer->token.line = lexer->line;
+            lexer->token.type = TOKEN_EOF;
+            return;
+        }
+
+        char c = lexer->text[lexer->char_idx];
         if (c == '\n') {
             lexer->line += 1;
+            lexer->char_idx += 1;
         }
-    } while (c == ' ' || c == '\t' || c == '\r' || c == '\f' || c == '\n');
+        else if (c == ' ' || c == '\t' || c == '\r' || c == '\f') {
+            lexer->char_idx += 1;
+        }
+        else {
+            break;
+        }
+    }
 
+    char c = lexer->text[lexer->char_idx];
     lexer->token.line = lexer->line;
     switch (c) {
-        case EOF: {
-            lexer->token.type = TOKEN_EOF;
-        } break;
         case '+': {
             lexer->token.type = TOKEN_PLUS;
         } break;
@@ -38,4 +64,6 @@ void ReadToken(struct Lexer *lexer) {
             }
         };
     }
+
+    lexer->char_idx += 1;
 }

@@ -2,12 +2,12 @@
 #define CLITTLE_LEXER_H
 #include "Token.h"
 
-#include <stdio.h>
-
 
 struct Lexer {
     int line;
-    FILE *file;
+    int char_idx;
+    int text_size;
+    char *text;
     struct Token token;
 };
 
