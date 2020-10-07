@@ -11,7 +11,7 @@ IF "%1"=="" (
     IF NOT EXIST %BinDir% MKDIR %BinDir%
     IF NOT EXIST %ObjDir% MKDIR %ObjDir%
     SET Flags=/nologo /cgthreads1 /Od /W4 /ZI /sdl
-    cl %Flags% src\*.c /Fo./%ObjDir%/ /Fe:clittle.exe
+    cl %Flags% src\*.c /Fo./%ObjDir%/ /Fe:minic.exe
     IF EXIST *.asm MOVE *.asm %BinDir% >NUL
     IF EXIST *.exe MOVE *.exe %BinDir% >NUL
     IF EXIST *.idb MOVE *.idb %BinDir% >NUL
@@ -21,7 +21,7 @@ IF "%1"=="" (
 
 IF "%1"=="test" (
     ECHO Testing...
-    CALL %BinDir%\clittle.exe
+    CALL %BinDir%\minic.exe
 	nasm -f win64 -o TestMain.obj TestMain.asm
 	link /nologo TestMain.obj /defaultlib:msvcrt.lib /defaultlib:legacy_stdio_definitions.lib /defaultlib:Kernel32.lib /subsystem:console /out:TestMain.exe
 	ECHO TestMain.exe
