@@ -5,7 +5,7 @@
 
 
 int main() {
-    FILE *file = fopen("TestMain.c", "r");
+    FILE *file = fopen("TestMain.c", "rb");
     if (file == 0) {
         printf("could not open file\n");
         return 1;
@@ -19,6 +19,7 @@ int main() {
     rewind(file);
     lexer.text = malloc(lexer.text_size);
     fread(lexer.text, 1, lexer.text_size, file);
+    printf("'%s'\n", lexer.text);
 
     do {
         ReadToken(&lexer);

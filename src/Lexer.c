@@ -15,16 +15,18 @@ static int ReadNumber(struct Lexer *lexer) {
             break;
         }
 
-        lexer->char_idx += 1;
-        if (!IS_DIGIT(lexer->text[lexer->char_idx])) {
+        if (!IS_DIGIT(lexer->text[lexer->char_idx + 1])) {
             break;
         }
+
+        lexer->char_idx += 1;
     }
 
     return result;
 }
 
 void ReadToken(struct Lexer *lexer) {
+    char c;
     while (TRUE) {
         if (lexer->char_idx == lexer->text_size) {
             lexer->token.line = lexer->line;
@@ -32,7 +34,7 @@ void ReadToken(struct Lexer *lexer) {
             return;
         }
 
-        char c = lexer->text[lexer->char_idx];
+        c = lexer->text[lexer->char_idx];
         if (c == '\n') {
             lexer->line += 1;
             lexer->char_idx += 1;
@@ -45,7 +47,6 @@ void ReadToken(struct Lexer *lexer) {
         }
     }
 
-    char c = lexer->text[lexer->char_idx];
     lexer->token.line = lexer->line;
     switch (c) {
         case '+': {
@@ -61,6 +62,12 @@ void ReadToken(struct Lexer *lexer) {
             }
             else {
                 lexer->token.type = TOKEN_INVALID;
+                printf("invalid: '%d', '%c', %d, %d\n",
+                    c,
+                    c,
+                    lexer->char_idx,
+                    lexer->text_size
+                );
             }
         };
     }
