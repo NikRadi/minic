@@ -8,7 +8,6 @@ enum AstNodeType {
     AST_ADD,
     AST_SUB,
     AST_MUL,
-    AST_DIV,
     AST_INT_LITERAL,
 };
 

@@ -57,9 +57,6 @@ void ReadToken(struct Lexer *lexer) {
         case '*': {
             lexer->token.type = TOKEN_STAR;
         } break;
-        case '/': {
-            lexer->token.type = TOKEN_SLASH;
-        } break;
         default: {
             if (IS_DIGIT(c)) {
                 lexer->token.intvalue = ReadNumber(lexer);

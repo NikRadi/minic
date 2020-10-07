@@ -16,7 +16,6 @@ static enum AstNodeType GetOperatorType(enum TokenType type) {
         case TOKEN_PLUS:  return AST_ADD;
         case TOKEN_MINUS: return AST_SUB;
         case TOKEN_STAR:  return AST_MUL;
-        case TOKEN_SLASH: return AST_DIV;
         default: {
             printf("invalid operator\n");
             exit(1);
@@ -35,9 +34,9 @@ static struct AstNode *AstNodeNew() {
 }
 
 struct AstNode *ParseExpr(struct Lexer *lexer, int min_precedence) {
+    ReadToken(lexer);
     struct AstNode *lhs = ParseLiteral(lexer);
     while (TRUE) {
-        ReadToken(lexer);
         int precedence = op_precedence[lexer->token.type];
         if (precedence < min_precedence) {
             break;
@@ -45,8 +44,8 @@ struct AstNode *ParseExpr(struct Lexer *lexer, int min_precedence) {
 
         struct AstNode *binaryop = AstNodeNew();
         binaryop->type = GetOperatorType(lexer->token.type);
-        binaryop->lhs = lhs;
         binaryop->rhs = ParseExpr(lexer, precedence);
+        binaryop->lhs = lhs;
         lhs = binaryop;
     }
 
@@ -54,14 +53,14 @@ struct AstNode *ParseExpr(struct Lexer *lexer, int min_precedence) {
 }
 
 struct AstNode *ParseLiteral(struct Lexer *lexer) {
-    ReadToken(lexer);
     if (lexer->token.type == TOKEN_INT_LITERAL) {
         struct AstNode *literal = AstNodeNew();
         literal->intvalue = lexer->token.intvalue;
         literal->type = AST_INT_LITERAL;
+        ReadToken(lexer);
         return literal;
     }
 
-    printf("%d: invalid literal", lexer->token.line);
+    printf("%d: invalid literal '%d'\n", lexer->token.line, lexer->token.type);
     exit(1);
 }
