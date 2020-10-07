@@ -1,5 +1,6 @@
 #ifndef CLITTLE_TOKEN_H
 #define CLITTLE_TOKEN_H
+#include "Common.h"
 
 
 enum TokenType {
@@ -9,12 +10,17 @@ enum TokenType {
     TOKEN_MINUS,
     TOKEN_STAR,
     TOKEN_INT_LITERAL,
+    TOKEN_PRINT,
+    TOKEN_SEMICOLON
 };
 
 struct Token {
     int line;
     enum TokenType type;
-    int intvalue;
+    union {
+        int intvalue;
+        char *strvalue;
+    };
 };
 
 #endif // CLITTLE_TOKEN_H

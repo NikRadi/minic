@@ -22,7 +22,7 @@ int main() {
     lexer.text = malloc(lexer.text_size);
     fread(lexer.text, 1, lexer.text_size, file);
 
-    struct AstNode *ast = ParseExpr(&lexer, 0);
+    struct AstNode *ast = ParseStatement(&lexer);
     file = fopen("TestMain.asm", "w");
     if (file == 0) {
         printf("could not write to file\n");

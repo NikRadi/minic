@@ -22,7 +22,6 @@ struct AstNode {
     };
 };
 
-struct AstNode *ParseExpr(struct Lexer *lexer, int min_precedence);
-struct AstNode *ParseLiteral(struct Lexer *lexer);
+struct AstNode *ParseStatement(struct Lexer *lexer);
 
 #endif // CLITTLE_PARSER_H
