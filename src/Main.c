@@ -1,7 +1,8 @@
-#pragma warning(disable : 4996) // _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
 #include <stdlib.h>
+#include "Common.h"
 #include "Lexer.h"
+#include "Parser.h"
 
 
 int main() {
@@ -19,16 +20,7 @@ int main() {
     rewind(file);
     lexer.text = malloc(lexer.text_size);
     fread(lexer.text, 1, lexer.text_size, file);
-    printf("'%s'\n", lexer.text);
 
-    do {
-        ReadToken(&lexer);
-        printf("%d, %d, %d\n",
-            lexer.token.line,
-            lexer.token.type,
-            lexer.token.intvalue
-        );
-    } while (lexer.token.type != TOKEN_EOF);
-
+    struct AstNode *ast = ParseExpr(&lexer, 0);
     return 0;
 }

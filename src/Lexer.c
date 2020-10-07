@@ -1,4 +1,3 @@
-#pragma warning(disable : 4127)
 #include "Lexer.h"
 #include <stdio.h>
 #include "Common.h"
@@ -55,6 +54,12 @@ void ReadToken(struct Lexer *lexer) {
         case '-': {
             lexer->token.type = TOKEN_MINUS;
         } break;
+        case '*': {
+            lexer->token.type = TOKEN_STAR;
+        } break;
+        case '/': {
+            lexer->token.type = TOKEN_SLASH;
+        } break;
         default: {
             if (IS_DIGIT(c)) {
                 lexer->token.intvalue = ReadNumber(lexer);
@@ -62,12 +67,6 @@ void ReadToken(struct Lexer *lexer) {
             }
             else {
                 lexer->token.type = TOKEN_INVALID;
-                printf("invalid: '%d', '%c', %d, %d\n",
-                    c,
-                    c,
-                    lexer->char_idx,
-                    lexer->text_size
-                );
             }
         };
     }

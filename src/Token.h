@@ -7,6 +7,8 @@ enum TokenType {
     TOKEN_INVALID,
     TOKEN_PLUS,
     TOKEN_MINUS,
+    TOKEN_STAR,
+    TOKEN_SLASH,
     TOKEN_INT_LITERAL,
 };
 
