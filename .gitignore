@@ -1,11 +1,12 @@
 # Files
 *.asm
-*.bat
 *.exe
 *.idb
 *.ilk
 *.pdb
 *.obj
+TestMain.c
 
 # Folders
+bin/
 obj/

@@ -29,7 +29,7 @@ int main() {
         return 1;
     }
 
-    Codegenx86(ast, file);
+    Codegenx86(file, ast);
     fclose(file);
     return 0;
 }
