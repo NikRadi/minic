@@ -1,9 +1,11 @@
 # Files
+*.asm
 *.bat
 *.exe
 *.idb
 *.ilk
 *.pdb
+*.obj
 
 # Folders
 obj/

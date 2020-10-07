@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "Codegenx86.h"
 #include "Common.h"
 #include "Lexer.h"
 #include "Parser.h"
@@ -8,7 +9,7 @@
 int main() {
     FILE *file = fopen("TestMain.c", "rb");
     if (file == 0) {
-        printf("could not open file\n");
+        printf("could not read from file\n");
         return 1;
     }
 
@@ -22,5 +23,13 @@ int main() {
     fread(lexer.text, 1, lexer.text_size, file);
 
     struct AstNode *ast = ParseExpr(&lexer, 0);
+    file = fopen("TestMain.asm", "w");
+    if (file == 0) {
+        printf("could not write to file\n");
+        return 1;
+    }
+
+    Codegenx86(ast, file);
+    fclose(file);
     return 0;
 }
