@@ -48,11 +48,13 @@ static struct AstNode *AstNodeNew() {
 static struct AstNode *ParseExpr(struct Lexer *lexer, int min_precedence) {
     struct AstNode *lhs = ParseLiteral(lexer);
     while (TRUE) {
-        int precedence = op_precedence[lexer->token.type];
+        // TODO: Need to peek next token (not char)
+        int precedence = op_precedence[lexer->peek.type];
         if (precedence < min_precedence) {
             break;
         }
 
+        ReadToken(lexer);
         struct AstNode *binaryop = AstNodeNew();
         binaryop->type = GetOperatorType(lexer->token.type);
         binaryop->rhs = ParseExpr(lexer, precedence);

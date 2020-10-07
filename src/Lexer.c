@@ -49,11 +49,12 @@ static int ReadNumber(struct Lexer *lexer) {
 }
 
 void ReadToken(struct Lexer *lexer) {
+    lexer->token = lexer->peek;
     char c;
     while (TRUE) {
         if (lexer->char_idx == lexer->text_size) {
-            lexer->token.line = lexer->line;
-            lexer->token.type = TOKEN_EOF;
+            lexer->peek.line = lexer->line;
+            lexer->peek.type = TOKEN_EOF;
             return;
         }
 
@@ -70,29 +71,29 @@ void ReadToken(struct Lexer *lexer) {
         }
     }
 
-    lexer->token.line = lexer->line;
+    lexer->peek.line = lexer->line;
     switch (c) {
         case '+': {
-            lexer->token.type = TOKEN_PLUS;
+            lexer->peek.type = TOKEN_PLUS;
         } break;
         case '-': {
-            lexer->token.type = TOKEN_MINUS;
+            lexer->peek.type = TOKEN_MINUS;
         } break;
         case '*': {
-            lexer->token.type = TOKEN_STAR;
+            lexer->peek.type = TOKEN_STAR;
         } break;
         case ';': {
-            lexer->token.type = TOKEN_SEMICOLON;
+            lexer->peek.type = TOKEN_SEMICOLON;
         } break;
         default: {
             if (IS_DIGIT(c)) {
-                lexer->token.intvalue = ReadNumber(lexer);
-                lexer->token.type = TOKEN_INT_LITERAL;
+                lexer->peek.intvalue = ReadNumber(lexer);
+                lexer->peek.type = TOKEN_INT_LITERAL;
             }
             else if (IS_ALPHA(c) || c == '_') {
-                lexer->token.strvalue = ReadIdent(lexer);
-                if (strcmp(lexer->token.strvalue, "print") == 0) {
-                    lexer->token.type = TOKEN_PRINT;
+                lexer->peek.strvalue = ReadIdent(lexer);
+                if (strcmp(lexer->peek.strvalue, "print") == 0) {
+                    lexer->peek.type = TOKEN_PRINT;
                 }
                 else {
                     printf("invalid identifier\n");
@@ -100,7 +101,7 @@ void ReadToken(struct Lexer *lexer) {
                 }
             }
             else {
-                lexer->token.type = TOKEN_INVALID;
+                lexer->peek.type = TOKEN_INVALID;
             }
         };
     }

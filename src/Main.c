@@ -22,6 +22,7 @@ int main() {
     lexer.text = malloc(lexer.text_size);
     fread(lexer.text, 1, lexer.text_size, file);
 
+    ReadToken(&lexer);
     struct AstNode *ast = ParseStatement(&lexer);
     file = fopen("TestMain.asm", "w");
     if (file == 0) {

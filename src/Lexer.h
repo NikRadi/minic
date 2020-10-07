@@ -9,6 +9,7 @@ struct Lexer {
     int text_size;
     char *text;
     struct Token token;
+    struct Token peek;
 };
 
 void ReadToken(struct Lexer *lexer);
