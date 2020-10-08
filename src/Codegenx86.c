@@ -60,6 +60,41 @@ static int Codegenx86Expr(FILE *file, struct AstNode *expr) {
     }
 }
 
+static void Codegenx86PrintStmt(FILE *file, struct AstNode *print_stmt) {
+    int regid = Codegenx86Expr(file, print_stmt->lhs);
+    FreeRegisters();
+    fprintf(file,
+        "\tmov\t\trcx, %s\n"
+        "\tcall\tprintint\n",
+        regs[regid]
+    );
+}
+
+static void Codegenx86CompoundStmt(FILE *file, struct AstNode *compund_stmt) {
+    struct AstNode *current_compound_stmt = compund_stmt;
+    while (TRUE) {
+        if (current_compound_stmt->lhs == 0) {
+            break;
+        }
+
+        switch (current_compound_stmt->lhs->type) {
+            case AST_PRINT: {
+                Codegenx86PrintStmt(file, current_compound_stmt->lhs);
+            } break;
+            default: {
+                printf("internal error, invalid statement in compound\n");
+                exit(1);
+            } break;
+        }
+
+        if (current_compound_stmt->rhs == 0) {
+            break;
+        }
+
+        current_compound_stmt = current_compound_stmt->rhs;
+    }
+}
+
 void Codegenx86(FILE *file, struct AstNode *ast) {
     fputs(
         "bits 64\n"
@@ -86,14 +121,9 @@ void Codegenx86(FILE *file, struct AstNode *ast) {
     );
 
     FreeRegisters();
-    int regid = Codegenx86Expr(file, ast);
-    fprintf(file,
-        "\tmov\t\trcx, %s\n",
-        regs[regid]
-    );
+    Codegenx86CompoundStmt(file, ast);
 
     fputs(
-        "\tcall\tprintint\n"
         "\txor\t\trax, rax\n"
         "\tcall\tExitProcess",
         file

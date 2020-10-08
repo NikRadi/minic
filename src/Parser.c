@@ -81,17 +81,45 @@ static struct AstNode *ParseLiteral(struct Lexer *lexer) {
     exit(1);
 }
 
-struct AstNode *ParsePrintStatement(struct Lexer *lexer) {
+struct AstNode *ParsePrintStmt(struct Lexer *lexer) {
     Expect(lexer, TOKEN_PRINT, "print");
-    struct AstNode *expr = ParseExpr(lexer, 0);
+    struct AstNode *print_stmt = AstNodeNew();
+    print_stmt->type = AST_PRINT;
+    print_stmt->lhs = ParseExpr(lexer, 0);
+    print_stmt->rhs = 0;
     Expect(lexer, TOKEN_SEMICOLON, ";");
-    return expr;
-    /*
-    Expect(lexer, TOKEN_PRINT, "print");
-    struct AstNode *print_statement = AstNodeNew();
-    print_statement->type = AST_PRINT;
-    print_statement->lhs = ParseExpr(lexer, 0);
-    Expect(lexer, TOKEN_SEMICOLON, ";");
-    return print_statement;
-    */
+    return print_stmt;
+}
+
+struct AstNode *ParseCompoundStmt(struct Lexer *lexer) {
+    Expect(lexer, TOKEN_LEFT_CURLY_BRAC, "{");
+    struct AstNode *root_compound_stmt = AstNodeNew();
+    root_compound_stmt->type = AST_COMPOUND;
+    root_compound_stmt->lhs = 0;
+    root_compound_stmt->rhs = 0;
+    struct AstNode *child_compound_stmt = root_compound_stmt;
+    while (TRUE) {
+        switch (lexer->peek.type) {
+            case TOKEN_PRINT: {
+                child_compound_stmt->lhs = ParsePrintStmt(lexer);
+            } break;
+            default: {
+                printf("%d: invalid statement '%d'\n", lexer->token.line, lexer->token.type);
+                exit(1);
+            };
+        }
+
+        if (lexer->peek.type == TOKEN_RIGHT_CURLY_BRAC) {
+            break;
+        }
+
+        child_compound_stmt->rhs = AstNodeNew();
+        child_compound_stmt = child_compound_stmt->rhs;
+        child_compound_stmt->lhs = 0;
+        child_compound_stmt->rhs = 0;
+        child_compound_stmt->type = AST_COMPOUND;
+    }
+
+    Expect(lexer, TOKEN_RIGHT_CURLY_BRAC, "}");
+    return root_compound_stmt;
 }

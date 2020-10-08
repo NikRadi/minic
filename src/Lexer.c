@@ -88,6 +88,12 @@ void ReadToken(struct Lexer *lexer) {
         case '=': {
             lexer->peek.type = TOKEN_EQUAL;
         } break;
+        case '{': {
+            lexer->peek.type = TOKEN_LEFT_CURLY_BRAC;
+        } break;
+        case '}': {
+            lexer->peek.type = TOKEN_RIGHT_CURLY_BRAC;
+        } break;
         default: {
             if (IS_DIGIT(c)) {
                 lexer->peek.intvalue = ReadNumber(lexer);

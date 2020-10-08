@@ -10,6 +10,7 @@ enum AstNodeType {
     AST_MUL,
     AST_INT_LITERAL,
     AST_PRINT,
+    AST_COMPOUND,
 };
 
 struct AstNode {
@@ -23,6 +24,6 @@ struct AstNode {
     };
 };
 
-struct AstNode *ParsePrintStatement(struct Lexer *lexer);
+struct AstNode *ParseCompoundStmt(struct Lexer *lexer);
 
 #endif // CLITTLE_PARSER_H
