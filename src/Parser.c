@@ -7,7 +7,10 @@ static int op_precedence[] = {
     -1, -1,
     10, 10,
     20,
-    -1, -1, -1
+    -1, -1, -1, -1,
+    -1, -1, -1, -1,
+    -1, -1, -1, -1,
+    -1, -1, -1, -1,
 };
 
 static void Expect(struct Lexer *lexer, enum TokenType type, const char *str) {
@@ -45,10 +48,10 @@ static struct AstNode *AstNodeNew() {
     return node;
 }
 
+// TODO: expression '1*2-3+4' results in '-5' and not '3'
 static struct AstNode *ParseExpr(struct Lexer *lexer, int min_precedence) {
     struct AstNode *lhs = ParseLiteral(lexer);
     while (TRUE) {
-        // TODO: Need to peek next token (not char)
         int precedence = op_precedence[lexer->peek.type];
         if (precedence < min_precedence) {
             break;
@@ -78,9 +81,17 @@ static struct AstNode *ParseLiteral(struct Lexer *lexer) {
     exit(1);
 }
 
-struct AstNode *ParseStatement(struct Lexer *lexer) {
+struct AstNode *ParsePrintStatement(struct Lexer *lexer) {
     Expect(lexer, TOKEN_PRINT, "print");
-    struct AstNode *stmt = ParseExpr(lexer, 0);
+    struct AstNode *expr = ParseExpr(lexer, 0);
     Expect(lexer, TOKEN_SEMICOLON, ";");
-    return stmt;
+    return expr;
+    /*
+    Expect(lexer, TOKEN_PRINT, "print");
+    struct AstNode *print_statement = AstNodeNew();
+    print_statement->type = AST_PRINT;
+    print_statement->lhs = ParseExpr(lexer, 0);
+    Expect(lexer, TOKEN_SEMICOLON, ";");
+    return print_statement;
+    */
 }

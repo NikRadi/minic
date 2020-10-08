@@ -85,6 +85,9 @@ void ReadToken(struct Lexer *lexer) {
         case ';': {
             lexer->peek.type = TOKEN_SEMICOLON;
         } break;
+        case '=': {
+            lexer->peek.type = TOKEN_EQUAL;
+        } break;
         default: {
             if (IS_DIGIT(c)) {
                 lexer->peek.intvalue = ReadNumber(lexer);
@@ -95,9 +98,11 @@ void ReadToken(struct Lexer *lexer) {
                 if (strcmp(lexer->peek.strvalue, "print") == 0) {
                     lexer->peek.type = TOKEN_PRINT;
                 }
+                else if (strcmp(lexer->peek.strvalue, "int") == 0) {
+                    lexer->peek.type = TOKEN_PRINT;
+                }
                 else {
-                    printf("invalid identifier\n");
-                    exit(1);
+                    lexer->peek.type = TOKEN_IDENTIFIER;
                 }
             }
             else {

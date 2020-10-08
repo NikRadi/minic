@@ -11,7 +11,10 @@ enum TokenType {
     TOKEN_STAR,
     TOKEN_INT_LITERAL,
     TOKEN_PRINT,
-    TOKEN_SEMICOLON
+    TOKEN_SEMICOLON,
+    TOKEN_EQUAL,
+    TOKEN_INT,
+    TOKEN_IDENTIFIER
 };
 
 struct Token {

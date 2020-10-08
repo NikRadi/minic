@@ -9,6 +9,7 @@ enum AstNodeType {
     AST_SUB,
     AST_MUL,
     AST_INT_LITERAL,
+    AST_PRINT,
 };
 
 struct AstNode {
@@ -22,6 +23,6 @@ struct AstNode {
     };
 };
 
-struct AstNode *ParseStatement(struct Lexer *lexer);
+struct AstNode *ParsePrintStatement(struct Lexer *lexer);
 
 #endif // CLITTLE_PARSER_H

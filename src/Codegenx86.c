@@ -66,12 +66,20 @@ void Codegenx86(FILE *file, struct AstNode *ast) {
         "default rel\n"
         "\n"
         "segment .data\n"
-        "\tstr: db \"%d\", 0xd, 0xa, 0\n"
+        "\tfmt: db \"%d\", 0xd, 0xa, 0\n"
         "\n"
         "segment .text\n"
         "global main\n"
         "extern ExitProcess\n"
         "extern printf\n"
+        "\n"
+        "printint:\n"
+        "\tsub\t\trsp, 28h\n"
+        "\tmov\t\trdx, rcx\n"
+        "\tlea\t\trcx, [fmt]\n"
+        "\tcall\tprintf\n"
+        "\tadd\t\trsp, 28h\n"
+        "\tret\n"
         "\n"
         "main:\n",
         file
@@ -79,10 +87,13 @@ void Codegenx86(FILE *file, struct AstNode *ast) {
 
     FreeRegisters();
     int regid = Codegenx86Expr(file, ast);
-    fprintf(file, "\tmov\t\trdx, %s\n", regs[regid]);
+    fprintf(file,
+        "\tmov\t\trcx, %s\n",
+        regs[regid]
+    );
+
     fputs(
-        "\tlea\t\trcx, [str]\n"
-        "\tcall\tprintf\n"
+        "\tcall\tprintint\n"
         "\txor\t\trax, rax\n"
         "\tcall\tExitProcess",
         file
