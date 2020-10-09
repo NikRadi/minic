@@ -41,7 +41,7 @@ static int FindMemLocation(char *ident) {
             exit(1);
         }
 
-        return identid * 32;
+        return identid * 8;
 }
 
 static int Codegenx86Expr(FILE *file, struct AstNode *expr) {
@@ -59,7 +59,7 @@ static int Codegenx86Expr(FILE *file, struct AstNode *expr) {
         int identid = FindMemLocation(expr->strvalue);
         int regid = AllocRegister();
         fprintf(file,
-            "\tmov\t\t%s, [rsp-%d]\n",
+            "\tmov\t\t%s, [rbp-%d]\n",
             regs[regid],
             identid
         );
@@ -122,7 +122,7 @@ static void Codegenx86CompoundStmt(FILE *file, struct AstNode *compund_stmt) {
                 int regid = Codegenx86Expr(file, varassign->rhs);
                 FreeRegisters();
                 fprintf(file,
-                    "\tmov\t\t[rsp-%d], %s\n",
+                    "\tmov\t\t[rbp-%d], %s\n",
                     identid,
                     regs[regid]
                 );
@@ -157,13 +157,15 @@ void Codegenx86(FILE *file, struct AstNode *ast) {
         "printint:\n"
         "\tsub\t\trsp, 32\n"
         "\tmov\t\trdx, rcx\n"
-        "\tlea\t\trcx, fmt\n"
+        "\tlea\t\trcx, [fmt]\n"
         "\tcall\tprintf\n"
         "\tadd\t\trsp, 32\n"
         "\tret\n"
         "\n"
         "main:\n"
-        "\tsub\t\trsp, 64\n",
+        "\tpush\trbp\n"
+        "\tmov\t\trbp, rsp\n"
+        "\tsub\t\trsp, 48\n",
         file
     );
 
@@ -171,7 +173,7 @@ void Codegenx86(FILE *file, struct AstNode *ast) {
     Codegenx86CompoundStmt(file, ast);
 
     fputs(
-        "\tadd\t\trsp, 64\n"
+        "\tadd\t\trsp, 48\n"
         "\txor\t\trax, rax\n"
         "\tcall\tExitProcess",
         file
