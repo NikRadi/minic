@@ -13,6 +13,7 @@ enum AstNodeType {
     AST_COMPOUND,
     AST_ASSIGN,
     AST_DECL,
+    AST_IDENT,
 };
 
 struct AstNode {

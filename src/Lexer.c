@@ -108,7 +108,7 @@ void ReadToken(struct Lexer *lexer) {
                     lexer->peek.type = TOKEN_INT;
                 }
                 else {
-                    lexer->peek.type = TOKEN_IDENTIFIER;
+                    lexer->peek.type = TOKEN_IDENT;
                 }
             }
             else {

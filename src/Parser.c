@@ -72,9 +72,16 @@ static struct AstNode *ParseLiteral(struct Lexer *lexer) {
     ReadToken(lexer);
     if (lexer->token.type == TOKEN_INT_LITERAL) {
         struct AstNode *literal = AstNodeNew();
-        literal->intvalue = lexer->token.intvalue;
         literal->type = AST_INT_LITERAL;
+        literal->intvalue = lexer->token.intvalue;
         return literal;
+    }
+
+    if (lexer->token.type == TOKEN_IDENT) {
+        struct AstNode *ident = AstNodeNew();
+        ident->type = AST_IDENT;
+        ident->strvalue = lexer->token.strvalue;
+        return ident;
     }
 
     printf("%d: invalid literal '%d'\n", lexer->token.line, lexer->token.type);
@@ -95,8 +102,8 @@ struct AstNode *ParseVarDecl(struct Lexer *lexer) {
     Expect(lexer, TOKEN_INT, "int");
     struct AstNode *vardecl = AstNodeNew();
     vardecl->type = AST_DECL;
-    vardecl->strvalue = lexer->token.strvalue;
-    Expect(lexer, TOKEN_IDENTIFIER, "identifier");
+    vardecl->strvalue = lexer->peek.strvalue;
+    Expect(lexer, TOKEN_IDENT, "identifier");
     Expect(lexer, TOKEN_SEMICOLON, ";");
     return vardecl;
 }
@@ -104,8 +111,9 @@ struct AstNode *ParseVarDecl(struct Lexer *lexer) {
 struct AstNode *ParseVarAssign(struct Lexer *lexer) {
     struct AstNode *varassign = AstNodeNew();
     varassign->type = AST_ASSIGN;
+    varassign->lhs = AstNodeNew();
     varassign->lhs->strvalue = lexer->peek.strvalue;
-    Expect(lexer, TOKEN_IDENTIFIER, "identifier");
+    Expect(lexer, TOKEN_IDENT, "identifier");
     Expect(lexer, TOKEN_EQUAL, "=");
     varassign->rhs = ParseExpr(lexer, 0);
     Expect(lexer, TOKEN_SEMICOLON, ";");
@@ -127,7 +135,7 @@ struct AstNode *ParseCompoundStmt(struct Lexer *lexer) {
             case TOKEN_INT: {
                 child_compound_stmt->lhs = ParseVarDecl(lexer);
             } break;
-            case TOKEN_IDENTIFIER: {
+            case TOKEN_IDENT: {
                 child_compound_stmt->lhs = ParseVarAssign(lexer);
             } break;
             default: {
