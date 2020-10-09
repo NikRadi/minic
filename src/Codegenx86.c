@@ -2,6 +2,7 @@
 
 static enum Bool is_reg_free[4];
 static char *regs[4] = {"r8", "r9", "r10", "r11"};
+static char *bregs[4] = {"r8b", "r9b", "r10b", "r11b"};
 static int num_vars = 0;
 static char *vars[8];
 
@@ -44,6 +45,20 @@ static int FindMemLocation(char *ident) {
         return identid * 8;
 }
 
+static int Compare(FILE *file, int regid1, int regid2, char *asm) {
+    fprintf(file,
+        "\tcmp\t\t%s, %s\n"
+        "\t%s\t%s\n"
+        "\tand\t\t%s, 255\n",
+        regs[regid1], regs[regid2],
+        asm, bregs[regid1],
+        regs[regid1]
+    );
+
+    FreeRegister(regid2);
+    return regid1;
+}
+
 static int Codegenx86Expr(FILE *file, struct AstNode *expr) {
     if (expr->type == AST_INT_LITERAL) {
         int regid = AllocRegister();
@@ -79,6 +94,12 @@ static int Codegenx86Expr(FILE *file, struct AstNode *expr) {
             case AST_MUL: {
                 fprintf(file, "\timul\t%s, %s\n", regs[regid1], regs[regid2]);
             } break;
+            case AST_ISEQUAL:               return Compare(file, regid1, regid2, "sete");
+            case AST_NOTEQUAL:              return Compare(file, regid1, regid2, "setne");
+            case AST_ISLESS_THAN:           return Compare(file, regid1, regid2, "setl");
+            case AST_ISLESS_THAN_EQUAL:     return Compare(file, regid1, regid2, "setle");
+            case AST_ISGREATER_THAN:        return Compare(file, regid1, regid2, "setg");
+            case AST_ISGREATER_THAN_EQUAL:  return Compare(file, regid1, regid2, "setge");
             default: {
                 printf("unknown operator type\n");
                 exit(1);

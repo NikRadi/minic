@@ -4,9 +4,13 @@
 static struct AstNode *ParseLiteral(struct Lexer *lexer);
 
 static int op_precedence[] = {
-    -1, -1,
-    10, 10,
-    20,
+    0,              // EOF
+    10, 10,         //  +,  -
+    20, //20,       //  *,  /
+    30, 30,         // ==, !=
+    40, 40, 40, 40  //  <, <=, >, >=
+    // Non-operators
+    -1, -1, -1, -1,
     -1, -1, -1, -1,
     -1, -1, -1, -1,
     -1, -1, -1, -1,
@@ -28,9 +32,16 @@ static void Expect(struct Lexer *lexer, enum TokenType type, const char *str) {
 
 static enum AstNodeType GetOperatorType(enum TokenType type) {
     switch (type) {
-        case TOKEN_PLUS:  return AST_ADD;
-        case TOKEN_MINUS: return AST_SUB;
-        case TOKEN_STAR:  return AST_MUL;
+        case TOKEN_PLUS:                return AST_ADD;
+        case TOKEN_MINUS:               return AST_SUB;
+        case TOKEN_STAR:                return AST_MUL;
+        //case TOKEN_SLASH:             return AST_DIV;
+        case TOKEN_TWO_EQUAL:           return AST_ISEQUAL;
+        case TOKEN_EXMARK_EQUAL:        return AST_NOTEQUAL;
+        case TOKEN_LESS_THAN:           return AST_ISLESS_THAN;
+        case TOKEN_LESS_THAN_EQUAL:     return AST_ISLESS_THAN_EQUAL;
+        case TOKEN_GREATER_THAN:        return AST_ISGREATER_THAN;
+        case TOKEN_GREATER_THAN_EQUAL:  return AST_ISGREATER_THAN_EQUAL;
         default: {
             printf("invalid operator of type %d\n", type);
             exit(1);

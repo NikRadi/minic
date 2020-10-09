@@ -48,6 +48,23 @@ static int ReadNumber(struct Lexer *lexer) {
     return result;
 }
 
+static void TryReadPair(struct Lexer *lexer, enum TokenType type1, char char2, enum TokenType type2) {
+    int peek_idx = lexer->char_idx + 1;
+    if (peek_idx < lexer->text_size && lexer->text[peek_idx] == char2) {
+        lexer->char_idx += 1;
+        lexer->peek.type = type2;
+    }
+    else {
+        // TODO: Probably should be removed sometime
+        if (type1 == TOKEN_INVALID) {
+            printf("invalid character\n");
+            exit(1);
+        }
+
+        lexer->peek.type = type1;
+    }
+}
+
 void ReadToken(struct Lexer *lexer) {
     lexer->token = lexer->peek;
     char c;
@@ -86,7 +103,16 @@ void ReadToken(struct Lexer *lexer) {
             lexer->peek.type = TOKEN_SEMICOLON;
         } break;
         case '=': {
-            lexer->peek.type = TOKEN_EQUAL;
+            TryReadPair(lexer, TOKEN_EQUAL, '=', TOKEN_TWO_EQUAL);
+        } break;
+        case '!': {
+            TryReadPair(lexer, TOKEN_INVALID, '=', TOKEN_EXMARK_EQUAL);
+        } break;
+        case '<': {
+            TryReadPair(lexer, TOKEN_LESS_THAN, '=', TOKEN_LESS_THAN_EQUAL);
+        } break;
+        case '>': {
+            TryReadPair(lexer, TOKEN_GREATER_THAN, '=', TOKEN_GREATER_THAN_EQUAL);
         } break;
         case '{': {
             lexer->peek.type = TOKEN_LEFT_CURLY_BRAC;
