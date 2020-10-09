@@ -2,6 +2,8 @@
 
 static enum Bool is_reg_free[4];
 static char *regs[4] = {"r8", "r9", "r10", "r11"};
+static int num_vars = 0;
+static char *vars[8];
 
 static void FreeRegisters() {
     for (int i = 0; i < 4; ++i) {
@@ -21,8 +23,25 @@ static int AllocRegister() {
         }
     }
 
-    printf("out of registers\n");
+    printf("internal error, out of registers\n");
     exit(1);
+}
+
+static int FindMemLocation(char *ident) {
+        int identid = -1;
+        for (int i = 0; i < num_vars; ++i) {
+            if (strcmp(ident, vars[i]) == 0) {
+                identid = i;
+                break;
+            }
+        }
+
+        if (identid == -1) {
+            printf("internal error, could not find identifier '%s'\n", ident);
+            exit(1);
+        }
+
+        return identid * 32;
 }
 
 static int Codegenx86Expr(FILE *file, struct AstNode *expr) {
@@ -37,11 +56,12 @@ static int Codegenx86Expr(FILE *file, struct AstNode *expr) {
         return regid;
     }
     else if (expr->type == AST_IDENT) {
+        int identid = FindMemLocation(expr->strvalue);
         int regid = AllocRegister();
         fprintf(file,
-            "\tmov\t\t%s, [%s]\n",
+            "\tmov\t\t%s, [rsp-%d]\n",
             regs[regid],
-            expr->strvalue
+            identid
         );
 
         return regid;
@@ -80,8 +100,6 @@ static void Codegenx86PrintStmt(FILE *file, struct AstNode *print_stmt) {
     );
 }
 
-static int num_vars = 0;
-static char *vars[8];
 static void Codegenx86CompoundStmt(FILE *file, struct AstNode *compund_stmt) {
     struct AstNode *current_compound_stmt = compund_stmt;
     while (TRUE) {
@@ -94,16 +112,18 @@ static void Codegenx86CompoundStmt(FILE *file, struct AstNode *compund_stmt) {
                 Codegenx86PrintStmt(file, current_compound_stmt->lhs);
             } break;
             case AST_DECL: {
-                vars[num_vars] = strdup(current_compound_stmt->strvalue);
+                vars[num_vars] = strdup(current_compound_stmt->lhs->strvalue);
                 num_vars += 1;
             } break;
             case AST_ASSIGN: {
                 struct AstNode *varassign = current_compound_stmt->lhs;
-                int regid = Codegenx86Expr(file, varassign->rhs);
                 char *varident = varassign->lhs->strvalue;
+                int identid = FindMemLocation(varident);
+                int regid = Codegenx86Expr(file, varassign->rhs);
+                FreeRegisters();
                 fprintf(file,
-                    "\tmov\t\t[%s], %s\n",
-                    varident,
+                    "\tmov\t\t[rsp-%d], %s\n",
+                    identid,
                     regs[regid]
                 );
             } break;
@@ -128,8 +148,6 @@ void Codegenx86(FILE *file, struct AstNode *ast) {
         "\n"
         "segment .data\n"
         "\tfmt:\tdb \"%d\", 0xd, 0xa, 0\n"
-        "\tx:\t\tdq 0\n"
-        "\ty:\t\tdq 0\n"
         "\n"
         "segment .text\n"
         "global main\n"
@@ -137,14 +155,15 @@ void Codegenx86(FILE *file, struct AstNode *ast) {
         "extern printf\n"
         "\n"
         "printint:\n"
-        "\tsub\t\trsp, 32h\n"
+        "\tsub\t\trsp, 32\n"
         "\tmov\t\trdx, rcx\n"
-        "\tlea\t\trcx, [fmt]\n"
+        "\tlea\t\trcx, fmt\n"
         "\tcall\tprintf\n"
-        "\tadd\t\trsp, 32h\n"
+        "\tadd\t\trsp, 32\n"
         "\tret\n"
         "\n"
-        "main:\n",
+        "main:\n"
+        "\tsub\t\trsp, 64\n",
         file
     );
 
@@ -152,6 +171,7 @@ void Codegenx86(FILE *file, struct AstNode *ast) {
     Codegenx86CompoundStmt(file, ast);
 
     fputs(
+        "\tadd\t\trsp, 64\n"
         "\txor\t\trax, rax\n"
         "\tcall\tExitProcess",
         file
