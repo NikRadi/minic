@@ -105,7 +105,7 @@ void ReadToken(struct Lexer *lexer) {
                     lexer->peek.type = TOKEN_PRINT;
                 }
                 else if (strcmp(lexer->peek.strvalue, "int") == 0) {
-                    lexer->peek.type = TOKEN_PRINT;
+                    lexer->peek.type = TOKEN_INT;
                 }
                 else {
                     lexer->peek.type = TOKEN_IDENTIFIER;

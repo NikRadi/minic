@@ -91,6 +91,27 @@ struct AstNode *ParsePrintStmt(struct Lexer *lexer) {
     return print_stmt;
 }
 
+struct AstNode *ParseVarDecl(struct Lexer *lexer) {
+    Expect(lexer, TOKEN_INT, "int");
+    struct AstNode *vardecl = AstNodeNew();
+    vardecl->type = AST_DECL;
+    vardecl->strvalue = lexer->token.strvalue;
+    Expect(lexer, TOKEN_IDENTIFIER, "identifier");
+    Expect(lexer, TOKEN_SEMICOLON, ";");
+    return vardecl;
+}
+
+struct AstNode *ParseVarAssign(struct Lexer *lexer) {
+    struct AstNode *varassign = AstNodeNew();
+    varassign->type = AST_ASSIGN;
+    varassign->lhs->strvalue = lexer->peek.strvalue;
+    Expect(lexer, TOKEN_IDENTIFIER, "identifier");
+    Expect(lexer, TOKEN_EQUAL, "=");
+    varassign->rhs = ParseExpr(lexer, 0);
+    Expect(lexer, TOKEN_SEMICOLON, ";");
+    return varassign;
+}
+
 struct AstNode *ParseCompoundStmt(struct Lexer *lexer) {
     Expect(lexer, TOKEN_LEFT_CURLY_BRAC, "{");
     struct AstNode *root_compound_stmt = AstNodeNew();
@@ -102,6 +123,12 @@ struct AstNode *ParseCompoundStmt(struct Lexer *lexer) {
         switch (lexer->peek.type) {
             case TOKEN_PRINT: {
                 child_compound_stmt->lhs = ParsePrintStmt(lexer);
+            } break;
+            case TOKEN_INT: {
+                child_compound_stmt->lhs = ParseVarDecl(lexer);
+            } break;
+            case TOKEN_IDENTIFIER: {
+                child_compound_stmt->lhs = ParseVarAssign(lexer);
             } break;
             default: {
                 printf("%d: invalid statement '%d'\n", lexer->token.line, lexer->token.type);

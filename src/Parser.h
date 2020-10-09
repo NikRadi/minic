@@ -11,12 +11,15 @@ enum AstNodeType {
     AST_INT_LITERAL,
     AST_PRINT,
     AST_COMPOUND,
+    AST_ASSIGN,
+    AST_DECL,
 };
 
 struct AstNode {
     enum AstNodeType type;
     union {
         int intvalue;
+        char *strvalue;
         struct {
             struct AstNode *lhs;
             struct AstNode *rhs;

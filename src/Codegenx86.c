@@ -70,6 +70,8 @@ static void Codegenx86PrintStmt(FILE *file, struct AstNode *print_stmt) {
     );
 }
 
+static int num_vars = 0;
+static char *vars[8];
 static void Codegenx86CompoundStmt(FILE *file, struct AstNode *compund_stmt) {
     struct AstNode *current_compound_stmt = compund_stmt;
     while (TRUE) {
@@ -80,6 +82,13 @@ static void Codegenx86CompoundStmt(FILE *file, struct AstNode *compund_stmt) {
         switch (current_compound_stmt->lhs->type) {
             case AST_PRINT: {
                 Codegenx86PrintStmt(file, current_compound_stmt->lhs);
+            } break;
+            case AST_DECL: {
+                vars[num_vars] = strdup(current_compound_stmt->strvalue);
+                num_vars += 1;
+            } break;
+            case AST_ASSIGN: {
+
             } break;
             default: {
                 printf("internal error, invalid statement in compound\n");
