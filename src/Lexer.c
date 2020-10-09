@@ -120,6 +120,12 @@ void ReadToken(struct Lexer *lexer) {
         case '}': {
             lexer->peek.type = TOKEN_RIGHT_CURLY_BRAC;
         } break;
+        case '(': {
+            lexer->peek.type = TOKEN_LEFT_PAREN;
+        } break;
+        case ')': {
+            lexer->peek.type = TOKEN_RIGHT_PAREN;
+        } break;
         default: {
             if (IS_DIGIT(c)) {
                 lexer->peek.intvalue = ReadNumber(lexer);
@@ -132,6 +138,12 @@ void ReadToken(struct Lexer *lexer) {
                 }
                 else if (strcmp(lexer->peek.strvalue, "int") == 0) {
                     lexer->peek.type = TOKEN_INT;
+                }
+                else if (strcmp(lexer->peek.strvalue, "if") == 0) {
+                    lexer->peek.type = TOKEN_IF;
+                }
+                else if (strcmp(lexer->peek.strvalue, "else") == 0) {
+                    lexer->peek.type = TOKEN_ELSE;
                 }
                 else {
                     lexer->peek.type = TOKEN_IDENT;

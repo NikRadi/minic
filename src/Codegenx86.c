@@ -1,10 +1,19 @@
 #include "Codegenx86.h"
 
 static enum Bool is_reg_free[4];
-static char *regs[4] = {"r8", "r9", "r10", "r11"};
-static char *bregs[4] = {"r8b", "r9b", "r10b", "r11b"};
+static char *regs[] = {"r8", "r9", "r10", "r11"};
+static char *bregs[] = {"r8b", "r9b", "r10b", "r11b"};
+                                  // ==    !=    =>      >      <    <=
+static char *inverse_compares[] = {"jne", "je", "jl", "jle", "jge", "jg"};
 static int num_vars = 0;
 static char *vars[8];
+static int labelid = 0;
+
+static int NewLabel() {
+    int id = labelid;
+    labelid += 1;
+    return id;
+}
 
 static void FreeRegisters() {
     for (int i = 0; i < 4; ++i) {
@@ -147,6 +156,22 @@ static void Codegenx86CompoundStmt(FILE *file, struct AstNode *compund_stmt) {
                     identid,
                     regs[regid]
                 );
+            } break;
+            case AST_IF: {
+                struct AstNode *ifstmt = current_compound_stmt->lhs;
+                int false_label = NewLabel();
+                int op_idx = ifstmt->lhs->type - AST_ISEQUAL;
+                // TODO: before %s there is and instr, which is wrong
+                //       should be cmp because it leave 0 or 1
+                Codegenx86Expr(file, ifstmt->lhs);
+                fprintf(file,
+                    "\t%s\t\tL%d\n",
+                    inverse_compares[op_idx], false_label
+                );
+
+                Codegenx86CompoundStmt(file, ifstmt->rhs->lhs);
+                fprintf(file, "L%d:\n", false_label);
+                FreeRegisters();
             } break;
             default: {
                 printf("internal error, invalid statement in compound\n");

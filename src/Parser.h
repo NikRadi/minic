@@ -16,6 +16,7 @@ enum AstNodeType {
     AST_ASSIGN,
     AST_DECL,
     AST_IDENT,
+    AST_IF,
 };
 
 struct AstNode {

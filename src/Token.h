@@ -13,6 +13,8 @@ enum TokenType {
     // Keywords
     TOKEN_PRINT,
     TOKEN_INT,
+    TOKEN_IF,
+    TOKEN_ELSE,
 
     TOKEN_INVALID,
     TOKEN_EQUAL,
@@ -21,6 +23,8 @@ enum TokenType {
     TOKEN_IDENT,
     TOKEN_LEFT_CURLY_BRAC,
     TOKEN_RIGHT_CURLY_BRAC,
+    TOKEN_LEFT_PAREN,
+    TOKEN_RIGHT_PAREN
 };
 
 struct Token {

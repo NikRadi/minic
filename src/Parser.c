@@ -99,7 +99,7 @@ static struct AstNode *ParseLiteral(struct Lexer *lexer) {
     exit(1);
 }
 
-struct AstNode *ParsePrintStmt(struct Lexer *lexer) {
+static struct AstNode *ParsePrintStmt(struct Lexer *lexer) {
     Expect(lexer, TOKEN_PRINT, "print");
     struct AstNode *print_stmt = AstNodeNew();
     print_stmt->type = AST_PRINT;
@@ -109,7 +109,7 @@ struct AstNode *ParsePrintStmt(struct Lexer *lexer) {
     return print_stmt;
 }
 
-struct AstNode *ParseVarDecl(struct Lexer *lexer) {
+static struct AstNode *ParseVarDecl(struct Lexer *lexer) {
     Expect(lexer, TOKEN_INT, "int");
     struct AstNode *vardecl = AstNodeNew();
     vardecl->type = AST_DECL;
@@ -119,7 +119,7 @@ struct AstNode *ParseVarDecl(struct Lexer *lexer) {
     return vardecl;
 }
 
-struct AstNode *ParseVarAssign(struct Lexer *lexer) {
+static struct AstNode *ParseVarAssign(struct Lexer *lexer) {
     struct AstNode *varassign = AstNodeNew();
     varassign->type = AST_ASSIGN;
     varassign->lhs = AstNodeNew();
@@ -131,6 +131,30 @@ struct AstNode *ParseVarAssign(struct Lexer *lexer) {
     return varassign;
 }
 
+static struct AstNode *ParseIfStmt(struct Lexer *lexer) {
+    Expect(lexer, TOKEN_IF, "if");
+    Expect(lexer, TOKEN_LEFT_PAREN, "(");
+    struct AstNode *ifstmt = AstNodeNew();
+    ifstmt->type = AST_IF;
+    ifstmt->lhs = ParseExpr(lexer, 0);
+    if (ifstmt->lhs->type < AST_ISEQUAL || ifstmt->lhs->type > AST_ISGREATER_THAN_EQUAL) {
+        printf("invalid comparison operator\n");
+        exit(1);
+    }
+
+    Expect(lexer, TOKEN_RIGHT_PAREN, ")");
+    ifstmt->rhs = AstNodeNew();
+    ifstmt->rhs->lhs = ParseCompoundStmt(lexer);
+    if (lexer->peek.type == TOKEN_ELSE) {
+        ifstmt->rhs->rhs = ParseCompoundStmt(lexer);
+    }
+    else {
+        ifstmt->rhs->rhs = 0;
+    }
+
+    return ifstmt;
+}
+
 struct AstNode *ParseCompoundStmt(struct Lexer *lexer) {
     Expect(lexer, TOKEN_LEFT_CURLY_BRAC, "{");
     struct AstNode *root_compound_stmt = AstNodeNew();
@@ -139,6 +163,10 @@ struct AstNode *ParseCompoundStmt(struct Lexer *lexer) {
     root_compound_stmt->rhs = 0;
     struct AstNode *child_compound_stmt = root_compound_stmt;
     while (TRUE) {
+        if (lexer->peek.type == TOKEN_RIGHT_CURLY_BRAC) {
+            break;
+        }
+
         switch (lexer->peek.type) {
             case TOKEN_PRINT: {
                 child_compound_stmt->lhs = ParsePrintStmt(lexer);
@@ -149,14 +177,13 @@ struct AstNode *ParseCompoundStmt(struct Lexer *lexer) {
             case TOKEN_IDENT: {
                 child_compound_stmt->lhs = ParseVarAssign(lexer);
             } break;
+            case TOKEN_IF: {
+                child_compound_stmt->lhs = ParseIfStmt(lexer);
+            } break;
             default: {
                 printf("%d: invalid statement '%d'\n", lexer->token.line, lexer->token.type);
                 exit(1);
             };
-        }
-
-        if (lexer->peek.type == TOKEN_RIGHT_CURLY_BRAC) {
-            break;
         }
 
         child_compound_stmt->rhs = AstNodeNew();
