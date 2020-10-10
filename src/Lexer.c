@@ -90,42 +90,18 @@ void ReadToken(struct Lexer *lexer) {
 
     lexer->peek.line = lexer->line;
     switch (c) {
-        case '+': {
-            lexer->peek.type = TOKEN_PLUS;
-        } break;
-        case '-': {
-            lexer->peek.type = TOKEN_MINUS;
-        } break;
-        case '*': {
-            lexer->peek.type = TOKEN_STAR;
-        } break;
-        case ';': {
-            lexer->peek.type = TOKEN_SEMICOLON;
-        } break;
-        case '=': {
-            TryReadPair(lexer, TOKEN_EQUAL, '=', TOKEN_TWO_EQUAL);
-        } break;
-        case '!': {
-            TryReadPair(lexer, TOKEN_INVALID, '=', TOKEN_EXMARK_EQUAL);
-        } break;
-        case '<': {
-            TryReadPair(lexer, TOKEN_LESS_THAN, '=', TOKEN_LESS_THAN_EQUAL);
-        } break;
-        case '>': {
-            TryReadPair(lexer, TOKEN_GREATER_THAN, '=', TOKEN_GREATER_THAN_EQUAL);
-        } break;
-        case '{': {
-            lexer->peek.type = TOKEN_LEFT_CURLY_BRAC;
-        } break;
-        case '}': {
-            lexer->peek.type = TOKEN_RIGHT_CURLY_BRAC;
-        } break;
-        case '(': {
-            lexer->peek.type = TOKEN_LEFT_PAREN;
-        } break;
-        case ')': {
-            lexer->peek.type = TOKEN_RIGHT_PAREN;
-        } break;
+        case '+': {lexer->peek.type = TOKEN_PLUS;} break;
+        case '-': {lexer->peek.type = TOKEN_MINUS;} break;
+        case '*': {lexer->peek.type = TOKEN_STAR;} break;
+        case ';': {lexer->peek.type = TOKEN_SEMICOLON;} break;
+        case '{': {lexer->peek.type = TOKEN_LEFT_CURLY_BRAC;} break;
+        case '}': {lexer->peek.type = TOKEN_RIGHT_CURLY_BRAC;} break;
+        case '(': {lexer->peek.type = TOKEN_LEFT_PAREN;} break;
+        case ')': {lexer->peek.type = TOKEN_RIGHT_PAREN;} break;
+        case '=': {TryReadPair(lexer, TOKEN_EQUAL, '=', TOKEN_TWO_EQUAL);} break;
+        case '!': {TryReadPair(lexer, TOKEN_INVALID, '=', TOKEN_EXMARK_EQUAL);} break;
+        case '<': {TryReadPair(lexer, TOKEN_LESS_THAN, '=', TOKEN_LESS_THAN_EQUAL);} break;
+        case '>': {TryReadPair(lexer, TOKEN_GREATER_THAN, '=', TOKEN_GREATER_THAN_EQUAL);} break;
         default: {
             if (IS_DIGIT(c)) {
                 lexer->peek.intvalue = ReadNumber(lexer);
@@ -133,24 +109,15 @@ void ReadToken(struct Lexer *lexer) {
             }
             else if (IS_ALPHA(c) || c == '_') {
                 lexer->peek.strvalue = ReadIdent(lexer);
-                if (strcmp(lexer->peek.strvalue, "print") == 0) {
-                    lexer->peek.type = TOKEN_PRINT;
-                }
-                else if (strcmp(lexer->peek.strvalue, "int") == 0) {
-                    lexer->peek.type = TOKEN_INT;
-                }
-                else if (strcmp(lexer->peek.strvalue, "if") == 0) {
-                    lexer->peek.type = TOKEN_IF;
-                }
-                else if (strcmp(lexer->peek.strvalue, "else") == 0) {
-                    lexer->peek.type = TOKEN_ELSE;
-                }
-                else {
-                    lexer->peek.type = TOKEN_IDENT;
-                }
+                if (strcmp(lexer->peek.strvalue, "print") == 0) lexer->peek.type = TOKEN_PRINT;
+                else if (strcmp(lexer->peek.strvalue, "int") == 0) lexer->peek.type = TOKEN_INT;
+                else if (strcmp(lexer->peek.strvalue, "if") == 0) lexer->peek.type = TOKEN_IF;
+                else if (strcmp(lexer->peek.strvalue, "else") == 0) lexer->peek.type = TOKEN_ELSE;
+                else lexer->peek.type = TOKEN_IDENT;
             }
             else {
-                lexer->peek.type = TOKEN_INVALID;
+                printf("invalid character '%c'\n", c);
+                exit(1);
             }
         };
     }

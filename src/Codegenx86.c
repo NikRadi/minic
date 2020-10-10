@@ -2,9 +2,8 @@
 
 static enum Bool is_reg_free[4];
 static char *regs[] = {"r8", "r9", "r10", "r11"};
-static char *bregs[] = {"r8b", "r9b", "r10b", "r11b"};
-                                  // ==    !=    =>      >      <    <=
-static char *inverse_compares[] = {"jne", "je", "jl", "jle", "jge", "jg"};
+                                         // ==    !=    =>      >      <    <=
+static char *inverse_branch_compares[] = {"jne", "je", "jl", "jle", "jge", "jg"};
 static int num_vars = 0;
 static char *vars[8];
 static int labelid = 0;
@@ -57,14 +56,13 @@ static int FindMemLocation(char *ident) {
 static int Compare(FILE *file, int regid1, int regid2, char *asm) {
     fprintf(file,
         "\tcmp\t\t%s, %s\n"
-        "\t%s\t%s\n"
+        "\t%s\t%sb\n"
         "\tand\t\t%s, 255\n",
         regs[regid1], regs[regid2],
-        asm, bregs[regid1],
+        asm, regs[regid1],
         regs[regid1]
     );
 
-    FreeRegister(regid2);
     return regid1;
 }
 
@@ -91,8 +89,9 @@ static int Codegenx86Expr(FILE *file, struct AstNode *expr) {
         return regid;
     }
     else {
-        int regid1 = Codegenx86Expr(file, expr->lhs);
+        // If we recurse into rhs first we don't run out of registers
         int regid2 = Codegenx86Expr(file, expr->rhs);
+        int regid1 = Codegenx86Expr(file, expr->lhs);
         switch (expr->type) {
             case AST_ADD: {
                 fprintf(file, "\tadd\t\t%s, %s\n", regs[regid1], regs[regid2]);
@@ -166,7 +165,7 @@ static void Codegenx86CompoundStmt(FILE *file, struct AstNode *compund_stmt) {
                 Codegenx86Expr(file, ifstmt->lhs);
                 fprintf(file,
                     "\t%s\t\tL%d\n",
-                    inverse_compares[op_idx], false_label
+                    inverse_branch_compares[op_idx], false_label
                 );
 
                 Codegenx86CompoundStmt(file, ifstmt->rhs->lhs);
