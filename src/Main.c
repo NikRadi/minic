@@ -4,6 +4,7 @@
 #include "Common.h"
 #include "Lexer.h"
 #include "Parser.h"
+#include "Typechecking.h"
 
 
 int main() {
@@ -23,14 +24,15 @@ int main() {
     fread(lexer.text, 1, lexer.text_size, file);
 
     ReadToken(&lexer);
-    struct AstNode *ast = ParseFuncDecl(&lexer);
+    struct AstNode *ast = ParseFile(&lexer);
+    TypecheckFile(ast);
     file = fopen("TestMain.asm", "w");
     if (file == 0) {
         printf("could not write to file\n");
         return 1;
     }
 
-    Codegenx86(file, ast);
+    Codegenx86File(file, ast);
     fclose(file);
     return 0;
 }

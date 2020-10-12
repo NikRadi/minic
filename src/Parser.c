@@ -2,7 +2,9 @@
 
 
 static struct AstNode *ParseLiteral(struct Lexer *lexer);
+static struct AstNode *ParseFuncDecl(struct Lexer *lexer);
 static struct AstNode *ParseCompoundStmt(struct Lexer *lexer, struct AstNode *last_statement);
+
 
 static int op_precedence[] = {
     0,              // EOF
@@ -225,7 +227,7 @@ static struct AstNode *ParseCompoundStmt(struct Lexer *lexer, struct AstNode *la
     return root_compound_stmt;
 }
 
-struct AstNode *ParseFuncDecl(struct Lexer *lexer) {
+static struct AstNode *ParseFuncDecl(struct Lexer *lexer) {
     Expect(lexer, TOKEN_VOID, "void");
     struct AstNode *funcdecl = NewAstNode(AST_FUNCTION);
     funcdecl->lhs = NewAstNode(AST_IDENT);
@@ -235,4 +237,27 @@ struct AstNode *ParseFuncDecl(struct Lexer *lexer) {
     Expect(lexer, TOKEN_RIGHT_PAREN, ")");
     funcdecl->rhs = ParseCompoundStmt(lexer, 0);
     return funcdecl;
+}
+
+struct AstNode *ParseFile(struct Lexer *lexer) {
+    struct AstNode *ast = NewAstNode(-1);
+    struct AstNode *stmt = ast;
+    while (lexer->peek.type != TOKEN_EOF) {
+        switch (lexer->peek.type) {
+            case TOKEN_VOID: {
+                stmt->lhs = ParseFuncDecl(lexer);
+            } break;
+            default: {
+                printf("invalid global statement '%d'\n", lexer->peek.type);
+                exit(1);
+            } break;
+        }
+
+        stmt->rhs = NewAstNode(-1);
+        stmt = stmt->rhs;
+        stmt->lhs = 0;
+        stmt->rhs = 0;
+    }
+
+    return ast;
 }

@@ -33,6 +33,6 @@ struct AstNode {
     };
 };
 
-struct AstNode *ParseFuncDecl(struct Lexer *lexer);
+struct AstNode *ParseFile(struct Lexer *lexer);
 
 #endif // CLITTLE_PARSER_H

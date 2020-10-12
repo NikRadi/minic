@@ -232,11 +232,11 @@ static void Codegenx86FuncDecl(FILE *file, struct AstNode *funcdecl) {
     );
 
     if (strcmp(funcdecl->lhs->strvalue, "main") == 0) {
-        fputs("\tcall\tExitProcess", file);
+        fputs("\tcall\tExitProcess\n\n", file);
     }
 }
 
-void Codegenx86(FILE *file, struct AstNode *ast) {
+void Codegenx86File(FILE *file, struct AstNode *ast) {
     fputs(
         "bits 64\n"
         "default rel\n"
@@ -261,5 +261,12 @@ void Codegenx86(FILE *file, struct AstNode *ast) {
     );
 
     FreeRegisters();
-    Codegenx86FuncDecl(file, ast);
+    struct AstNode *stmt = ast;
+    while (stmt != 0 && stmt->lhs != 0) {
+        switch (stmt->lhs->type) {
+            case AST_FUNCTION: {Codegenx86FuncDecl(file, stmt->lhs);} break;
+        }
+
+        stmt = stmt->rhs;
+    }
 }

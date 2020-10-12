@@ -4,6 +4,6 @@
 #include "Parser.h"
 
 
-void Codegenx86(FILE *file, struct AstNode *ast);
+void Codegenx86File(FILE *file, struct AstNode *ast);
 
 #endif // CLITTLE_CODEGENX86_H
