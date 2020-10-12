@@ -4,6 +4,7 @@ static enum Bool is_reg_free[4];
 static char *regs[] = {"r8", "r9", "r10", "r11"};
                                          // ==    !=    =>      >      <    <=
 static char *inverse_branch_compares[] = {"jne", "je", "jl", "jle", "jge", "jg"};
+static char *compares[] = {"sete", "setne", "setl", "setle", "setg", "setge"};
 static int num_vars = 0;
 static char *vars[8];
 static int labelid = 0;
@@ -53,20 +54,7 @@ static int FindMemLocation(char *ident) {
         return identid * 8;
 }
 
-static int Compare(FILE *file, int regid1, int regid2, char *asm) {
-    fprintf(file,
-        "\tcmp\t\t%s, %s\n"
-        "\t%s\t%sb\n"
-        "\tand\t\t%s, 255\n",
-        regs[regid1], regs[regid2],
-        asm, regs[regid1],
-        regs[regid1]
-    );
-
-    return regid1;
-}
-
-static int Codegenx86Expr(FILE *file, struct AstNode *expr) {
+static int Codegenx86Expr(FILE *file, struct AstNode *expr, enum AstNodeType parent_ast, int label) {
     if (expr->type == AST_INT_LITERAL) {
         int regid = AllocRegister();
         fprintf(file,
@@ -90,8 +78,8 @@ static int Codegenx86Expr(FILE *file, struct AstNode *expr) {
     }
     else {
         // If we recurse into rhs first we don't run out of registers
-        int regid2 = Codegenx86Expr(file, expr->rhs);
-        int regid1 = Codegenx86Expr(file, expr->lhs);
+        int regid1 = Codegenx86Expr(file, expr->lhs, expr->type, -1);
+        int regid2 = Codegenx86Expr(file, expr->rhs, expr->type, -1);
         switch (expr->type) {
             case AST_ADD: {
                 fprintf(file, "\tadd\t\t%s, %s\n", regs[regid1], regs[regid2]);
@@ -102,12 +90,31 @@ static int Codegenx86Expr(FILE *file, struct AstNode *expr) {
             case AST_MUL: {
                 fprintf(file, "\timul\t%s, %s\n", regs[regid1], regs[regid2]);
             } break;
-            case AST_ISEQUAL:               return Compare(file, regid1, regid2, "sete");
-            case AST_NOTEQUAL:              return Compare(file, regid1, regid2, "setne");
-            case AST_ISLESS_THAN:           return Compare(file, regid1, regid2, "setl");
-            case AST_ISLESS_THAN_EQUAL:     return Compare(file, regid1, regid2, "setle");
-            case AST_ISGREATER_THAN:        return Compare(file, regid1, regid2, "setg");
-            case AST_ISGREATER_THAN_EQUAL:  return Compare(file, regid1, regid2, "setge");
+            case AST_ISEQUAL:
+            case AST_NOTEQUAL:
+            case AST_ISLESS_THAN:
+            case AST_ISLESS_THAN_EQUAL:
+            case AST_ISGREATER_THAN:
+            case AST_ISGREATER_THAN_EQUAL: {
+                if (parent_ast == AST_IF) {
+                    fprintf(file,
+                        "\tcmp\t\t%s, %s\n"
+                        "\t%s\t\tL%d\n",
+                        regs[regid2], regs[regid1],
+                        inverse_branch_compares[expr->type - AST_ISEQUAL], label
+                    );
+                }
+                else {
+                    fprintf(file,
+                        "\tcmp\t\t%s, %s\n"
+                        "\t%s\t%sb\n"
+                        "\tand\t\t%s, 0xff\n",
+                        regs[regid1], regs[regid2],
+                        compares[expr->type - AST_ISEQUAL], regs[regid1],
+                        regs[regid1]
+                    );
+                }
+            } break;
             default: {
                 printf("unknown operator type\n");
                 exit(1);
@@ -120,7 +127,7 @@ static int Codegenx86Expr(FILE *file, struct AstNode *expr) {
 }
 
 static void Codegenx86PrintStmt(FILE *file, struct AstNode *print_stmt) {
-    int regid = Codegenx86Expr(file, print_stmt->lhs);
+    int regid = Codegenx86Expr(file, print_stmt->lhs, AST_PRINT, -1);
     FreeRegisters();
     fprintf(file,
         "\tmov\t\trcx, %s\n"
@@ -148,7 +155,7 @@ static void Codegenx86CompoundStmt(FILE *file, struct AstNode *compund_stmt) {
                 struct AstNode *varassign = current_compound_stmt->lhs;
                 char *varident = varassign->lhs->strvalue;
                 int identid = FindMemLocation(varident);
-                int regid = Codegenx86Expr(file, varassign->rhs);
+                int regid = Codegenx86Expr(file, varassign->rhs, AST_ASSIGN, -1);
                 FreeRegisters();
                 fprintf(file,
                     "\tmov\t\t[rbp-%d], %s\n",
@@ -159,15 +166,7 @@ static void Codegenx86CompoundStmt(FILE *file, struct AstNode *compund_stmt) {
             case AST_IF: {
                 struct AstNode *ifstmt = current_compound_stmt->lhs;
                 int false_label = NewLabel();
-                int op_idx = ifstmt->lhs->type - AST_ISEQUAL;
-                // TODO: before %s there is and instr, which is wrong
-                //       should be cmp because it leave 0 or 1
-                Codegenx86Expr(file, ifstmt->lhs);
-                fprintf(file,
-                    "\t%s\t\tL%d\n",
-                    inverse_branch_compares[op_idx], false_label
-                );
-
+                Codegenx86Expr(file, ifstmt->lhs, AST_IF, false_label);
                 Codegenx86CompoundStmt(file, ifstmt->rhs->lhs);
                 fprintf(file, "L%d:\n", false_label);
                 FreeRegisters();
