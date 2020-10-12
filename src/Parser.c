@@ -152,6 +152,21 @@ static struct AstNode *ParseIfStmt(struct Lexer *lexer) {
     return ifstmt;
 }
 
+struct AstNode *ParseWhileLoop(struct Lexer *lexer) {
+    Expect(lexer, TOKEN_WHILE, "while");
+    Expect(lexer, TOKEN_LEFT_PAREN, "(");
+    struct AstNode *whileloop = NewAstNode(AST_WHILE);
+    whileloop->lhs = ParseExpr(lexer, 0);
+    Expect(lexer, TOKEN_RIGHT_PAREN, ")");
+    if (whileloop->lhs->type < AST_ISEQUAL || whileloop->lhs->type > AST_ISGREATER_THAN_EQUAL) {
+        printf("invalid comparison operator\n");
+        exit(1);
+    }
+
+    whileloop->rhs = ParseCompoundStmt(lexer);
+    return whileloop;
+}
+
 struct AstNode *ParseCompoundStmt(struct Lexer *lexer) {
     Expect(lexer, TOKEN_LEFT_CURLY_BRAC, "{");
     struct AstNode *root_compound_stmt = NewAstNode(AST_COMPOUND);
@@ -165,9 +180,10 @@ struct AstNode *ParseCompoundStmt(struct Lexer *lexer) {
 
         switch (lexer->peek.type) {
             case TOKEN_PRINT: {child_compound_stmt->lhs = ParsePrintStmt(lexer);} break;
+            case TOKEN_IF:    {child_compound_stmt->lhs = ParseIfStmt(lexer);} break;
+            case TOKEN_WHILE: {child_compound_stmt->lhs = ParseWhileLoop(lexer);} break;
             case TOKEN_INT:   {child_compound_stmt->lhs = ParseVarDecl(lexer);} break;
             case TOKEN_IDENT: {child_compound_stmt->lhs = ParseVarAssign(lexer);} break;
-            case TOKEN_IF:    {child_compound_stmt->lhs = ParseIfStmt(lexer);} break;
             default: {
                 printf("%d: invalid statement '%d'\n", lexer->token.line, lexer->token.type);
                 exit(1);

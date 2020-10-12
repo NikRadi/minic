@@ -3,7 +3,8 @@
 static enum Bool is_reg_free[4];
 static char *regs[] = {"r8", "r9", "r10", "r11"};
                                          // ==    !=    =>      >      <    <=
-static char *inverse_branch_compares[] = {"jne", "je", "jl", "jle", "jge", "jg"};
+// static char *inverse_branch_compares[] = {"jne", "je", "jl", "jle", "jge", "jg"};
+static char *inverse_branch_compares[] = {"jne", "je", "jge", "jg", "gle", "ge"};
 static char *compares[] = {"sete", "setne", "setl", "setle", "setg", "setge"};
 static int num_vars = 0;
 static char *vars[8];
@@ -96,11 +97,11 @@ static int Codegenx86Expr(FILE *file, struct AstNode *expr, enum AstNodeType par
             case AST_ISLESS_THAN_EQUAL:
             case AST_ISGREATER_THAN:
             case AST_ISGREATER_THAN_EQUAL: {
-                if (parent_ast == AST_IF) {
+                if (parent_ast == AST_IF || parent_ast == AST_WHILE) {
                     fprintf(file,
                         "\tcmp\t\t%s, %s\n"
                         "\t%s\t\tL%d\n",
-                        regs[regid2], regs[regid1],
+                        regs[regid1], regs[regid2],
                         inverse_branch_compares[expr->type - AST_ISEQUAL], label
                     );
                 }
@@ -181,6 +182,20 @@ static void Codegenx86CompoundStmt(FILE *file, struct AstNode *compund_stmt) {
                     Codegenx86CompoundStmt(file, ifstmt->rhs->rhs);
                     fprintf(file, "L%d:\n", end_label);
                 }
+            } break;
+            case AST_WHILE: {
+                struct AstNode *whileloop = current_compound_stmt->lhs;
+                int start_label = NewLabel();
+                int end_label = NewLabel();
+                fprintf(file, "L%d:\n", start_label);
+                Codegenx86Expr(file, whileloop->lhs, AST_WHILE, end_label);
+                Codegenx86CompoundStmt(file, whileloop->rhs);
+                fprintf(file,
+                    "\tjmp\t\tL%d\n"
+                    "L%d:\n",
+                    start_label,
+                    end_label
+                );
             } break;
             default: {
                 printf("internal error, invalid statement in compound\n");

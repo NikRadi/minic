@@ -113,6 +113,7 @@ void ReadToken(struct Lexer *lexer) {
                 else if (strcmp(lexer->peek.strvalue, "int") == 0) lexer->peek.type = TOKEN_INT;
                 else if (strcmp(lexer->peek.strvalue, "if") == 0) lexer->peek.type = TOKEN_IF;
                 else if (strcmp(lexer->peek.strvalue, "else") == 0) lexer->peek.type = TOKEN_ELSE;
+                else if (strcmp(lexer->peek.strvalue, "while") == 0) lexer->peek.type = TOKEN_WHILE;
                 else lexer->peek.type = TOKEN_IDENT;
             }
             else {

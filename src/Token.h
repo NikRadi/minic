@@ -15,6 +15,7 @@ enum TokenType {
     TOKEN_INT,
     TOKEN_IF,
     TOKEN_ELSE,
+    TOKEN_WHILE,
 
     TOKEN_INVALID,
     TOKEN_EQUAL,
