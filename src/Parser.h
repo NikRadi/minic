@@ -32,6 +32,6 @@ struct AstNode {
     };
 };
 
-struct AstNode *ParseCompoundStmt(struct Lexer *lexer);
+struct AstNode *ParseCompoundStmt(struct Lexer *lexer, struct AstNode *last_statement);
 
 #endif // CLITTLE_PARSER_H

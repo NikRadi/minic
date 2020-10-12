@@ -1,14 +1,17 @@
 #include "Codegenx86.h"
 
+
+static void Codegenx86CompoundStmt(FILE *file, struct AstNode *compound_stmt);
+
+
 static enum Bool is_reg_free[4];
 static char *regs[] = {"r8", "r9", "r10", "r11"};
-                                         // ==    !=    =>      >      <    <=
-// static char *inverse_branch_compares[] = {"jne", "je", "jl", "jle", "jge", "jg"};
 static char *inverse_branch_compares[] = {"jne", "je", "jge", "jg", "gle", "ge"};
 static char *compares[] = {"sete", "setne", "setl", "setle", "setg", "setge"};
 static int num_vars = 0;
 static char *vars[8];
 static int labelid = 0;
+
 
 static int NewLabel() {
     int id = labelid;
@@ -137,6 +140,51 @@ static void Codegenx86PrintStmt(FILE *file, struct AstNode *print_stmt) {
     );
 }
 
+static void Codegenx86VarAssign(FILE *file, struct AstNode *varassign) {
+    char *varident = varassign->lhs->strvalue;
+    int identid = FindMemLocation(varident);
+    int regid = Codegenx86Expr(file, varassign->rhs, AST_ASSIGN, -1);
+    FreeRegisters();
+    fprintf(file,
+        "\tmov\t\t[rbp-%d], %s\n",
+        identid,
+        regs[regid]
+    );
+}
+
+static void Codegenx86IfStmt(FILE *file, struct AstNode *ifstmt) {
+    enum Bool has_else = ifstmt->rhs->rhs != 0;
+    int false_label = NewLabel();
+    int end_label = -1;
+    Codegenx86Expr(file, ifstmt->lhs, AST_IF, false_label);
+    Codegenx86CompoundStmt(file, ifstmt->rhs->lhs);
+    if (has_else) {
+        end_label = NewLabel();
+        fprintf(file, "\tjmp\t\tL%d\n", end_label);
+    }
+
+    fprintf(file, "L%d:\n", false_label);
+    FreeRegisters();
+    if (has_else) {
+        Codegenx86CompoundStmt(file, ifstmt->rhs->rhs);
+        fprintf(file, "L%d:\n", end_label);
+    }
+}
+
+static void Codegenx86WhileLoop(FILE *file, struct AstNode *whileloop) {
+    int start_label = NewLabel();
+    int end_label = NewLabel();
+    fprintf(file, "L%d:\n", start_label);
+    Codegenx86Expr(file, whileloop->lhs, AST_WHILE, end_label);
+    Codegenx86CompoundStmt(file, whileloop->rhs);
+    fprintf(file,
+        "\tjmp\t\tL%d\n"
+        "L%d:\n",
+        start_label,
+        end_label
+    );
+}
+
 static void Codegenx86CompoundStmt(FILE *file, struct AstNode *compund_stmt) {
     struct AstNode *current_compound_stmt = compund_stmt;
     while (TRUE) {
@@ -145,60 +193,16 @@ static void Codegenx86CompoundStmt(FILE *file, struct AstNode *compund_stmt) {
         }
 
         switch (current_compound_stmt->lhs->type) {
-            case AST_PRINT: {
-                Codegenx86PrintStmt(file, current_compound_stmt->lhs);
-            } break;
+            case AST_PRINT:  {Codegenx86PrintStmt(file, current_compound_stmt->lhs);} break;
+            case AST_ASSIGN: {Codegenx86VarAssign(file, current_compound_stmt->lhs);} break;
+            case AST_IF:     {Codegenx86IfStmt(file, current_compound_stmt->lhs);} break;
+            case AST_WHILE:  {Codegenx86WhileLoop(file, current_compound_stmt->lhs);} break;
             case AST_DECL: {
                 vars[num_vars] = strdup(current_compound_stmt->lhs->strvalue);
                 num_vars += 1;
             } break;
-            case AST_ASSIGN: {
-                struct AstNode *varassign = current_compound_stmt->lhs;
-                char *varident = varassign->lhs->strvalue;
-                int identid = FindMemLocation(varident);
-                int regid = Codegenx86Expr(file, varassign->rhs, AST_ASSIGN, -1);
-                FreeRegisters();
-                fprintf(file,
-                    "\tmov\t\t[rbp-%d], %s\n",
-                    identid,
-                    regs[regid]
-                );
-            } break;
-            case AST_IF: {
-                struct AstNode *ifstmt = current_compound_stmt->lhs;
-                enum Bool has_else = ifstmt->rhs->rhs != 0;
-                int false_label = NewLabel();
-                int end_label = -1;
-                Codegenx86Expr(file, ifstmt->lhs, AST_IF, false_label);
-                Codegenx86CompoundStmt(file, ifstmt->rhs->lhs);
-                if (has_else) {
-                    end_label = NewLabel();
-                    fprintf(file, "\tjmp\t\tL%d\n", end_label);
-                }
-
-                fprintf(file, "L%d:\n", false_label);
-                FreeRegisters();
-                if (has_else) {
-                    Codegenx86CompoundStmt(file, ifstmt->rhs->rhs);
-                    fprintf(file, "L%d:\n", end_label);
-                }
-            } break;
-            case AST_WHILE: {
-                struct AstNode *whileloop = current_compound_stmt->lhs;
-                int start_label = NewLabel();
-                int end_label = NewLabel();
-                fprintf(file, "L%d:\n", start_label);
-                Codegenx86Expr(file, whileloop->lhs, AST_WHILE, end_label);
-                Codegenx86CompoundStmt(file, whileloop->rhs);
-                fprintf(file,
-                    "\tjmp\t\tL%d\n"
-                    "L%d:\n",
-                    start_label,
-                    end_label
-                );
-            } break;
             default: {
-                printf("internal error, invalid statement in compound\n");
+                printf("internal error, invalid statement in compound '%d'\n", current_compound_stmt->lhs->type);
                 exit(1);
             } break;
         }

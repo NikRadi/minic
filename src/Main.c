@@ -23,7 +23,7 @@ int main() {
     fread(lexer.text, 1, lexer.text_size, file);
 
     ReadToken(&lexer);
-    struct AstNode *ast = ParseCompoundStmt(&lexer);
+    struct AstNode *ast = ParseCompoundStmt(&lexer, 0);
     file = fopen("TestMain.asm", "w");
     if (file == 0) {
         printf("could not write to file\n");

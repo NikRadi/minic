@@ -117,14 +117,17 @@ static struct AstNode *ParseVarDecl(struct Lexer *lexer) {
     return vardecl;
 }
 
-static struct AstNode *ParseVarAssign(struct Lexer *lexer) {
+static struct AstNode *ParseVarAssign(struct Lexer *lexer, enum Bool eat_semicolon) {
     struct AstNode *varassign = NewAstNode(AST_ASSIGN);
     varassign->lhs = NewAstNode(-1);
     varassign->lhs->strvalue = lexer->peek.strvalue;
     Expect(lexer, TOKEN_IDENT, "identifier");
     Expect(lexer, TOKEN_EQUAL, "=");
     varassign->rhs = ParseExpr(lexer, 0);
-    Expect(lexer, TOKEN_SEMICOLON, ";");
+    if (eat_semicolon) {
+        Expect(lexer, TOKEN_SEMICOLON, ";");
+    }
+
     return varassign;
 }
 
@@ -140,10 +143,10 @@ static struct AstNode *ParseIfStmt(struct Lexer *lexer) {
 
     Expect(lexer, TOKEN_RIGHT_PAREN, ")");
     ifstmt->rhs = NewAstNode(-1);
-    ifstmt->rhs->lhs = ParseCompoundStmt(lexer);
+    ifstmt->rhs->lhs = ParseCompoundStmt(lexer, 0);
     if (lexer->peek.type == TOKEN_ELSE) {
         ReadToken(lexer);
-        ifstmt->rhs->rhs = ParseCompoundStmt(lexer);
+        ifstmt->rhs->rhs = ParseCompoundStmt(lexer, 0);
     }
     else {
         ifstmt->rhs->rhs = 0;
@@ -163,11 +166,11 @@ struct AstNode *ParseWhileLoop(struct Lexer *lexer) {
         exit(1);
     }
 
-    whileloop->rhs = ParseCompoundStmt(lexer);
+    whileloop->rhs = ParseCompoundStmt(lexer, 0);
     return whileloop;
 }
 
-struct AstNode *ParseCompoundStmt(struct Lexer *lexer) {
+struct AstNode *ParseCompoundStmt(struct Lexer *lexer, struct AstNode *last_statement) {
     Expect(lexer, TOKEN_LEFT_CURLY_BRAC, "{");
     struct AstNode *root_compound_stmt = NewAstNode(AST_COMPOUND);
     root_compound_stmt->lhs = 0;
@@ -175,6 +178,7 @@ struct AstNode *ParseCompoundStmt(struct Lexer *lexer) {
     struct AstNode *child_compound_stmt = root_compound_stmt;
     while (TRUE) {
         if (lexer->peek.type == TOKEN_RIGHT_CURLY_BRAC) {
+            child_compound_stmt->lhs = last_statement;
             break;
         }
 
@@ -183,7 +187,28 @@ struct AstNode *ParseCompoundStmt(struct Lexer *lexer) {
             case TOKEN_IF:    {child_compound_stmt->lhs = ParseIfStmt(lexer);} break;
             case TOKEN_WHILE: {child_compound_stmt->lhs = ParseWhileLoop(lexer);} break;
             case TOKEN_INT:   {child_compound_stmt->lhs = ParseVarDecl(lexer);} break;
-            case TOKEN_IDENT: {child_compound_stmt->lhs = ParseVarAssign(lexer);} break;
+            case TOKEN_IDENT: {child_compound_stmt->lhs = ParseVarAssign(lexer, TRUE);} break;
+            case TOKEN_FOR: {
+                Expect(lexer, TOKEN_FOR, "for");
+                Expect(lexer, TOKEN_LEFT_PAREN, "(");
+                struct AstNode *pre_operation = ParseVarAssign(lexer, FALSE);
+                Expect(lexer, TOKEN_SEMICOLON, ";");
+                struct AstNode *condition = ParseExpr(lexer, 0);
+                Expect(lexer, TOKEN_SEMICOLON, ";");
+                struct AstNode *post_operation = ParseVarAssign(lexer, FALSE);
+                Expect(lexer, TOKEN_RIGHT_PAREN, ")");
+                struct AstNode *body = ParseCompoundStmt(lexer, post_operation);
+
+                struct AstNode *whileloop = NewAstNode(AST_WHILE);
+                whileloop->lhs = condition;
+                whileloop->rhs = body;
+
+                child_compound_stmt->lhs = pre_operation;
+
+                child_compound_stmt->rhs = NewAstNode(AST_COMPOUND);
+                child_compound_stmt = child_compound_stmt->rhs;
+                child_compound_stmt->lhs = whileloop;
+            } break;
             default: {
                 printf("%d: invalid statement '%d'\n", lexer->token.line, lexer->token.type);
                 exit(1);
@@ -192,7 +217,6 @@ struct AstNode *ParseCompoundStmt(struct Lexer *lexer) {
 
         child_compound_stmt->rhs = NewAstNode(AST_COMPOUND);
         child_compound_stmt = child_compound_stmt->rhs;
-        child_compound_stmt->lhs = 0;
         child_compound_stmt->rhs = 0;
     }
 
