@@ -2,6 +2,7 @@
 
 
 static struct AstNode *ParseLiteral(struct Lexer *lexer);
+static struct AstNode *ParseCompoundStmt(struct Lexer *lexer, struct AstNode *last_statement);
 
 static int op_precedence[] = {
     0,              // EOF
@@ -170,7 +171,7 @@ struct AstNode *ParseWhileLoop(struct Lexer *lexer) {
     return whileloop;
 }
 
-struct AstNode *ParseCompoundStmt(struct Lexer *lexer, struct AstNode *last_statement) {
+static struct AstNode *ParseCompoundStmt(struct Lexer *lexer, struct AstNode *last_statement) {
     Expect(lexer, TOKEN_LEFT_CURLY_BRAC, "{");
     struct AstNode *root_compound_stmt = NewAstNode(AST_COMPOUND);
     root_compound_stmt->lhs = 0;
@@ -222,4 +223,16 @@ struct AstNode *ParseCompoundStmt(struct Lexer *lexer, struct AstNode *last_stat
 
     Expect(lexer, TOKEN_RIGHT_CURLY_BRAC, "}");
     return root_compound_stmt;
+}
+
+struct AstNode *ParseFuncDecl(struct Lexer *lexer) {
+    Expect(lexer, TOKEN_VOID, "void");
+    struct AstNode *funcdecl = NewAstNode(AST_FUNCTION);
+    funcdecl->lhs = NewAstNode(AST_IDENT);
+    Expect(lexer, TOKEN_IDENT, "identifier");
+    funcdecl->lhs->strvalue = lexer->peek.strvalue;
+    Expect(lexer, TOKEN_LEFT_PAREN, "(");
+    Expect(lexer, TOKEN_RIGHT_PAREN, ")");
+    funcdecl->rhs = ParseCompoundStmt(lexer, 0);
+    return funcdecl;
 }

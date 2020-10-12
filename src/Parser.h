@@ -18,6 +18,7 @@ enum AstNodeType {
     AST_IDENT,
     AST_IF,
     AST_WHILE,
+    AST_FUNCTION,
 };
 
 struct AstNode {
@@ -32,6 +33,6 @@ struct AstNode {
     };
 };
 
-struct AstNode *ParseCompoundStmt(struct Lexer *lexer, struct AstNode *last_statement);
+struct AstNode *ParseFuncDecl(struct Lexer *lexer);
 
 #endif // CLITTLE_PARSER_H

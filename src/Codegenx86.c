@@ -215,6 +215,27 @@ static void Codegenx86CompoundStmt(FILE *file, struct AstNode *compund_stmt) {
     }
 }
 
+static void Codegenx86FuncDecl(FILE *file, struct AstNode *funcdecl) {
+    fprintf(file,
+        "%s:\n"
+        "\tpush\trbp\n"
+        "\tmov\t\trbp, rsp\n"
+        "\tsub\t\trsp, 48\n",
+        funcdecl->lhs->strvalue
+    );
+
+    Codegenx86CompoundStmt(file, funcdecl->rhs);
+    fputs(
+        "\tadd\t\trsp, 48\n"
+        "\txor\t\trax, rax\n",
+        file
+    );
+
+    if (strcmp(funcdecl->lhs->strvalue, "main") == 0) {
+        fputs("\tcall\tExitProcess", file);
+    }
+}
+
 void Codegenx86(FILE *file, struct AstNode *ast) {
     fputs(
         "bits 64\n"
@@ -235,21 +256,10 @@ void Codegenx86(FILE *file, struct AstNode *ast) {
         "\tcall\tprintf\n"
         "\tadd\t\trsp, 32\n"
         "\tret\n"
-        "\n"
-        "main:\n"
-        "\tpush\trbp\n"
-        "\tmov\t\trbp, rsp\n"
-        "\tsub\t\trsp, 48\n",
+        "\n",
         file
     );
 
     FreeRegisters();
-    Codegenx86CompoundStmt(file, ast);
-
-    fputs(
-        "\tadd\t\trsp, 48\n"
-        "\txor\t\trax, rax\n"
-        "\tcall\tExitProcess",
-        file
-    );
+    Codegenx86FuncDecl(file, ast);
 }
