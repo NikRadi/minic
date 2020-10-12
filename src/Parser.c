@@ -142,6 +142,7 @@ static struct AstNode *ParseIfStmt(struct Lexer *lexer) {
     ifstmt->rhs = NewAstNode(-1);
     ifstmt->rhs->lhs = ParseCompoundStmt(lexer);
     if (lexer->peek.type == TOKEN_ELSE) {
+        ReadToken(lexer);
         ifstmt->rhs->rhs = ParseCompoundStmt(lexer);
     }
     else {

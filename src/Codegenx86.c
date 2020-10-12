@@ -165,11 +165,22 @@ static void Codegenx86CompoundStmt(FILE *file, struct AstNode *compund_stmt) {
             } break;
             case AST_IF: {
                 struct AstNode *ifstmt = current_compound_stmt->lhs;
+                enum Bool has_else = ifstmt->rhs->rhs != 0;
                 int false_label = NewLabel();
+                int end_label = -1;
                 Codegenx86Expr(file, ifstmt->lhs, AST_IF, false_label);
                 Codegenx86CompoundStmt(file, ifstmt->rhs->lhs);
+                if (has_else) {
+                    end_label = NewLabel();
+                    fprintf(file, "\tjmp\t\tL%d\n", end_label);
+                }
+
                 fprintf(file, "L%d:\n", false_label);
                 FreeRegisters();
+                if (has_else) {
+                    Codegenx86CompoundStmt(file, ifstmt->rhs->rhs);
+                    fprintf(file, "L%d:\n", end_label);
+                }
             } break;
             default: {
                 printf("internal error, invalid statement in compound\n");
