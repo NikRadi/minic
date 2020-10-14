@@ -6,8 +6,8 @@
 struct Lexer {
     int line;
     int char_idx;
-    char *filename;
     int text_size;
+    char *filename;
     char *text;
     Token token;
     Token peek;

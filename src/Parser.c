@@ -235,6 +235,7 @@ static FuncDecl *ParseFuncDecl(Lexer *lexer) {
     ASSERT(lexer->token.type == TOKEN_VOID);
     FuncDecl *funcdecl = NEW_AST(FuncDecl);
     funcdecl->info.type = AST_FUNCDECL;
+    funcdecl->stack_depth_bytes = 0;
     funcdecl->ident = 0;
     funcdecl->block = 0;
     ReadToken(lexer);

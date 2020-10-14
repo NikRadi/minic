@@ -29,6 +29,7 @@ enum DataType {
 
 struct Ast {
     AstType type;
+    struct Ast *parent;
 } typedef Ast;
 
 struct Literal {
@@ -88,6 +89,7 @@ struct ForLoop {
 
 struct FuncDecl {
     Ast info;
+    int stack_depth_bytes;
     char *ident;
     Block *block;
 } typedef FuncDecl;

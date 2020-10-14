@@ -1,8 +1,8 @@
 #include "Codegenx86.h"
 
 
-static void Codegenx86Block(FILE *file, Block *block);
-static int Codegenx86Expr(FILE *file, Ast *expr, Bool is_jump, int label);
+static void Codegenx86Block(FileInfo *info, Block *block);
+static int Codegenx86Expr(FileInfo *info, Ast *expr, Bool is_jump, int label);
 
 
 static Bool is_reg_free[4];
@@ -55,10 +55,10 @@ static int NewLabel() {
     return id;
 }
 
-static int Codegenx86Literal(FILE *file, Literal *literal) {
+static int Codegenx86Literal(FileInfo *info, Literal *literal) {
     if (literal->info.type == AST_INT_LITERAL) {
         int regid = AllocRegister();
-        fprintf(file,
+        fprintf(info->asmfile,
             "\tmov\t\t%s, %d\n",
             regs[regid], literal->intvalue
         );
@@ -70,9 +70,9 @@ static int Codegenx86Literal(FILE *file, Literal *literal) {
     exit(1);
 }
 
-static int Codegenx86BinaryOp(FILE *file, BinaryOp *binaryop, Bool is_jump, int label) {
-    int regid_lhs = Codegenx86Expr(file, binaryop->lhs, FALSE, -1);
-    int regid_rhs = Codegenx86Expr(file, binaryop->rhs, FALSE, -1);
+static int Codegenx86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int label) {
+    int regid_lhs = Codegenx86Expr(info, binaryop->lhs, FALSE, -1);
+    int regid_rhs = Codegenx86Expr(info, binaryop->rhs, FALSE, -1);
     switch (binaryop->optype) {
         case OP_ISEQUAL:
         case OP_NOTEQUAL:
@@ -81,7 +81,7 @@ static int Codegenx86BinaryOp(FILE *file, BinaryOp *binaryop, Bool is_jump, int 
         case OP_ISGREATER_THAN:
         case OP_ISGREATER_THAN_EQUAL: {
             if (is_jump) {
-                fprintf(file,
+                fprintf(info->asmfile,
                     "\tcmp\t\t%s, %s\n"
                     "\t%s\t\t%d\n",
                     regs[regid_lhs], regs[regid_rhs],
@@ -89,7 +89,7 @@ static int Codegenx86BinaryOp(FILE *file, BinaryOp *binaryop, Bool is_jump, int 
                 );
             }
             else {
-                fprintf(file,
+                fprintf(info->asmfile,
                     "\tcmp\t\t%s, %s\n"
                     "\t%s\t%sb\n"
                     "\tand\t\t%s, 0xff\n",
@@ -108,10 +108,10 @@ static int Codegenx86BinaryOp(FILE *file, BinaryOp *binaryop, Bool is_jump, int 
     return 0;
 }
 
-static int Codegenx86Expr(FILE *file, Ast *expr, Bool is_jump, int label) {
+static int Codegenx86Expr(FileInfo *info, Ast *expr, Bool is_jump, int label) {
     switch (expr->type) {
-        case AST_INT_LITERAL: return Codegenx86Literal(file, (Literal *) expr);
-        case AST_BINARYOP:    return Codegenx86BinaryOp(file, (BinaryOp *) expr, is_jump, label);
+        case AST_INT_LITERAL: return Codegenx86Literal(info, (Literal *) expr);
+        case AST_BINARYOP:    return Codegenx86BinaryOp(info, (BinaryOp *) expr, is_jump, label);
         default: {
             printf("internal error: invalid expression type '%d'\n", expr->type);
             exit(1);
@@ -119,12 +119,12 @@ static int Codegenx86Expr(FILE *file, Ast *expr, Bool is_jump, int label) {
     }
 }
 
-static void Codegenx86VarDecl(FILE *file, VarDecl *vardecl) {
+static void Codegenx86VarDecl(FileInfo *info, VarDecl *vardecl) {
     var_idents[num_vars] = strdup(vardecl->ident);
     if (vardecl->expr != 0) {
-        int regid = Codegenx86Expr(file, vardecl->expr, FALSE, -1);
+        int regid = Codegenx86Expr(info, vardecl->expr, FALSE, -1);
         FreeRegs();
-        fprintf(file,
+        fprintf(info->asmfile,
             "\tmov\t\t[rbp-%d], %s\n",
             num_vars, regs[regid]
         );
@@ -133,72 +133,72 @@ static void Codegenx86VarDecl(FILE *file, VarDecl *vardecl) {
     num_vars += 1;
 }
 
-static void Codegenx86VarAssign(FILE *file, VarAssign *varassign) {
+static void Codegenx86VarAssign(FileInfo *info, VarAssign *varassign) {
     int var_location = FindMemLocation(varassign->ident);
-    int regid = Codegenx86Expr(file, varassign->expr, FALSE, -1);
+    int regid = Codegenx86Expr(info, varassign->expr, FALSE, -1);
     FreeRegs();
-    fprintf(file,
+    fprintf(info->asmfile,
         "\tmov\t\t[rbp-%d], %s\n",
         var_location, regs[regid]
     );
 }
 
-static void Codegenx86IfStmtElse(FILE *file, IfStmt *elsestmt, int end_label) {
+static void Codegenx86IfStmtElse(FileInfo *info, IfStmt *elsestmt, int end_label) {
     int false_label = NewLabel();
     if (elsestmt->condition != 0) {
-        Codegenx86Expr(file, elsestmt->condition, TRUE, false_label);
+        Codegenx86Expr(info, elsestmt->condition, TRUE, false_label);
     }
 
-    Codegenx86Block(file, elsestmt->block);
+    Codegenx86Block(info, elsestmt->block);
     if (elsestmt->elsestmt != 0) {
-        fprintf(file,
+        fprintf(info->asmfile,
             "\tjmp\t\tL%d\n"
             "L%d:\n",
             end_label, false_label
         );
 
-        Codegenx86IfStmtElse(file, elsestmt->elsestmt, end_label);
+        Codegenx86IfStmtElse(info, elsestmt->elsestmt, end_label);
     }
 }
 
-static void Codegenx86IfStmt(FILE *file, IfStmt *ifstmt) {
+static void Codegenx86IfStmt(FileInfo *info, IfStmt *ifstmt) {
     int false_label = NewLabel();
     int end_label = -1;
-    Codegenx86Expr(file, ifstmt->condition, TRUE, false_label);
-    Codegenx86Block(file, ifstmt->block);
+    Codegenx86Expr(info, ifstmt->condition, TRUE, false_label);
+    Codegenx86Block(info, ifstmt->block);
     if (ifstmt->elsestmt != 0) {
         end_label = NewLabel();
-        fprintf(file, "\tjmp\t\tL%d\n", end_label);
+        fprintf(info->asmfile, "\tjmp\t\tL%d\n", end_label);
     }
 
-    fprintf(file, "L%d:\n", false_label);
+    fprintf(info->asmfile, "L%d:\n", false_label);
     if (ifstmt->elsestmt != 0) {
-        Codegenx86IfStmtElse(file, ifstmt->elsestmt, end_label);
-        fprintf(file, "L%d:\n", end_label);
+        Codegenx86IfStmtElse(info, ifstmt->elsestmt, end_label);
+        fprintf(info->asmfile, "L%d:\n", end_label);
     }
 }
 
-static void Codegenx86WhileLoop(FILE *file, WhileLoop *whileloop) {
+static void Codegenx86WhileLoop(FileInfo *info, WhileLoop *whileloop) {
     int start_label = NewLabel();
     int end_label = NewLabel();
-    fprintf(file, "L%d\n", start_label);
-    Codegenx86Expr(file, whileloop->condition, TRUE, end_label);
-    Codegenx86Block(file, whileloop->block);
-    fprintf(file,
+    fprintf(info->asmfile, "L%d\n", start_label);
+    Codegenx86Expr(info, whileloop->condition, TRUE, end_label);
+    Codegenx86Block(info, whileloop->block);
+    fprintf(info->asmfile,
         "\tjmp\t\tL%d\n"
         "L%d\n",
         start_label, end_label
     );
 }
 
-static void Codegenx86Block(FILE *file, Block *block) {
+static void Codegenx86Block(FileInfo *info, Block *block) {
     Block *child_block = block;
     while (child_block != 0 && child_block->stmt != 0) {
         switch (child_block->stmt->type) {
-            case AST_VARDECL:   {Codegenx86VarDecl(file, (VarDecl *) child_block->stmt);} break;
-            case AST_VARASSIGN: {Codegenx86VarAssign(file, (VarAssign *) child_block->stmt);} break;
-            case AST_IFSTMT:    {Codegenx86IfStmt(file, (IfStmt *) child_block->stmt);} break;
-            case AST_WHILELOOP: {Codegenx86WhileLoop(file, (WhileLoop *) child_block->stmt);} break;
+            case AST_VARDECL:   {Codegenx86VarDecl(info, (VarDecl *) child_block->stmt);} break;
+            case AST_VARASSIGN: {Codegenx86VarAssign(info, (VarAssign *) child_block->stmt);} break;
+            case AST_IFSTMT:    {Codegenx86IfStmt(info, (IfStmt *) child_block->stmt);} break;
+            case AST_WHILELOOP: {Codegenx86WhileLoop(info, (WhileLoop *) child_block->stmt);} break;
             default: {
                 printf("internal error: invalid statement type '%d'\n", child_block->stmt->type);
                 exit(1);
@@ -209,10 +209,9 @@ static void Codegenx86Block(FILE *file, Block *block) {
     }
 }
 
-static void Codegenx86FuncDecl(FILE *file, FuncDecl *funcdecl) {
-    int num_vars_in_func = 10;
-    int bytes = 32 + (num_vars_in_func * 8);
-    fprintf(file,
+static void Codegenx86FuncDecl(FileInfo *info, FuncDecl *funcdecl) {
+    int bytes = 32 + funcdecl->stack_depth_bytes;
+    fprintf(info->asmfile,
         "%s:\n"
         "\tpush\trbp\n"
         "\tmov\t\trbp, rsp\n"
@@ -221,22 +220,22 @@ static void Codegenx86FuncDecl(FILE *file, FuncDecl *funcdecl) {
         bytes
     );
 
-    Codegenx86Block(file, funcdecl->block);
-    fprintf(file,
+    Codegenx86Block(info, funcdecl->block);
+    fprintf(info->asmfile,
         "\tadd\t\trsp, %d\n"
         "\txor\t\trax, rax\n",
         bytes
     );
 
     if (strcmp(funcdecl->ident, "main") == 0) {
-        fputs("\tcall\tExitProcess", file);
+        fputs("\tcall\tExitProcess", info->asmfile);
     }
     else {
-        fputs("\tret", file);
+        fputs("\tret", info->asmfile);
     }
 }
 
-void Codegenx86File(FILE *file, File *cfile) {
+void Codegenx86File(FileInfo *info, File *cfile) {
     fputs(
         "bits 64\n"
         "default rel\n"
@@ -256,14 +255,14 @@ void Codegenx86File(FILE *file, File *cfile) {
         "\tcall\tprintf\n"
         "\tadd\t\trsp, 32\n"
         "\tret",
-        file
+        info->asmfile
     );
 
     FreeRegs();
     File *child_file = cfile;
     while (child_file != 0 && child_file->funcdecl != 0) {
-        fputs("\n\n", file);
-        Codegenx86FuncDecl(file, child_file->funcdecl);
+        fputs("\n\n", info->asmfile);
+        Codegenx86FuncDecl(info, child_file->funcdecl);
         child_file = child_file->glue;
     }
 }
