@@ -6,7 +6,7 @@ IF NOT DEFINED DevEnvDir (
     CALL "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall" x64
 )
 
-IF "%1"=="" (
+IF "%1" == "" (
     ECHO Building...
     IF NOT EXIST %BinDir% MKDIR %BinDir%
     IF NOT EXIST %ObjDir% MKDIR %ObjDir%
@@ -19,16 +19,22 @@ IF "%1"=="" (
     IF EXIST *.pdb MOVE *.pdb %BinDir% >NUL
 )
 
-IF "%1"=="test" (
+IF "%1" == "test" (
     ECHO Testing...
     CALL %BinDir%\minic.exe
-	nasm -f win64 -o TestMain.obj TestMain.asm
-	link /nologo TestMain.obj /defaultlib:msvcrt.lib /defaultlib:legacy_stdio_definitions.lib /defaultlib:Kernel32.lib /subsystem:console /out:TestMain.exe
-	ECHO TestMain.exe
-	CALL TestMain.exe
+    IF %ERRORLEVEL% == 1 (
+        ECHO Return code: %ERRORLEVEL%
+    )
+
+    IF %ERRORLEVEL% == "0" (
+        nasm -f win64 -o TestMain.obj TestMain.asm
+        link /nologo TestMain.obj /defaultlib:msvcrt.lib /defaultlib:legacy_stdio_definitions.lib /defaultlib:Kernel32.lib /subsystem:console /out:TestMain.exe
+        ECHO TestMain.exe
+        CALL TestMain.exe
+    )
 )
 
-IF "%1"=="clean" (
+IF "%1" == "clean" (
     ECHO Cleaning...
 	IF EXIST *.asm DEL *.asm
 	IF EXIST *.exe DEL *.exe

@@ -1,8 +1,8 @@
-#ifndef CLITTLE_TYPECHECKING_H
-#define CLITTLE_TYPECHECKING_H
+#ifndef MINIC_TYPECHECKING_H
+#define MINIC_TYPECHECKING_H
 #include "Parser.h"
 
 
-void TypecheckFile(struct AstNode *ast);
+void TypecheckFile(File *file);
 
-#endif // CLITTLE_TYPECHECKING_H
+#endif // MINIC_TYPECHECKING_H

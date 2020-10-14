@@ -1,76 +1,91 @@
 #include "Typechecking.h"
 
 
-static void TypecheckCompoundStmt(struct AstNode *compoundstmt);
+static void TypecheckBlock(Block *block);
+static void TypecheckExpr(Ast *expr);
 
 
-static void Assert(enum Bool expression) {
-    if (!expression) {
-        printf("Assertion failed\n");
-        exit(1);
+static char *func_idents[50];
+static int num_funcs = 0;
+
+
+static void TypecheckLiteral(Literal *literal) {
+
+}
+
+static void TypecheckBinaryOp(BinaryOp *binaryop) {
+    TypecheckExpr(binaryop->lhs);
+    TypecheckExpr(binaryop->rhs);
+}
+
+static void TypecheckExpr(Ast *expr) {
+    switch (expr->type) {
+        case AST_INT_LITERAL: {TypecheckLiteral((Literal *) expr);} break;
+        case AST_BINARYOP:    {TypecheckBinaryOp((BinaryOp *) expr);} break;
+        default: {
+            printf("is this even possible\n");
+            exit(1);
+        };
     }
 }
 
-static void TypecheckExpr(struct AstNode *expr) {
-}
-
-static void TypecheckVarDecl(struct AstNode *vardecl) {
-    Assert(vardecl->type == AST_DECL);
-}
-
-static void TypecheckVarAssign(struct AstNode *varassign) {
-    Assert(varassign->type == AST_ASSIGN);
-    TypecheckExpr(varassign->rhs);
-}
-
-static void TypecheckIfStmt(struct AstNode *ifstmt) {
-    Assert(ifstmt->type == AST_IF);
-    TypecheckExpr(ifstmt->lhs);
-    TypecheckCompoundStmt(ifstmt->rhs);
-}
-
-static void TypecheckWhileLoop(struct AstNode *whileloop) {
-    Assert(whileloop->type == AST_WHILE);
-    TypecheckExpr(whileloop->lhs);
-    TypecheckCompoundStmt(whileloop->rhs);
-}
-
-static void TypecheckCompoundStmt(struct AstNode *compoundstmt) {
-    struct AstNode *stmt = compoundstmt;
-    while (stmt != 0 && stmt->lhs != 0) {
-        Assert(stmt->type == AST_COMPOUND);
-        switch (stmt->lhs->type) {
-            case AST_PRINT:   {} break;
-            case AST_DECL:    {TypecheckVarDecl(stmt->lhs);} break;
-            case AST_ASSIGN : {TypecheckVarAssign(stmt->lhs);} break;
-            case AST_IF:      {TypecheckIfStmt(stmt->lhs);} break;
-            case AST_WHILE:   {TypecheckWhileLoop(stmt->lhs);} break;
-            default: {
-                printf("invalid statement in compound '%d'\n", stmt->lhs->type);
-                exit(1);
-            } break;
-        }
-
-        stmt = stmt->rhs;
+static void TypecheckVarDecl(VarDecl *vardecl) {
+    if (vardecl->expr != 0) {
+        TypecheckExpr(vardecl->expr);
     }
 }
 
-static void TypecheckFuncdecl(struct AstNode *funcdecl) {
-    Assert(funcdecl->type == AST_FUNCTION);
-    TypecheckCompoundStmt(funcdecl->rhs);
+static void TypecheckVarAssign(VarAssign *varassign) {
+    TypecheckExpr(varassign->expr);
 }
 
-void TypecheckFile(struct AstNode *ast) {
-    struct AstNode *stmt = ast;
-    while (stmt != 0 && stmt->lhs != 0) {
-        switch (stmt->lhs->type) {
-            case AST_FUNCTION: {TypecheckFuncdecl(stmt->lhs);} break;
-            default: {
-                printf("invalid global statment\n");
-                exit(1);
-            } break;
+static void TypecheckIfStmt(IfStmt *ifstmt) {
+    TypecheckExpr(ifstmt->condition);
+    // TypecheckBlock(ifstmt->if_block);
+}
+
+static void TypecheckWhileLoop(WhileLoop *whileloop) {
+    TypecheckExpr(whileloop->condition);
+    TypecheckBlock(whileloop->block);
+}
+
+static void TypecheckForLoop(ForLoop *forloop) {
+    TypecheckVarDecl(forloop->pre_operation);
+    TypecheckExpr(forloop->condition);
+    TypecheckVarAssign(forloop->post_operation);
+    TypecheckBlock(forloop->block);
+}
+
+static void TypecheckBlock(Block *block) {
+    Block *child_block = block;
+    while (child_block != 0 && child_block->stmt != 0) {
+        switch (child_block->stmt->type) {
+            case AST_VARDECL:   {TypecheckVarDecl((VarDecl *) child_block->stmt);} break;
+            case AST_VARASSIGN: {TypecheckVarAssign((VarAssign *)child_block->stmt);} break;
+            case AST_IFSTMT:    {TypecheckIfStmt((IfStmt *) child_block->stmt);} break;
+            case AST_WHILELOOP: {TypecheckWhileLoop((WhileLoop *) child_block->stmt);} break;
+            case AST_FORLOOP:   {TypecheckForLoop((ForLoop *) child_block->stmt);} break;
         }
 
-        stmt = stmt->rhs;
+        child_block = child_block->glue;
+    }
+}
+
+static void TypecheckFuncDecl(FuncDecl *funcdecl) {
+    TypecheckBlock(funcdecl->block);
+}
+
+void TypecheckFile(File *file) {
+    File *child_file = file;
+    while (child_file != 0 && child_file->funcdecl != 0) {
+        func_idents[num_funcs] = strdup(child_file->funcdecl->ident);
+        num_funcs += 1;
+        child_file = child_file->glue;
+    }
+
+    child_file = file;
+    while (child_file != 0 && child_file->funcdecl != 0) {
+        TypecheckFuncDecl(child_file->funcdecl);
+        child_file = child_file->glue;
     }
 }

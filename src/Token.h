@@ -1,5 +1,5 @@
-#ifndef CLITTLE_TOKEN_H
-#define CLITTLE_TOKEN_H
+#ifndef MINIC_TOKEN_H
+#define MINIC_TOKEN_H
 #include "Common.h"
 
 
@@ -20,23 +20,24 @@ enum TokenType {
     TOKEN_VOID,
 
     TOKEN_INVALID,
-    TOKEN_EQUAL,
     TOKEN_INT_LITERAL,
-    TOKEN_SEMICOLON,
     TOKEN_IDENT,
-    TOKEN_LEFT_CURLY_BRAC,
-    TOKEN_RIGHT_CURLY_BRAC,
-    TOKEN_LEFT_PAREN,
-    TOKEN_RIGHT_PAREN
-};
+    TOKEN_LEFT_PAREN        = '(',
+    TOKEN_RIGHT_PAREN       = ')',
+    TOKEN_SEMICOLON         = ';',
+    TOKEN_EQUAL             = '=',
+    TOKEN_LEFT_CURLY_BRAC   = '{',
+    TOKEN_RIGHT_CURLY_BRAC  = '}',
+
+} typedef TokenType;
 
 struct Token {
     int line;
-    enum TokenType type;
+    TokenType type;
     union {
         int intvalue;
         char *strvalue;
     };
-};
+} typedef Token;
 
-#endif // CLITTLE_TOKEN_H
+#endif // MINIC_TOKEN_H

@@ -15,7 +15,8 @@ int main() {
     }
 
     fseek(file, 0, SEEK_END);
-    struct Lexer lexer;
+    Lexer lexer;
+    lexer.filename = "TestMain.c";
     lexer.line = 1;
     lexer.char_idx = 0;
     lexer.text_size = ftell(file);
@@ -24,15 +25,15 @@ int main() {
     fread(lexer.text, 1, lexer.text_size, file);
 
     ReadToken(&lexer);
-    struct AstNode *ast = ParseFile(&lexer);
-    TypecheckFile(ast);
+    File *cfile = ParseFile(&lexer);
+    TypecheckFile(cfile);
     file = fopen("TestMain.asm", "w");
     if (file == 0) {
         printf("could not write to file\n");
         return 1;
     }
 
-    Codegenx86File(file, ast);
+    Codegenx86File(file, cfile);
     fclose(file);
     return 0;
 }

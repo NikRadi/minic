@@ -6,7 +6,7 @@
 #define IS_DIGIT(x) ('0' <= x && x <= '9')
 
 
-static char *ReadIdent(struct Lexer *lexer) {
+static char *ReadIdent(Lexer *lexer) {
     int ident_start = lexer->char_idx;
     int ident_len = 1;
     while (TRUE) {
@@ -29,7 +29,7 @@ static char *ReadIdent(struct Lexer *lexer) {
     return result;
 }
 
-static int ReadNumber(struct Lexer *lexer) {
+static int ReadNumber(Lexer *lexer) {
     int result = 0;
     while (TRUE) {
         int digit = lexer->text[lexer->char_idx] - '0';
@@ -48,7 +48,7 @@ static int ReadNumber(struct Lexer *lexer) {
     return result;
 }
 
-static void TryReadPair(struct Lexer *lexer, enum TokenType type1, char char2, enum TokenType type2) {
+static void TryReadPair(Lexer *lexer, TokenType type1, char char2, TokenType type2) {
     int peek_idx = lexer->char_idx + 1;
     if (peek_idx < lexer->text_size && lexer->text[peek_idx] == char2) {
         lexer->char_idx += 1;

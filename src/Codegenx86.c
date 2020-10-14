@@ -1,32 +1,23 @@
 #include "Codegenx86.h"
 
 
-static void Codegenx86CompoundStmt(FILE *file, struct AstNode *compound_stmt);
+static void Codegenx86Block(FILE *file, Block *block);
+static int Codegenx86Expr(FILE *file, Ast *expr, Bool is_jump, int label);
 
 
-static enum Bool is_reg_free[4];
+static Bool is_reg_free[4];
 static char *regs[] = {"r8", "r9", "r10", "r11"};
-static char *inverse_branch_compares[] = {"jne", "je", "jge", "jg", "gle", "ge"};
+static char *var_idents[32];
 static char *compares[] = {"sete", "setne", "setl", "setle", "setg", "setge"};
+static char *inverse_branch_compares[] = {"jne", "je", "jge", "jg", "gle", "ge"};
 static int num_vars = 0;
-static char *vars[8];
-static int labelid = 0;
+static int num_labels = 0;
 
 
-static int NewLabel() {
-    int id = labelid;
-    labelid += 1;
-    return id;
-}
-
-static void FreeRegisters() {
+static void FreeRegs() {
     for (int i = 0; i < 4; ++i) {
         is_reg_free[i] = TRUE;
     }
-}
-
-static void FreeRegister(int regid) {
-    is_reg_free[regid] = TRUE;
 }
 
 static int AllocRegister() {
@@ -37,206 +28,215 @@ static int AllocRegister() {
         }
     }
 
-    printf("internal error, out of registers\n");
+    printf("internal error: out of registers\n");
     exit(1);
 }
 
 static int FindMemLocation(char *ident) {
-        int identid = -1;
-        for (int i = 0; i < num_vars; ++i) {
-            if (strcmp(ident, vars[i]) == 0) {
-                identid = i;
-                break;
-            }
+    int regid = -1;
+    for (int i = 0; i < num_vars; ++i) {
+        if (strcmp(ident, var_idents[i]) == 0) {
+            regid = i;
+            break;
         }
+    }
 
-        if (identid == -1) {
-            printf("internal error, could not find identifier '%s'\n", ident);
-            exit(1);
-        }
+    if (regid == -1) {
+        printf("internal error: could not find memory location of variable '%s'\n", ident);
+        exit(1);
+    }
 
-        return identid * 8;
+    return regid;
 }
 
-static int Codegenx86Expr(FILE *file, struct AstNode *expr, enum AstNodeType parent_ast, int label) {
-    if (expr->type == AST_INT_LITERAL) {
+static int NewLabel() {
+    int id = num_labels;
+    num_labels += 1;
+    return id;
+}
+
+static int Codegenx86Literal(FILE *file, Literal *literal) {
+    if (literal->info.type == AST_INT_LITERAL) {
         int regid = AllocRegister();
         fprintf(file,
             "\tmov\t\t%s, %d\n",
-            regs[regid],
-            expr->intvalue
+            regs[regid], literal->intvalue
         );
 
         return regid;
     }
-    else if (expr->type == AST_IDENT) {
-        int identid = FindMemLocation(expr->strvalue);
-        int regid = AllocRegister();
+
+    printf("internal error: invalid literal type '%d'\n", literal->info.type);
+    exit(1);
+}
+
+static int Codegenx86BinaryOp(FILE *file, BinaryOp *binaryop, Bool is_jump, int label) {
+    int regid_lhs = Codegenx86Expr(file, binaryop->lhs, FALSE, -1);
+    int regid_rhs = Codegenx86Expr(file, binaryop->rhs, FALSE, -1);
+    switch (binaryop->optype) {
+        case OP_ISEQUAL:
+        case OP_NOTEQUAL:
+        case OP_ISLESS_THAN:
+        case OP_ISLESS_THAN_EQUAL:
+        case OP_ISGREATER_THAN:
+        case OP_ISGREATER_THAN_EQUAL: {
+            if (is_jump) {
+                fprintf(file,
+                    "\tcmp\t\t%s, %s\n"
+                    "\t%s\t\t%d\n",
+                    regs[regid_lhs], regs[regid_rhs],
+                    inverse_branch_compares[binaryop->optype - OP_ISEQUAL], label
+                );
+            }
+            else {
+                fprintf(file,
+                    "\tcmp\t\t%s, %s\n"
+                    "\t%s\t%sb\n"
+                    "\tand\t\t%s, 0xff\n",
+                    regs[regid_lhs], regs[regid_rhs],
+                    compares[binaryop->optype - OP_ISEQUAL], regs[regid_lhs],
+                    regs[regid_lhs]
+                );
+            }
+        } break;
+        default: {
+            printf("internal error: binary operator '%d' not implemented\n", binaryop->optype);
+            exit(1);
+        };
+    }
+
+    return 0;
+}
+
+static int Codegenx86Expr(FILE *file, Ast *expr, Bool is_jump, int label) {
+    switch (expr->type) {
+        case AST_INT_LITERAL: return Codegenx86Literal(file, (Literal *) expr);
+        case AST_BINARYOP:    return Codegenx86BinaryOp(file, (BinaryOp *) expr, is_jump, label);
+        default: {
+            printf("internal error: invalid expression type '%d'\n", expr->type);
+            exit(1);
+        };
+    }
+}
+
+static void Codegenx86VarDecl(FILE *file, VarDecl *vardecl) {
+    var_idents[num_vars] = strdup(vardecl->ident);
+    if (vardecl->expr != 0) {
+        int regid = Codegenx86Expr(file, vardecl->expr, FALSE, -1);
+        FreeRegs();
         fprintf(file,
-            "\tmov\t\t%s, [rbp-%d]\n",
-            regs[regid],
-            identid
+            "\tmov\t\t[rbp-%d], %s\n",
+            num_vars, regs[regid]
         );
-
-        return regid;
     }
-    else {
-        // If we recurse into rhs first we don't run out of registers
-        int regid1 = Codegenx86Expr(file, expr->lhs, expr->type, -1);
-        int regid2 = Codegenx86Expr(file, expr->rhs, expr->type, -1);
-        switch (expr->type) {
-            case AST_ADD: {
-                fprintf(file, "\tadd\t\t%s, %s\n", regs[regid1], regs[regid2]);
-            } break;
-            case AST_SUB: {
-                fprintf(file, "\tsub\t\t%s, %s\n", regs[regid1], regs[regid2]);
-            } break;
-            case AST_MUL: {
-                fprintf(file, "\timul\t%s, %s\n", regs[regid1], regs[regid2]);
-            } break;
-            case AST_ISEQUAL:
-            case AST_NOTEQUAL:
-            case AST_ISLESS_THAN:
-            case AST_ISLESS_THAN_EQUAL:
-            case AST_ISGREATER_THAN:
-            case AST_ISGREATER_THAN_EQUAL: {
-                if (parent_ast == AST_IF || parent_ast == AST_WHILE) {
-                    fprintf(file,
-                        "\tcmp\t\t%s, %s\n"
-                        "\t%s\t\tL%d\n",
-                        regs[regid1], regs[regid2],
-                        inverse_branch_compares[expr->type - AST_ISEQUAL], label
-                    );
-                }
-                else {
-                    fprintf(file,
-                        "\tcmp\t\t%s, %s\n"
-                        "\t%s\t%sb\n"
-                        "\tand\t\t%s, 0xff\n",
-                        regs[regid1], regs[regid2],
-                        compares[expr->type - AST_ISEQUAL], regs[regid1],
-                        regs[regid1]
-                    );
-                }
-            } break;
-            default: {
-                printf("unknown operator type\n");
-                exit(1);
-            } break;
-        }
 
-        FreeRegister(regid2);
-        return regid1;
-    }
+    num_vars += 1;
 }
 
-static void Codegenx86PrintStmt(FILE *file, struct AstNode *print_stmt) {
-    int regid = Codegenx86Expr(file, print_stmt->lhs, AST_PRINT, -1);
-    FreeRegisters();
-    fprintf(file,
-        "\tmov\t\trcx, %s\n"
-        "\tcall\tprintint\n",
-        regs[regid]
-    );
-}
-
-static void Codegenx86VarAssign(FILE *file, struct AstNode *varassign) {
-    char *varident = varassign->lhs->strvalue;
-    int identid = FindMemLocation(varident);
-    int regid = Codegenx86Expr(file, varassign->rhs, AST_ASSIGN, -1);
-    FreeRegisters();
+static void Codegenx86VarAssign(FILE *file, VarAssign *varassign) {
+    int var_location = FindMemLocation(varassign->ident);
+    int regid = Codegenx86Expr(file, varassign->expr, FALSE, -1);
+    FreeRegs();
     fprintf(file,
         "\tmov\t\t[rbp-%d], %s\n",
-        identid,
-        regs[regid]
+        var_location, regs[regid]
     );
 }
 
-static void Codegenx86IfStmt(FILE *file, struct AstNode *ifstmt) {
-    enum Bool has_else = ifstmt->rhs->rhs != 0;
+static void Codegenx86IfStmtElse(FILE *file, IfStmt *elsestmt, int end_label) {
+    int false_label = NewLabel();
+    if (elsestmt->condition != 0) {
+        Codegenx86Expr(file, elsestmt->condition, TRUE, false_label);
+    }
+
+    Codegenx86Block(file, elsestmt->block);
+    if (elsestmt->elsestmt != 0) {
+        fprintf(file,
+            "\tjmp\t\tL%d\n"
+            "L%d:\n",
+            end_label, false_label
+        );
+
+        Codegenx86IfStmtElse(file, elsestmt->elsestmt, end_label);
+    }
+}
+
+static void Codegenx86IfStmt(FILE *file, IfStmt *ifstmt) {
     int false_label = NewLabel();
     int end_label = -1;
-    Codegenx86Expr(file, ifstmt->lhs, AST_IF, false_label);
-    Codegenx86CompoundStmt(file, ifstmt->rhs->lhs);
-    if (has_else) {
+    Codegenx86Expr(file, ifstmt->condition, TRUE, false_label);
+    Codegenx86Block(file, ifstmt->block);
+    if (ifstmt->elsestmt != 0) {
         end_label = NewLabel();
         fprintf(file, "\tjmp\t\tL%d\n", end_label);
     }
 
     fprintf(file, "L%d:\n", false_label);
-    FreeRegisters();
-    if (has_else) {
-        Codegenx86CompoundStmt(file, ifstmt->rhs->rhs);
+    if (ifstmt->elsestmt != 0) {
+        Codegenx86IfStmtElse(file, ifstmt->elsestmt, end_label);
         fprintf(file, "L%d:\n", end_label);
     }
 }
 
-static void Codegenx86WhileLoop(FILE *file, struct AstNode *whileloop) {
+static void Codegenx86WhileLoop(FILE *file, WhileLoop *whileloop) {
     int start_label = NewLabel();
     int end_label = NewLabel();
-    fprintf(file, "L%d:\n", start_label);
-    Codegenx86Expr(file, whileloop->lhs, AST_WHILE, end_label);
-    Codegenx86CompoundStmt(file, whileloop->rhs);
+    fprintf(file, "L%d\n", start_label);
+    Codegenx86Expr(file, whileloop->condition, TRUE, end_label);
+    Codegenx86Block(file, whileloop->block);
     fprintf(file,
         "\tjmp\t\tL%d\n"
-        "L%d:\n",
-        start_label,
-        end_label
+        "L%d\n",
+        start_label, end_label
     );
 }
 
-static void Codegenx86CompoundStmt(FILE *file, struct AstNode *compund_stmt) {
-    struct AstNode *current_compound_stmt = compund_stmt;
-    while (TRUE) {
-        if (current_compound_stmt->lhs == 0) {
-            break;
-        }
-
-        switch (current_compound_stmt->lhs->type) {
-            case AST_PRINT:  {Codegenx86PrintStmt(file, current_compound_stmt->lhs);} break;
-            case AST_ASSIGN: {Codegenx86VarAssign(file, current_compound_stmt->lhs);} break;
-            case AST_IF:     {Codegenx86IfStmt(file, current_compound_stmt->lhs);} break;
-            case AST_WHILE:  {Codegenx86WhileLoop(file, current_compound_stmt->lhs);} break;
-            case AST_DECL: {
-                vars[num_vars] = strdup(current_compound_stmt->lhs->strvalue);
-                num_vars += 1;
-            } break;
+static void Codegenx86Block(FILE *file, Block *block) {
+    Block *child_block = block;
+    while (child_block != 0 && child_block->stmt != 0) {
+        switch (child_block->stmt->type) {
+            case AST_VARDECL:   {Codegenx86VarDecl(file, (VarDecl *) child_block->stmt);} break;
+            case AST_VARASSIGN: {Codegenx86VarAssign(file, (VarAssign *) child_block->stmt);} break;
+            case AST_IFSTMT:    {Codegenx86IfStmt(file, (IfStmt *) child_block->stmt);} break;
+            case AST_WHILELOOP: {Codegenx86WhileLoop(file, (WhileLoop *) child_block->stmt);} break;
             default: {
-                printf("internal error, invalid statement in compound '%d'\n", current_compound_stmt->lhs->type);
+                printf("internal error: invalid statement type '%d'\n", child_block->stmt->type);
                 exit(1);
-            } break;
+            };
         }
 
-        if (current_compound_stmt->rhs == 0) {
-            break;
-        }
-
-        current_compound_stmt = current_compound_stmt->rhs;
+        child_block = child_block->glue;
     }
 }
 
-static void Codegenx86FuncDecl(FILE *file, struct AstNode *funcdecl) {
+static void Codegenx86FuncDecl(FILE *file, FuncDecl *funcdecl) {
+    int num_vars_in_func = 10;
+    int bytes = 32 + (num_vars_in_func * 8);
     fprintf(file,
         "%s:\n"
         "\tpush\trbp\n"
         "\tmov\t\trbp, rsp\n"
-        "\tsub\t\trsp, 48\n",
-        funcdecl->lhs->strvalue
+        "\tsub\t\trsp, %d\n",
+        funcdecl->ident,
+        bytes
     );
 
-    Codegenx86CompoundStmt(file, funcdecl->rhs);
-    fputs(
-        "\tadd\t\trsp, 48\n"
+    Codegenx86Block(file, funcdecl->block);
+    fprintf(file,
+        "\tadd\t\trsp, %d\n"
         "\txor\t\trax, rax\n",
-        file
+        bytes
     );
 
-    if (strcmp(funcdecl->lhs->strvalue, "main") == 0) {
-        fputs("\tcall\tExitProcess\n\n", file);
+    if (strcmp(funcdecl->ident, "main") == 0) {
+        fputs("\tcall\tExitProcess", file);
+    }
+    else {
+        fputs("\tret", file);
     }
 }
 
-void Codegenx86File(FILE *file, struct AstNode *ast) {
+void Codegenx86File(FILE *file, File *cfile) {
     fputs(
         "bits 64\n"
         "default rel\n"
@@ -255,18 +255,15 @@ void Codegenx86File(FILE *file, struct AstNode *ast) {
         "\tlea\t\trcx, [fmt]\n"
         "\tcall\tprintf\n"
         "\tadd\t\trsp, 32\n"
-        "\tret\n"
-        "\n",
+        "\tret",
         file
     );
 
-    FreeRegisters();
-    struct AstNode *stmt = ast;
-    while (stmt != 0 && stmt->lhs != 0) {
-        switch (stmt->lhs->type) {
-            case AST_FUNCTION: {Codegenx86FuncDecl(file, stmt->lhs);} break;
-        }
-
-        stmt = stmt->rhs;
+    FreeRegs();
+    File *child_file = cfile;
+    while (child_file != 0 && child_file->funcdecl != 0) {
+        fputs("\n\n", file);
+        Codegenx86FuncDecl(file, child_file->funcdecl);
+        child_file = child_file->glue;
     }
 }
