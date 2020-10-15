@@ -109,8 +109,7 @@ void ReadToken(struct Lexer *lexer) {
             }
             else if (IS_ALPHA(c) || c == '_') {
                 lexer->peek.strvalue = ReadIdent(lexer);
-                if (strcmp(lexer->peek.strvalue, "print") == 0) lexer->peek.type = TOKEN_PRINT;
-                else if (strcmp(lexer->peek.strvalue, "int") == 0) lexer->peek.type = TOKEN_INT;
+                if (strcmp(lexer->peek.strvalue, "int") == 0) lexer->peek.type = TOKEN_INT;
                 else if (strcmp(lexer->peek.strvalue, "if") == 0) lexer->peek.type = TOKEN_IF;
                 else if (strcmp(lexer->peek.strvalue, "else") == 0) lexer->peek.type = TOKEN_ELSE;
                 else if (strcmp(lexer->peek.strvalue, "while") == 0) lexer->peek.type = TOKEN_WHILE;

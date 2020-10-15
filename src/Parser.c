@@ -1,9 +1,6 @@
 #include "Parser.h"
 
 
-#define NEW_AST(type) (type *) malloc(sizeof(type));
-
-
 static int op_precedence[] = {
     0,              // EOF
     10, 10,         //  +,  -
@@ -11,6 +8,18 @@ static int op_precedence[] = {
     30, 30,         // ==, !=
     40, 40, 40, 40  //  <, <=, >, >=
     // Non-operators
+    -1, -1, -1, -1,
+    -1, -1, -1, -1,
+    -1, -1, -1, -1,
+    -1, -1, -1, -1,
+    -1, -1, -1, -1,
+    -1, -1, -1, -1,
+    -1, -1, -1, -1,
+    -1, -1, -1, -1,
+    -1, -1, -1, -1,
+    -1, -1, -1, -1,
+    -1, -1, -1, -1,
+    -1, -1, -1, -1,
     -1, -1, -1, -1,
     -1, -1, -1, -1,
     -1, -1, -1, -1,
@@ -60,8 +69,16 @@ static OperatorType ToOperatorType(TokenType type) {
 static Literal *ParseLiteral(Lexer *lexer) {
     if (lexer->token.type == TOKEN_INT_LITERAL) {
         Literal *literal = NEW_AST(Literal);
-        literal->info.type = AST_INT_LITERAL;
+        literal->info.type = AST_LITERAL_INT;
         literal->intvalue = lexer->token.intvalue;
+        ReadToken(lexer);
+        return literal;
+    }
+
+    if (lexer->token.type == TOKEN_IDENT) {
+        Literal *literal = NEW_AST(Literal);
+        literal->info.type = AST_LITERAL_IDENT;
+        literal->strvalue = strdup(lexer->token.strvalue);
         ReadToken(lexer);
         return literal;
     }
@@ -71,7 +88,6 @@ static Literal *ParseLiteral(Lexer *lexer) {
 }
 
 static Ast *ParseExpr_(Lexer *lexer, int min_precedence) {
-    ASSERT(lexer->token.type == TOKEN_INT_LITERAL);
     Ast *lhs = (Ast *) ParseLiteral(lexer);
     while (op_precedence[lexer->token.type] > min_precedence) {
         int precedence = op_precedence[lexer->token.type];
@@ -194,6 +210,23 @@ static WhileLoop *ParseWhileLoop(Lexer *lexer) {
     return whileloop;
 }
 
+static ForLoop *ParseForLoop(Lexer *lexer) {
+    ASSERT(lexer->token.type == TOKEN_FOR);
+    ForLoop *forloop = NEW_AST(ForLoop);
+    forloop->info.type = AST_FORLOOP;
+    ReadToken(lexer);
+    Expect(lexer, TOKEN_LEFT_PAREN);
+    ReadToken(lexer);
+    forloop->pre_operation = ParseVarAssign(lexer);
+    forloop->condition = ParseExpr(lexer);
+    Expect(lexer, TOKEN_SEMICOLON);
+    ReadToken(lexer);
+    forloop->post_operation = ParseVarAssign(lexer);
+    Expect(lexer, TOKEN_RIGHT_PAREN);
+    forloop->block = ParseBlock(lexer);
+    return forloop;
+}
+
 static Block *ParseBlock(Lexer *lexer) {
     ReadToken(lexer);
     Expect(lexer, TOKEN_LEFT_CURLY_BRAC);
@@ -220,8 +253,9 @@ static Block *ParseBlock(Lexer *lexer) {
             case TOKEN_IDENT: {child_block->stmt = (Ast *) ParseVarAssign(lexer);} break;
             case TOKEN_IF:    {child_block->stmt = (Ast *) ParseIfStmt(lexer);} break;
             case TOKEN_WHILE: {child_block->stmt = (Ast *) ParseWhileLoop(lexer);} break;
+            case TOKEN_FOR:   {child_block->stmt = (Ast *) ParseForLoop(lexer);} break;
             default: {
-                printf("Test %d\n", lexer->peek.type);
+                printf("Test %d\n", lexer->token.type);
                 exit(1);
             } break;
         }

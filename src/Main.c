@@ -29,6 +29,7 @@ int main() {
 
     FileInfo info;
     info.num_funcs = 0;
+    info.num_vars = 0;
     info.filename = lexer.filename;
     info.current_func = 0;
     TypecheckFile(&info, cfile);

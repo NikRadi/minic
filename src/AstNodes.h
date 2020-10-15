@@ -3,8 +3,12 @@
 #include "Common.h"
 
 
+#define NEW_AST(type) (type *) malloc(sizeof(type));
+
+
 enum AstType {
-    AST_INT_LITERAL,
+    AST_LITERAL_INT,
+    AST_LITERAL_IDENT,
     AST_BINARYOP,
     AST_VARDECL,
     AST_VARASSIGN,
@@ -81,7 +85,7 @@ struct WhileLoop {
 
 struct ForLoop {
     Ast info;
-    VarDecl *pre_operation;
+    VarAssign *pre_operation;
     Ast *condition;
     VarAssign *post_operation;
     Block *block;

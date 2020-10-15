@@ -7,10 +7,8 @@ static int Codegenx86Expr(FileInfo *info, Ast *expr, Bool is_jump, int label);
 
 static Bool is_reg_free[4];
 static char *regs[] = {"r8", "r9", "r10", "r11"};
-static char *var_idents[32];
 static char *compares[] = {"sete", "setne", "setl", "setle", "setg", "setge"};
 static char *inverse_branch_compares[] = {"jne", "je", "jge", "jg", "gle", "ge"};
-static int num_vars = 0;
 static int num_labels = 0;
 
 
@@ -32,10 +30,10 @@ static int AllocRegister() {
     exit(1);
 }
 
-static int FindMemLocation(char *ident) {
+static int FindMemLocation(FileInfo *info, char *ident) {
     int regid = -1;
-    for (int i = 0; i < num_vars; ++i) {
-        if (strcmp(ident, var_idents[i]) == 0) {
+    for (int i = 0; i < info->num_vars; ++i) {
+        if (strcmp(ident, info->var_idents[i]) == 0) {
             regid = i;
             break;
         }
@@ -56,11 +54,22 @@ static int NewLabel() {
 }
 
 static int Codegenx86Literal(FileInfo *info, Literal *literal) {
-    if (literal->info.type == AST_INT_LITERAL) {
+    if (literal->info.type == AST_LITERAL_INT) {
         int regid = AllocRegister();
         fprintf(info->asmfile,
             "\tmov\t\t%s, %d\n",
             regs[regid], literal->intvalue
+        );
+
+        return regid;
+    }
+
+    if (literal->info.type == AST_LITERAL_IDENT) {
+        int regid = AllocRegister();
+        int mem_location = FindMemLocation(info, literal->strvalue);
+        fprintf(info->asmfile,
+            "\tmov\t\t%s, [rbp-%d]\n",
+            regs[regid], mem_location
         );
 
         return regid;
@@ -74,6 +83,7 @@ static int Codegenx86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, 
     int regid_lhs = Codegenx86Expr(info, binaryop->lhs, FALSE, -1);
     int regid_rhs = Codegenx86Expr(info, binaryop->rhs, FALSE, -1);
     switch (binaryop->optype) {
+        case OP_ADD: {fprintf(info->asmfile, "\tadd\t\t%s, %s\n", regs[regid_lhs], regs[regid_rhs]);} break;
         case OP_ISEQUAL:
         case OP_NOTEQUAL:
         case OP_ISLESS_THAN:
@@ -110,8 +120,9 @@ static int Codegenx86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, 
 
 static int Codegenx86Expr(FileInfo *info, Ast *expr, Bool is_jump, int label) {
     switch (expr->type) {
-        case AST_INT_LITERAL: return Codegenx86Literal(info, (Literal *) expr);
-        case AST_BINARYOP:    return Codegenx86BinaryOp(info, (BinaryOp *) expr, is_jump, label);
+        case AST_LITERAL_INT:
+        case AST_LITERAL_IDENT: return Codegenx86Literal(info, (Literal *) expr);
+        case AST_BINARYOP:      return Codegenx86BinaryOp(info, (BinaryOp *) expr, is_jump, label);
         default: {
             printf("internal error: invalid expression type '%d'\n", expr->type);
             exit(1);
@@ -120,21 +131,22 @@ static int Codegenx86Expr(FileInfo *info, Ast *expr, Bool is_jump, int label) {
 }
 
 static void Codegenx86VarDecl(FileInfo *info, VarDecl *vardecl) {
-    var_idents[num_vars] = strdup(vardecl->ident);
+    info->var_idents[info->num_vars] = vardecl->ident;
+
     if (vardecl->expr != 0) {
         int regid = Codegenx86Expr(info, vardecl->expr, FALSE, -1);
         FreeRegs();
         fprintf(info->asmfile,
             "\tmov\t\t[rbp-%d], %s\n",
-            num_vars, regs[regid]
+            info->num_vars, regs[regid]
         );
     }
 
-    num_vars += 1;
+    info->num_vars += 1;
 }
 
 static void Codegenx86VarAssign(FileInfo *info, VarAssign *varassign) {
-    int var_location = FindMemLocation(varassign->ident);
+    int var_location = FindMemLocation(info, varassign->ident);
     int regid = Codegenx86Expr(info, varassign->expr, FALSE, -1);
     FreeRegs();
     fprintf(info->asmfile,
