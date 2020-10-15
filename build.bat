@@ -22,16 +22,11 @@ IF "%1" == "" (
 IF "%1" == "test" (
     ECHO Testing...
     CALL %BinDir%\minic.exe
-    IF %ERRORLEVEL% == 1 (
-        ECHO Return code: %ERRORLEVEL%
-    )
-
-    IF %ERRORLEVEL% == "0" (
-        nasm -f win64 -o TestMain.obj TestMain.asm
-        link /nologo TestMain.obj /defaultlib:msvcrt.lib /defaultlib:legacy_stdio_definitions.lib /defaultlib:Kernel32.lib /subsystem:console /out:TestMain.exe
-        ECHO TestMain.exe
-        CALL TestMain.exe
-    )
+    nasm -f win64 -o TestMain.obj TestMain.asm
+    SET Libs=/DEFAULTLIB:msvcrt.lib /DEFAULTLIB:legacy_stdio_definitions.lib /DEFAULTLIB:Kernel32.lib
+    link /NOLOGO TestMain.obj /DEFAULTLIB:PrintInt.lib %Libs% /SUBSYSTEM:console /OUT:TestMain.exe
+    ECHO TestMain.exe
+    CALL TestMain.exe
 )
 
 IF "%1" == "clean" (

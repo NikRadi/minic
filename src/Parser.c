@@ -154,17 +154,35 @@ static VarAssign *ParseVarAssign(Lexer *lexer) {
     VarAssign *varassign = NEW_AST(VarAssign);
     varassign->info.type = AST_VARASSIGN;
     varassign->ident = strdup(lexer->token.strvalue);
-    varassign->expr = 0;
     ReadToken(lexer);
     Expect(lexer, TOKEN_EQUAL);
 
     ReadToken(lexer);
     varassign->expr = ParseExpr(lexer);
-    if (lexer->token.type == TOKEN_SEMICOLON) {
-        ReadToken(lexer);
-    }
+    Expect(lexer, TOKEN_SEMICOLON);
+    ReadToken(lexer);
 
     return varassign;
+}
+
+static FuncCall *ParseFuncCall(Lexer *lexer) {
+    ASSERT(lexer->token.type == TOKEN_IDENT);
+    FuncCall *funccall = NEW_AST(FuncCall);
+    funccall->info.type = AST_FUNCCALL;
+    funccall->ident = strdup(lexer->token.strvalue);
+    funccall->arg = 0;
+    ReadToken(lexer);
+    Expect(lexer, TOKEN_LEFT_PAREN);
+    ReadToken(lexer);
+    if (lexer->token.type != TOKEN_RIGHT_PAREN) {
+        funccall->arg = ParseExpr(lexer);
+    }
+
+    Expect(lexer, TOKEN_RIGHT_PAREN);
+    ReadToken(lexer);
+    Expect(lexer, TOKEN_SEMICOLON);
+    ReadToken(lexer);
+    return funccall;
 }
 
 static IfStmt *ParseIfStmt(Lexer *lexer) {
@@ -250,10 +268,20 @@ static Block *ParseBlock(Lexer *lexer) {
 
         switch (lexer->token.type) {
             case TOKEN_INT:   {child_block->stmt = (Ast *) ParseVarDecl(lexer);} break;
-            case TOKEN_IDENT: {child_block->stmt = (Ast *) ParseVarAssign(lexer);} break;
             case TOKEN_IF:    {child_block->stmt = (Ast *) ParseIfStmt(lexer);} break;
             case TOKEN_WHILE: {child_block->stmt = (Ast *) ParseWhileLoop(lexer);} break;
             case TOKEN_FOR:   {child_block->stmt = (Ast *) ParseForLoop(lexer);} break;
+            case TOKEN_IDENT: {
+                if (lexer->peek.type == TOKEN_EQUAL) {
+                    child_block->stmt = (Ast *) ParseVarAssign(lexer);
+                }
+                else if (lexer->peek.type == TOKEN_LEFT_PAREN) {
+                    child_block->stmt = (Ast *) ParseFuncCall(lexer);
+                }
+                else {
+                    ThrowError(lexer, "cool error message\n");
+                }
+            } break;
             default: {
                 printf("Test %d\n", lexer->token.type);
                 exit(1);

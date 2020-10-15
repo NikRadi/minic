@@ -105,6 +105,12 @@ static void TypecheckForLoop(FileInfo *info, ForLoop *forloop) {
     glue_loop->glue = parent_glue;
 }
 
+static void TypecheckFuncCall(FileInfo *info, FuncCall *funccall) {
+    if (funccall->arg != 0) {
+        TypecheckExpr(info, funccall->arg);
+    }
+}
+
 static void TypecheckBlock(FileInfo *info, Block *block) {
     Block *child_block = block;
     while (child_block != 0 && child_block->stmt != 0) {
@@ -115,6 +121,11 @@ static void TypecheckBlock(FileInfo *info, Block *block) {
             case AST_IFSTMT:    {TypecheckIfStmt(info, (IfStmt *) child_block->stmt);} break;
             case AST_WHILELOOP: {TypecheckWhileLoop(info, (WhileLoop *) child_block->stmt);} break;
             case AST_FORLOOP:   {TypecheckForLoop(info, (ForLoop *) child_block->stmt);} break;
+            case AST_FUNCCALL:  {TypecheckFuncCall(info, (FuncCall *) child_block->stmt);} break;
+            default: {
+                printf("invalid statement '%d'\n", child_block->stmt->type);
+                exit(1);
+            };
         }
 
         child_block = child_block->glue;

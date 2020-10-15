@@ -203,6 +203,15 @@ static void Codegenx86WhileLoop(FileInfo *info, WhileLoop *whileloop) {
     );
 }
 
+static void Codegenx86FuncCall(FileInfo *info, FuncCall *funccall) {
+    if (funccall->arg != 0) {
+        int regid = Codegenx86Expr(info, funccall->arg, FALSE, -1);
+        fprintf(info->asmfile, "\tmov\t\trcx, %s\n", regs[regid]);
+    }
+
+    fprintf(info->asmfile, "\tcall\t%s\n", funccall->ident);
+}
+
 static void Codegenx86Block(FileInfo *info, Block *block) {
     Block *child_block = block;
     while (child_block != 0 && child_block->stmt != 0) {
@@ -211,6 +220,7 @@ static void Codegenx86Block(FileInfo *info, Block *block) {
             case AST_VARASSIGN: {Codegenx86VarAssign(info, (VarAssign *) child_block->stmt);} break;
             case AST_IFSTMT:    {Codegenx86IfStmt(info, (IfStmt *) child_block->stmt);} break;
             case AST_WHILELOOP: {Codegenx86WhileLoop(info, (WhileLoop *) child_block->stmt);} break;
+            case AST_FUNCCALL:  {Codegenx86FuncCall(info, (FuncCall *) child_block->stmt);} break;
             default: {
                 printf("internal error: invalid statement type '%d'\n", child_block->stmt->type);
                 exit(1);
@@ -253,20 +263,11 @@ void Codegenx86File(FileInfo *info, File *cfile) {
         "default rel\n"
         "\n"
         "segment .data\n"
-        "\tfmt:\tdb \"%d\", 0xd, 0xa, 0\n"
         "\n"
         "segment .text\n"
-        "global main\n"
-        "extern ExitProcess\n"
-        "extern printf\n"
-        "\n"
-        "printint:\n"
-        "\tsub\t\trsp, 32\n"
-        "\tmov\t\trdx, rcx\n"
-        "\tlea\t\trcx, [fmt]\n"
-        "\tcall\tprintf\n"
-        "\tadd\t\trsp, 32\n"
-        "\tret",
+        "\tglobal main\n"
+        "\textern ExitProcess\n"
+        "\textern PrintInt",
         info->asmfile
     );
 

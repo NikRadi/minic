@@ -17,6 +17,7 @@ enum AstType {
     AST_WHILELOOP,
     AST_FORLOOP,
     AST_FUNCDECL,
+    AST_FUNCCALL,
     AST_FILE,
 } typedef AstType;
 
@@ -90,6 +91,12 @@ struct ForLoop {
     VarAssign *post_operation;
     Block *block;
 } typedef ForLoop;
+
+struct FuncCall {
+    Ast info;
+    char *ident;
+    Ast *arg;
+} typedef FuncCall;
 
 struct FuncDecl {
     Ast info;
