@@ -93,7 +93,7 @@ static int Codegenx86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, 
             if (is_jump) {
                 fprintf(info->asmfile,
                     "\tcmp\t\t%s, %s\n"
-                    "\t%s\t\t%d\n",
+                    "\t%s\t\tL%d\n",
                     regs[regid_lhs], regs[regid_rhs],
                     inverse_branch_compares[binaryop->optype - OP_ISEQUAL], label
                 );
@@ -156,13 +156,14 @@ static void Codegenx86VarAssign(FileInfo *info, VarAssign *varassign) {
 }
 
 static void Codegenx86IfStmtElse(FileInfo *info, IfStmt *elsestmt, int end_label) {
-    int false_label = NewLabel();
+    Bool has_elsestmt = elsestmt->elsestmt != 0;
+    int false_label = (has_elsestmt) ? NewLabel() : end_label;
     if (elsestmt->condition != 0) {
         Codegenx86Expr(info, elsestmt->condition, TRUE, false_label);
     }
 
     Codegenx86Block(info, elsestmt->block);
-    if (elsestmt->elsestmt != 0) {
+    if (has_elsestmt) {
         fprintf(info->asmfile,
             "\tjmp\t\tL%d\n"
             "L%d:\n",
@@ -206,6 +207,7 @@ static void Codegenx86WhileLoop(FileInfo *info, WhileLoop *whileloop) {
 static void Codegenx86FuncCall(FileInfo *info, FuncCall *funccall) {
     if (funccall->arg != 0) {
         int regid = Codegenx86Expr(info, funccall->arg, FALSE, -1);
+        FreeRegs();
         fprintf(info->asmfile, "\tmov\t\trcx, %s\n", regs[regid]);
     }
 
@@ -263,11 +265,20 @@ void Codegenx86File(FileInfo *info, File *cfile) {
         "default rel\n"
         "\n"
         "segment .data\n"
+        "\tfmt:\tdb \"%d\", 0xd, 0xa, 0\n"
         "\n"
         "segment .text\n"
         "\tglobal main\n"
         "\textern ExitProcess\n"
-        "\textern PrintInt",
+        "\textern printf\n"
+        "\n"
+        "PrintInt:\n"
+        "\tsub\t\trsp, 32\n"
+        "\tmov\t\trdx, rcx\n"
+        "\tlea\t\trcx, [fmt]\n"
+        "\tcall\tprintf\n"
+        "\tadd\t\trsp, 32\n"
+        "\tret",
         info->asmfile
     );
 

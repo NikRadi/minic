@@ -10,7 +10,7 @@ IF "%1" == "" (
     ECHO Building...
     IF NOT EXIST %BinDir% MKDIR %BinDir%
     IF NOT EXIST %ObjDir% MKDIR %ObjDir%
-    SET Flags=/nologo /cgthreads1 /Od /W4 /ZI /sdl
+    SET Flags=/NOLOGO /cgthreads1 /Od /W4 /ZI /sdl
     cl %Flags% src\*.c /Fo./%ObjDir%/ /Fe:minic.exe
     IF EXIST *.asm MOVE *.asm %BinDir% >NUL
     IF EXIST *.exe MOVE *.exe %BinDir% >NUL
@@ -21,12 +21,13 @@ IF "%1" == "" (
 
 IF "%1" == "test" (
     ECHO Testing...
-    CALL %BinDir%\minic.exe
-    nasm -f win64 -o TestMain.obj TestMain.asm
     SET Libs=/DEFAULTLIB:msvcrt.lib /DEFAULTLIB:legacy_stdio_definitions.lib /DEFAULTLIB:Kernel32.lib
-    link /NOLOGO TestMain.obj /DEFAULTLIB:PrintInt.lib %Libs% /SUBSYSTEM:console /OUT:TestMain.exe
-    ECHO TestMain.exe
-    CALL TestMain.exe
+    FOR %%f in (Test*.c) DO (
+        ECHO %%~nf.c
+        bin\minic.exe %%f
+        nasm -f win64 -o %%~nf.obj %%~nf.asm
+        link /NOLOGO %Libs% /SUBSYSTEM:console %%~nf.obj /OUT:%%~nf.exe
+    )
 )
 
 IF "%1" == "clean" (
