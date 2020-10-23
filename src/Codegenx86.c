@@ -8,7 +8,7 @@ static int Codegenx86Expr(FileInfo *info, Ast *expr, Bool is_jump, int label);
 static Bool is_reg_free[4];
 static char *regs[] = {"r8", "r9", "r10", "r11"};
 static char *compares[] = {"sete", "setne", "setl", "setle", "setg", "setge"};
-static char *inverse_branch_compares[] = {"jne", "je", "jge", "jg", "gle", "ge"};
+static char *inverse_branch_compares[] = {"jne", "je", "jge", "jg", "jle", "je"};
 static int num_labels = 0;
 
 
@@ -132,7 +132,6 @@ static int Codegenx86Expr(FileInfo *info, Ast *expr, Bool is_jump, int label) {
 
 static void Codegenx86VarDecl(FileInfo *info, VarDecl *vardecl) {
     info->var_idents[info->num_vars] = vardecl->ident;
-
     if (vardecl->expr != 0) {
         int regid = Codegenx86Expr(info, vardecl->expr, FALSE, -1);
         FreeRegs();
@@ -160,6 +159,7 @@ static void Codegenx86IfStmtElse(FileInfo *info, IfStmt *elsestmt, int end_label
     int false_label = (has_elsestmt) ? NewLabel() : end_label;
     if (elsestmt->condition != 0) {
         Codegenx86Expr(info, elsestmt->condition, TRUE, false_label);
+        FreeRegs();
     }
 
     Codegenx86Block(info, elsestmt->block);
@@ -178,6 +178,7 @@ static void Codegenx86IfStmt(FileInfo *info, IfStmt *ifstmt) {
     int false_label = NewLabel();
     int end_label = -1;
     Codegenx86Expr(info, ifstmt->condition, TRUE, false_label);
+    FreeRegs();
     Codegenx86Block(info, ifstmt->block);
     if (ifstmt->elsestmt != 0) {
         end_label = NewLabel();
@@ -194,12 +195,13 @@ static void Codegenx86IfStmt(FileInfo *info, IfStmt *ifstmt) {
 static void Codegenx86WhileLoop(FileInfo *info, WhileLoop *whileloop) {
     int start_label = NewLabel();
     int end_label = NewLabel();
-    fprintf(info->asmfile, "L%d\n", start_label);
+    fprintf(info->asmfile, "L%d:\n", start_label);
     Codegenx86Expr(info, whileloop->condition, TRUE, end_label);
+    FreeRegs();
     Codegenx86Block(info, whileloop->block);
     fprintf(info->asmfile,
         "\tjmp\t\tL%d\n"
-        "L%d\n",
+        "L%d:\n",
         start_label, end_label
     );
 }

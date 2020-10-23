@@ -9,14 +9,14 @@
 
 int main(int argc, char **argv) {
     if (argc < 2) {
-        printf("no file name given");
+        printf("minic: no file name given");
         return 0;
     }
 
     char *filename = argv[1];
     FILE *file = fopen(filename, "rb");
     if (file == 0) {
-        printf("could not read from file '%s'\n", filename);
+        printf("minic: could not read from file '%s'\n", filename);
         return 1;
     }
 
