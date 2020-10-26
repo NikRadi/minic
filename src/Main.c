@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    Codegenx86File(&info, cfile);
+    CgX86File(&info, cfile);
     fclose(info.asmfile);
     return 0;
 }

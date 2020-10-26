@@ -10,7 +10,7 @@ IF "%1" == "" (
     ECHO Building...
     IF NOT EXIST %BinDir% MKDIR %BinDir%
     IF NOT EXIST %ObjDir% MKDIR %ObjDir%
-    SET Flags=/NOLOGO /cgthreads1 /Od /W4 /ZI /sdl
+    SET Flags=/nologo /cgthreads1 /Od /W4 /ZI /sdl
     CL %Flags% src\*.c /Fo./%ObjDir%/ /Fe:minic.exe
     IF EXIST *.asm MOVE *.asm %BinDir% >NUL
     IF EXIST *.exe MOVE *.exe %BinDir% >NUL

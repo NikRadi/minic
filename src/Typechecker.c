@@ -29,7 +29,9 @@ static void TypecheckExpr(FileInfo *info, Ast *expr) {
 static void TypecheckVarDecl(FileInfo *info, VarDecl *vardecl) {
     info->var_idents[info->num_vars] = vardecl->ident;
     info->num_vars += 1;
-    info->current_func->stack_depth_bytes += 8;
+    info->current_func->stack_depth_bytes += 4;
+    ASSERT(vardecl->info.parent->type == AST_BLOCK);
+    Block *parent_block = (Block *) vardecl->info.parent;
     if (vardecl->expr != 0) {
         TypecheckExpr(info, vardecl->expr);
         VarAssign *varassign = NEW_AST(VarAssign);
@@ -37,10 +39,42 @@ static void TypecheckVarDecl(FileInfo *info, VarDecl *vardecl) {
         varassign->info.parent = vardecl->info.parent;
         varassign->ident = vardecl->ident;
         varassign->expr = vardecl->expr;
-
-        ASSERT(varassign->info.parent->type == AST_BLOCK);
-        Block *parent_block = (Block *) varassign->info.parent;
         parent_block->stmt = (Ast *) varassign;
+    }
+    else {
+        ASSERT(parent_block->info.parent != 0);
+        if (parent_block->glue != 0) {
+            switch (parent_block->info.parent->type) {
+                case AST_FUNCDECL: {
+                    FuncDecl *funcdecl = (FuncDecl *) parent_block->info.parent;
+                    funcdecl->block = parent_block->glue;
+                } break;
+                case AST_BLOCK: {
+                    Block *block = (Block *) parent_block->info.parent;
+                    block->glue = parent_block->glue;
+                } break;
+                default: {
+                    printf("internal error: not implemented1 %d\n",
+                        parent_block->info.parent->type
+                    );
+                    exit(1);
+                }
+            }
+        }
+        else {
+            switch (parent_block->info.parent->type) {
+                case AST_FUNCDECL: {
+                    FuncDecl *funcdecl = (FuncDecl *) parent_block->info.parent;
+                    funcdecl->block = 0;
+                } break;
+                default: {
+                    printf("internal error: not implemented2 %d\n",
+                        parent_block->info.parent->type
+                    );
+                    exit(1);
+                }
+            }
+        }
     }
 }
 
@@ -114,7 +148,6 @@ static void TypecheckFuncCall(FileInfo *info, FuncCall *funccall) {
 static void TypecheckBlock(FileInfo *info, Block *block) {
     Block *child_block = block;
     while (child_block != 0 && child_block->stmt != 0) {
-        child_block->stmt->parent = (Ast *) child_block;
         switch (child_block->stmt->type) {
             case AST_VARDECL:   {TypecheckVarDecl(info, (VarDecl *) child_block->stmt);} break;
             case AST_VARASSIGN: {TypecheckVarAssign(info, (VarAssign *)child_block->stmt);} break;

@@ -149,7 +149,7 @@ static VarDecl *ParseVarDecl(Lexer *lexer) {
     return vardecl;
 }
 
-static VarAssign *ParseVarAssign(Lexer *lexer) {
+static VarAssign *ParseVarAssign(Lexer *lexer, Bool expect_semicolon) {
     ASSERT(lexer->token.type == TOKEN_IDENT);
     VarAssign *varassign = NEW_AST(VarAssign);
     varassign->info.type = AST_VARASSIGN;
@@ -159,8 +159,10 @@ static VarAssign *ParseVarAssign(Lexer *lexer) {
 
     ReadToken(lexer);
     varassign->expr = ParseExpr(lexer);
-    Expect(lexer, TOKEN_SEMICOLON);
-    ReadToken(lexer);
+    if (expect_semicolon) {
+        Expect(lexer, TOKEN_SEMICOLON);
+        ReadToken(lexer);
+    }
 
     return varassign;
 }
@@ -235,11 +237,11 @@ static ForLoop *ParseForLoop(Lexer *lexer) {
     ReadToken(lexer);
     Expect(lexer, TOKEN_LEFT_PAREN);
     ReadToken(lexer);
-    forloop->pre_operation = ParseVarAssign(lexer);
+    forloop->pre_operation = ParseVarAssign(lexer, TRUE);
     forloop->condition = ParseExpr(lexer);
     Expect(lexer, TOKEN_SEMICOLON);
     ReadToken(lexer);
-    forloop->post_operation = ParseVarAssign(lexer);
+    forloop->post_operation = ParseVarAssign(lexer, FALSE);
     Expect(lexer, TOKEN_RIGHT_PAREN);
     forloop->block = ParseBlock(lexer);
     return forloop;
@@ -251,6 +253,7 @@ static Block *ParseBlock(Lexer *lexer) {
 
     Block *root_block = NEW_AST(Block);
     root_block->info.type = AST_BLOCK;
+    root_block->info.parent = 0;
     root_block->stmt = 0;
     root_block->glue = 0;
     Block *child_block = root_block;
@@ -259,9 +262,11 @@ static Block *ParseBlock(Lexer *lexer) {
         if (child_block->stmt != 0) {
             Block *block = NEW_AST(Block);
             block->info.type = AST_BLOCK;
+            block->info.parent = (Ast *) child_block;
             block->stmt = 0;
             block->glue = 0;
 
+            child_block->stmt->parent = (Ast *) child_block;
             child_block->glue = block;
             child_block = child_block->glue;
         }
@@ -273,7 +278,7 @@ static Block *ParseBlock(Lexer *lexer) {
             case TOKEN_FOR:   {child_block->stmt = (Ast *) ParseForLoop(lexer);} break;
             case TOKEN_IDENT: {
                 if (lexer->peek.type == TOKEN_EQUAL) {
-                    child_block->stmt = (Ast *) ParseVarAssign(lexer);
+                    child_block->stmt = (Ast *) ParseVarAssign(lexer, TRUE);
                 }
                 else if (lexer->peek.type == TOKEN_LEFT_PAREN) {
                     child_block->stmt = (Ast *) ParseFuncCall(lexer);
@@ -285,7 +290,7 @@ static Block *ParseBlock(Lexer *lexer) {
             default: {
                 printf("Test %d\n", lexer->token.type);
                 exit(1);
-            } break;
+            }
         }
     }
 
@@ -311,6 +316,7 @@ static FuncDecl *ParseFuncDecl(Lexer *lexer) {
     Expect(lexer, TOKEN_RIGHT_PAREN);
 
     funcdecl->block = ParseBlock(lexer);
+    funcdecl->block->info.parent = (Ast *) funcdecl;
     return funcdecl;
 }
 
@@ -336,7 +342,7 @@ File *ParseFile(Lexer *lexer) {
             case TOKEN_VOID: {child_file->funcdecl = ParseFuncDecl(lexer);} break;
             default: {
                 ThrowError(lexer, "?");
-            } break;
+            }
         }
     }
 

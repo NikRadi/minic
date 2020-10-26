@@ -5,6 +5,6 @@
 #include "Typechecker.h"
 
 
-void Codegenx86File(FileInfo *info, File *cfile);
+void CgX86File(FileInfo *info, File *cfile);
 
 #endif // MINIC_CODEGENX86_H
