@@ -53,30 +53,25 @@ static int NewLabel() {
     return id;
 }
 
-static int CgX86Literal(FileInfo *info, Literal *literal) {
-    if (literal->info.type == AST_LITERAL_INT) {
-        int regid = AllocRegister();
-        fprintf(info->asmfile,
-            "\tmov\t\t%s, %d\n",
-            regs[regid], literal->intvalue
-        );
+static int CgX86LiteralInt(FileInfo *info, Literal *literal) {
+    int regid = AllocRegister();
+    fprintf(info->asmfile,
+        "\tmov\t\t%s, %d\n",
+        regs[regid], literal->intvalue
+    );
 
-        return regid;
-    }
+    return regid;
+}
 
-    if (literal->info.type == AST_LITERAL_IDENT) {
-        int regid = AllocRegister();
-        int mem_location = FindMemLocation(info, literal->strvalue);
-        fprintf(info->asmfile,
-            "\tmov\t\t%s, [rsp+%d]\n",
-            regs[regid], mem_location
-        );
+static int CgX86LiteralIdent(FileInfo *info, Literal *literal) {
+    int regid = AllocRegister();
+    int mem_location = FindMemLocation(info, literal->strvalue);
+    fprintf(info->asmfile,
+        "\tmov\t\t%s, [rsp+%d]\n",
+        regs[regid], mem_location
+    );
 
-        return regid;
-    }
-
-    printf("internal error: invalid literal type '%d'\n", literal->info.type);
-    exit(1);
+    return regid;
 }
 
 static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int label) {
@@ -120,8 +115,8 @@ static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int l
 
 static int CgX86Expr(FileInfo *info, Ast *expr, Bool is_jump, int label) {
     switch (expr->type) {
-        case AST_LITERAL_INT:
-        case AST_LITERAL_IDENT: return CgX86Literal(info, (Literal *) expr);
+        case AST_LITERAL_INT:   return CgX86LiteralInt(info, (Literal *) expr);
+        case AST_LITERAL_IDENT: return CgX86LiteralIdent(info, (Literal *) expr);
         case AST_BINARYOP:      return CgX86BinaryOp(info, (BinaryOp *) expr, is_jump, label);
         default: {
             printf("internal error: invalid expression type '%d'\n", expr->type);
