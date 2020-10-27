@@ -13,6 +13,7 @@ enum AstType {
     AST_VARDECL,
     AST_VARASSIGN,
     AST_BLOCK,
+    AST_RETURNSTMT,
     AST_IFSTMT,
     AST_WHILELOOP,
     AST_FORLOOP,
@@ -29,7 +30,7 @@ enum OperatorType {
 } typedef OperatorType;
 
 enum DataType {
-    DATA_INT, DATA_CHAR
+    DATA_INT, DATA_CHAR, DATA_VOID
 } typedef DataType;
 
 struct Ast {
@@ -78,6 +79,11 @@ struct IfStmt {
     struct IfStmt *elsestmt;
 } typedef IfStmt;
 
+struct ReturnStmt {
+    Ast info;
+    Ast *expr;
+} typedef ReturnStmt;
+
 struct WhileLoop {
     Ast info;
     Ast *condition;
@@ -101,6 +107,7 @@ struct FuncCall {
 struct FuncDecl {
     Ast info;
     int stack_depth_bytes;
+    DataType returntype;
     char *ident;
     Block *block;
 } typedef FuncDecl;

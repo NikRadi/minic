@@ -18,6 +18,7 @@ enum TokenType {
     TOKEN_FOR,
     TOKEN_VOID,
     TOKEN_CHAR,
+    TOKEN_RETURN,
 
     TOKEN_INVALID,
     TOKEN_INT_LITERAL,

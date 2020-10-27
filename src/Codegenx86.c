@@ -3,11 +3,12 @@
 
 static void CgX86Block(FileInfo *info, Block *block);
 static int CgX86Expr(FileInfo *info, Ast *expr, Bool is_jump, int label);
+static int CgX86FuncCall(FileInfo *info, FuncCall *funccall);
 
 
 static Bool is_reg_free[4];
-static char *regs64[] = {"r8", "r9", "r10", "r11"};
-static char *regs32[] = {"r8d", "r9d", "r10d", "r11d"};
+static char *regs64[] = {"r8", "r9", "r10", "r11", "rax"};
+static char *regs32[] = {"r8d", "r9d", "r10d", "r11d", "eax"};
 static char *regs8[] = {"r8b", "r9b", "r10b", "r11b"};
 static char *compares[] = {"sete", "setne", "setl", "setle", "setg", "setge"};
 static char *inverse_branch_compares[] = {"jne", "je", "jge", "jg", "jle", "je"};
@@ -132,6 +133,7 @@ static int CgX86Expr(FileInfo *info, Ast *expr, Bool is_jump, int label) {
         case AST_LITERAL_INT:   return CgX86LiteralInt(info, (Literal *) expr);
         case AST_LITERAL_IDENT: return CgX86LiteralIdent(info, (Literal *) expr);
         case AST_BINARYOP:      return CgX86BinaryOp(info, (BinaryOp *) expr, is_jump, label);
+        case AST_FUNCCALL:      return CgX86FuncCall(info, (FuncCall *) expr);
         default: {
             printf("internal error: invalid expression type '%d'\n", expr->type);
             exit(1);
@@ -171,6 +173,14 @@ static void CgX86IfStmtElse(FileInfo *info, IfStmt *elsestmt, int end_label) {
     }
 }
 
+static void CgX86ReturnStmt(FileInfo *info, ReturnStmt *returnstmt) {
+    int regid = CgX86Expr(info, returnstmt->expr, FALSE, -1);
+    fprintf(info->asmfile,
+        "\tmov\t\teax, %s\n",
+        regs32[regid]
+    );
+}
+
 static void CgX86IfStmt(FileInfo *info, IfStmt *ifstmt) {
     int false_label = NewLabel();
     int end_label = -1;
@@ -203,7 +213,7 @@ static void CgX86WhileLoop(FileInfo *info, WhileLoop *whileloop) {
     );
 }
 
-static void CgX86FuncCall(FileInfo *info, FuncCall *funccall) {
+static int CgX86FuncCall(FileInfo *info, FuncCall *funccall) {
     if (funccall->arg != 0) {
         int regid = CgX86Expr(info, funccall->arg, FALSE, -1);
         FreeRegs();
@@ -211,16 +221,18 @@ static void CgX86FuncCall(FileInfo *info, FuncCall *funccall) {
     }
 
     fprintf(info->asmfile, "\tcall\t%s\n", funccall->ident);
+    return 4;
 }
 
 static void CgX86Block(FileInfo *info, Block *block) {
     Block *child_block = block;
     while (child_block != 0 && child_block->stmt != 0) {
         switch (child_block->stmt->type) {
-            case AST_VARASSIGN: {CgX86VarAssign(info, (VarAssign *) child_block->stmt);} break;
-            case AST_IFSTMT:    {CgX86IfStmt(info, (IfStmt *) child_block->stmt);} break;
-            case AST_WHILELOOP: {CgX86WhileLoop(info, (WhileLoop *) child_block->stmt);} break;
-            case AST_FUNCCALL:  {CgX86FuncCall(info, (FuncCall *) child_block->stmt);} break;
+            case AST_VARASSIGN:  {CgX86VarAssign(info, (VarAssign *) child_block->stmt);} break;
+            case AST_RETURNSTMT: {CgX86ReturnStmt(info, (ReturnStmt *) child_block->stmt);} break;
+            case AST_IFSTMT:     {CgX86IfStmt(info, (IfStmt *) child_block->stmt);} break;
+            case AST_WHILELOOP:  {CgX86WhileLoop(info, (WhileLoop *) child_block->stmt);} break;
+            case AST_FUNCCALL:   {CgX86FuncCall(info, (FuncCall *) child_block->stmt);} break;
             default: {
                 printf("internal error: invalid statement type '%d'\n", child_block->stmt->type);
                 exit(1);
@@ -249,8 +261,7 @@ static void CgX86FuncDecl(FileInfo *info, FuncDecl *funcdecl) {
 
     CgX86Block(info, funcdecl->block);
     fprintf(info->asmfile,
-        "\tadd\t\trsp, %d\n"
-        "\txor\t\trax, rax\n",
+        "\tadd\t\trsp, %d\n",
         bytes
     );
 

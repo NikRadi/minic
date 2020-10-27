@@ -3,6 +3,7 @@
 
 static void TypecheckBlock(FileInfo *info, Block *block);
 static void TypecheckExpr(FileInfo *info, Ast *expr);
+static void TypecheckFuncCall(FileInfo *info, FuncCall *funccall);
 
 
 static void TypecheckLiteral(FileInfo *info, Literal *literal) {
@@ -19,6 +20,7 @@ static void TypecheckExpr(FileInfo *info, Ast *expr) {
         case AST_LITERAL_INT:
         case AST_LITERAL_IDENT: {TypecheckLiteral(info, (Literal *) expr);} break;
         case AST_BINARYOP:      {TypecheckBinaryOp(info, (BinaryOp *) expr);} break;
+        case AST_FUNCCALL:      {TypecheckFuncCall(info, (FuncCall *) expr);} break;
         default: {
             printf("is this even possible\n");
             exit(1);
@@ -87,6 +89,10 @@ static void TypecheckVarDecl(FileInfo *info, VarDecl *vardecl) {
 
 static void TypecheckVarAssign(FileInfo *info, VarAssign *varassign) {
     TypecheckExpr(info, varassign->expr);
+}
+
+static void TypecheckReturnStmt(FileInfo *info, ReturnStmt *returnstmt) {
+    TypecheckExpr(info, returnstmt->expr);
 }
 
 static void TypecheckIfStmt(FileInfo *info, IfStmt *ifstmt) {
@@ -161,12 +167,13 @@ static void TypecheckBlock(FileInfo *info, Block *block) {
     Block *child_block = block;
     while (child_block != 0 && child_block->stmt != 0) {
         switch (child_block->stmt->type) {
-            case AST_VARDECL:   {TypecheckVarDecl(info, (VarDecl *) child_block->stmt);} break;
-            case AST_VARASSIGN: {TypecheckVarAssign(info, (VarAssign *)child_block->stmt);} break;
-            case AST_IFSTMT:    {TypecheckIfStmt(info, (IfStmt *) child_block->stmt);} break;
-            case AST_WHILELOOP: {TypecheckWhileLoop(info, (WhileLoop *) child_block->stmt);} break;
-            case AST_FORLOOP:   {TypecheckForLoop(info, (ForLoop *) child_block->stmt);} break;
-            case AST_FUNCCALL:  {TypecheckFuncCall(info, (FuncCall *) child_block->stmt);} break;
+            case AST_VARDECL:    {TypecheckVarDecl(info, (VarDecl *) child_block->stmt);} break;
+            case AST_VARASSIGN:  {TypecheckVarAssign(info, (VarAssign *) child_block->stmt);} break;
+            case AST_RETURNSTMT: {TypecheckReturnStmt(info, (ReturnStmt *) child_block->stmt);} break;
+            case AST_IFSTMT:     {TypecheckIfStmt(info, (IfStmt *) child_block->stmt);} break;
+            case AST_WHILELOOP:  {TypecheckWhileLoop(info, (WhileLoop *) child_block->stmt);} break;
+            case AST_FORLOOP:    {TypecheckForLoop(info, (ForLoop *) child_block->stmt);} break;
+            case AST_FUNCCALL:   {TypecheckFuncCall(info, (FuncCall *) child_block->stmt);} break;
             default: {
                 printf("invalid statement '%d'\n", child_block->stmt->type);
                 exit(1);
