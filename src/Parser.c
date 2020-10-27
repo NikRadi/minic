@@ -117,11 +117,11 @@ static Ast *ParseParenthesizedExpr(Lexer *lexer) {
     return expr;
 }
 
-static VarDecl *ParseVarDecl(Lexer *lexer) {
-    ASSERT(lexer->token.type == TOKEN_INT);
+static VarDecl *ParseVarDecl(Lexer *lexer, DataType datatype) {
+    ASSERT(lexer->token.type == TOKEN_INT || lexer->token.type == TOKEN_CHAR);
     VarDecl *vardecl = NEW_AST(VarDecl);
     vardecl->info.type = AST_VARDECL;
-    vardecl->datatype = DATA_INT;
+    vardecl->datatype = datatype;
     vardecl->ident = 0;
     vardecl->expr = 0;
     ReadToken(lexer);
@@ -272,7 +272,8 @@ static Block *ParseBlock(Lexer *lexer) {
         }
 
         switch (lexer->token.type) {
-            case TOKEN_INT:   {child_block->stmt = (Ast *) ParseVarDecl(lexer);} break;
+            case TOKEN_CHAR:  {child_block->stmt = (Ast *) ParseVarDecl(lexer, DATA_CHAR);} break;
+            case TOKEN_INT:   {child_block->stmt = (Ast *) ParseVarDecl(lexer, DATA_INT);} break;
             case TOKEN_IF:    {child_block->stmt = (Ast *) ParseIfStmt(lexer);} break;
             case TOKEN_WHILE: {child_block->stmt = (Ast *) ParseWhileLoop(lexer);} break;
             case TOKEN_FOR:   {child_block->stmt = (Ast *) ParseForLoop(lexer);} break;
@@ -292,6 +293,8 @@ static Block *ParseBlock(Lexer *lexer) {
                 exit(1);
             }
         }
+
+        child_block->stmt->parent = (Ast *) child_block;
     }
 
     ReadToken(lexer); // }

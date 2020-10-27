@@ -6,7 +6,9 @@ static int CgX86Expr(FileInfo *info, Ast *expr, Bool is_jump, int label);
 
 
 static Bool is_reg_free[4];
-static char *regs[] = {"r8", "r9", "r10", "r11"};
+static char *regs64[] = {"r8", "r9", "r10", "r11"};
+static char *regs32[] = {"r8d", "r9d", "r10d", "r11d"};
+static char *regs8[] = {"r8b", "r9b", "r10b", "r11b"};
 static char *compares[] = {"sete", "setne", "setl", "setle", "setg", "setge"};
 static char *inverse_branch_compares[] = {"jne", "je", "jge", "jg", "jle", "je"};
 static int num_labels = 0;
@@ -30,10 +32,22 @@ static int AllocRegister() {
     exit(1);
 }
 
+static VarInfo GetVarInfo(FileInfo *info, char *ident) {
+    for (int i = 0; i < info->num_vars; ++i) {
+        if (strcmp(ident, info->var_infos[i].ident) == 0) {
+            return info->var_infos[i];
+        }
+    }
+
+    printf("internal error: could not find variable '%s'\n", ident);
+    exit(1);
+}
+
 static int FindMemLocation(FileInfo *info, char *ident) {
     int regid = -1;
     for (int i = 0; i < info->num_vars; ++i) {
-        if (strcmp(ident, info->var_idents[i]) == 0) {
+        //if (strcmp(ident, info->var_idents[i]) == 0) {
+        if (strcmp(ident, info->var_infos[i].ident) == 0) {
             regid = i;
             break;
         }
@@ -57,7 +71,7 @@ static int CgX86LiteralInt(FileInfo *info, Literal *literal) {
     int regid = AllocRegister();
     fprintf(info->asmfile,
         "\tmov\t\t%s, %d\n",
-        regs[regid], literal->intvalue
+        regs32[regid], literal->intvalue
     );
 
     return regid;
@@ -68,7 +82,7 @@ static int CgX86LiteralIdent(FileInfo *info, Literal *literal) {
     int mem_location = FindMemLocation(info, literal->strvalue);
     fprintf(info->asmfile,
         "\tmov\t\t%s, [rsp+%d]\n",
-        regs[regid], mem_location
+        regs32[regid], mem_location
     );
 
     return regid;
@@ -78,7 +92,7 @@ static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int l
     int regid_lhs = CgX86Expr(info, binaryop->lhs, FALSE, -1);
     int regid_rhs = CgX86Expr(info, binaryop->rhs, FALSE, -1);
     switch (binaryop->optype) {
-        case OP_ADD: {fprintf(info->asmfile, "\tadd\t\t%s, %s\n", regs[regid_lhs], regs[regid_rhs]);} break;
+        case OP_ADD: {fprintf(info->asmfile, "\tadd\t\t%s, %s\n", regs32[regid_lhs], regs32[regid_rhs]);} break;
         case OP_ISEQUAL:
         case OP_NOTEQUAL:
         case OP_ISLESS_THAN:
@@ -89,18 +103,18 @@ static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int l
                 fprintf(info->asmfile,
                     "\tcmp\t\t%s, %s\n"
                     "\t%s\t\tL%d\n",
-                    regs[regid_lhs], regs[regid_rhs],
+                    regs32[regid_lhs], regs32[regid_rhs],
                     inverse_branch_compares[binaryop->optype - OP_ISEQUAL], label
                 );
             }
             else {
                 fprintf(info->asmfile,
                     "\tcmp\t\t%s, %s\n"
-                    "\t%s\t%sb\n"
+                    "\t%s\t%s\n"
                     "\tand\t\t%s, 0xff\n",
-                    regs[regid_lhs], regs[regid_rhs],
-                    compares[binaryop->optype - OP_ISEQUAL], regs[regid_lhs],
-                    regs[regid_lhs]
+                    regs32[regid_lhs], regs32[regid_rhs],
+                    compares[binaryop->optype - OP_ISEQUAL], regs8[regid_lhs],
+                    regs32[regid_lhs]
                 );
             }
         } break;
@@ -125,27 +139,15 @@ static int CgX86Expr(FileInfo *info, Ast *expr, Bool is_jump, int label) {
     }
 }
 
-static void CgX86VarDecl(FileInfo *info, VarDecl *vardecl) {
-    info->var_idents[info->num_vars] = vardecl->ident;
-    if (vardecl->expr != 0) {
-        int regid = CgX86Expr(info, vardecl->expr, FALSE, -1);
-        FreeRegs();
-        fprintf(info->asmfile,
-            "\tmov\t\t[rsp+%d], %s\n",
-            info->num_vars, regs[regid]
-        );
-    }
-
-    info->num_vars += 1;
-}
-
 static void CgX86VarAssign(FileInfo *info, VarAssign *varassign) {
+    VarInfo varinfo = GetVarInfo(info, varassign->ident);
     int var_location = FindMemLocation(info, varassign->ident);
     int regid = CgX86Expr(info, varassign->expr, FALSE, -1);
     FreeRegs();
+    char *reg = (varinfo.datatype == DATA_CHAR) ? regs8[regid] : regs32[regid];
     fprintf(info->asmfile,
         "\tmov\t\t[rsp+%d], %s\n",
-        var_location, regs[regid]
+        var_location, reg
     );
 }
 
@@ -205,7 +207,7 @@ static void CgX86FuncCall(FileInfo *info, FuncCall *funccall) {
     if (funccall->arg != 0) {
         int regid = CgX86Expr(info, funccall->arg, FALSE, -1);
         FreeRegs();
-        fprintf(info->asmfile, "\tmov\t\trcx, %s\n", regs[regid]);
+        fprintf(info->asmfile, "\tmov\t\tecx, %s\n", regs32[regid]);
     }
 
     fprintf(info->asmfile, "\tcall\t%s\n", funccall->ident);

@@ -34,6 +34,27 @@ IF "%1" == "test" (
     )
 )
 
+IF "%1" == "testmain" (
+    ECHO Testing...
+    SET Libs=/DEFAULTLIB:msvcrt.lib /DEFAULTLIB:legacy_stdio_definitions.lib /DEFAULTLIB:Kernel32.lib
+    ECHO TestMain.c
+    bin\minic.exe TestMain.c
+    nasm -f win64 -o TestMain.obj TestMain.asm
+    LINK /NOLOGO %Libs% /SUBSYSTEM:console TestMain.obj /OUT:TestMain.exe
+    TestMain.exe
+    DEL TestMain.obj TestMain.exe
+)
+
+IF "%1" == "nasm" (
+    ECHO Testing...
+    SET Libs=/DEFAULTLIB:msvcrt.lib /DEFAULTLIB:legacy_stdio_definitions.lib /DEFAULTLIB:Kernel32.lib
+    ECHO TestMain.asm
+    nasm -f win64 -o TestMain.obj TestMain.asm
+    LINK /NOLOGO %Libs% /SUBSYSTEM:console TestMain.obj /OUT:TestMain.exe
+    TestMain.exe
+    DEL TestMain.obj TestMain.exe
+)
+
 IF "%1" == "clean" (
     ECHO Cleaning...
 	IF EXIST *.asm DEL *.asm

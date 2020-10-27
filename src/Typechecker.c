@@ -27,7 +27,12 @@ static void TypecheckExpr(FileInfo *info, Ast *expr) {
 }
 
 static void TypecheckVarDecl(FileInfo *info, VarDecl *vardecl) {
-    info->var_idents[info->num_vars] = vardecl->ident;
+    VarInfo varinfo;
+    varinfo.ident = vardecl->ident;
+    varinfo.datatype = vardecl->datatype;
+    info->var_infos[info->num_vars] = varinfo;
+
+    //info->var_idents[info->num_vars] = vardecl->ident;
     info->num_vars += 1;
     info->current_func->stack_depth_bytes += 4;
     ASSERT(vardecl->info.parent->type == AST_BLOCK);
@@ -48,10 +53,12 @@ static void TypecheckVarDecl(FileInfo *info, VarDecl *vardecl) {
                 case AST_FUNCDECL: {
                     FuncDecl *funcdecl = (FuncDecl *) parent_block->info.parent;
                     funcdecl->block = parent_block->glue;
+                    funcdecl->block->info.parent = (Ast *) funcdecl;
                 } break;
                 case AST_BLOCK: {
                     Block *block = (Block *) parent_block->info.parent;
                     block->glue = parent_block->glue;
+                    block->glue->info.parent = (Ast *) block;
                 } break;
                 default: {
                     printf("internal error: not implemented1 %d\n",
@@ -111,19 +118,24 @@ static void TypecheckForLoop(FileInfo *info, ForLoop *forloop) {
     loop->condition = forloop->condition;
     loop->block = forloop->block;
 
-    Block *glue_postop = NEW_AST(Block);
-    glue_postop->info.type = AST_BLOCK;
-    glue_postop->stmt = (Ast *) forloop->post_operation;
-    glue_postop->glue = 0;
-
+    // Insert forloop->post_operation as last statement in loop->block
     Block *child_block = loop->block;
-    while (TRUE) {
-        if (child_block->glue == 0) {
-            child_block->glue = glue_postop;
-            break;
-        }
-        else {
-            child_block = child_block->glue;
+    if (child_block->stmt == 0) {
+        child_block->stmt = (Ast *) forloop->post_operation;
+    }
+    else {
+        while (TRUE) {
+            Block *glue_postop = NEW_AST(Block);
+            glue_postop->info.type = AST_BLOCK;
+            glue_postop->stmt = (Ast *) forloop->post_operation;
+            glue_postop->glue = 0;
+            if (child_block->glue == 0) {
+                child_block->glue = glue_postop;
+                break;
+            }
+            else {
+                child_block = child_block->glue;
+            }
         }
     }
 

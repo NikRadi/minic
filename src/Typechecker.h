@@ -3,11 +3,16 @@
 #include "Parser.h"
 
 
+struct VarInfo {
+    char *ident;
+    DataType datatype;
+} typedef VarInfo;
+
 struct FileInfo {
     int num_funcs;
     int num_vars;
     char *func_idents[16];
-    char *var_idents[16];
+    VarInfo var_infos[16];
     char *filename;
     FuncDecl *current_func;
     FILE *asmfile;
