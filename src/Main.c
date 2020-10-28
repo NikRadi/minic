@@ -7,7 +7,7 @@
 #include "Typechecker.h"
 
 /*
-BUGS:
+TODO:
 - function call: program prints '20' but should print '25'
                  because 'Test' uses same registers as 'main'
                  what to do with registers when calling a function
@@ -26,6 +26,15 @@ BUGS:
                 sometimes, e.g. after two 'PrintInt()', it uses first
                 r8 then r9 even when r8 should be free after first call
                 probably should be added in 'CgX86Block()'
+
+- stack offset: currently all variables are gives 8 bytes on stack
+                e.g. first variable on [rsp+0], second on [rsp+8]
+                this is so pointers (need 8 bytes) work
+                but maybe char only needs 1
+
+- binaryop: previously there was a bug with binaryop not calculating
+            the correct answer when there is both TOKEN_STAR and
+            TOKEN_ADD
 */
 
 int main(int argc, char **argv) {
