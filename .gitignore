@@ -6,6 +6,7 @@
 *.pdb
 *.obj
 TestMain.c
+TestMain2.c
 
 # Folders
 .vs/

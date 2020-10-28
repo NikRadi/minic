@@ -76,7 +76,7 @@ static int CgX86LiteralInt(FileInfo *info, Literal *literal) {
     int regid = AllocRegister();
     fprintf(info->asmfile,
         "\tmov\t\t%s, %d\n",
-        regs32[regid], literal->intvalue
+        regs64[regid], literal->intvalue
     );
 
     return regid;
@@ -84,10 +84,21 @@ static int CgX86LiteralInt(FileInfo *info, Literal *literal) {
 
 static int CgX86LiteralIdent(FileInfo *info, Literal *literal) {
     int regid = AllocRegister();
+    VarInfo varinfo = GetVarInfo(info, literal->strvalue);
     int mem_location = FindMemLocation(info, literal->strvalue);
+    char *reg;
+    switch (varinfo.datatype) {
+        case DATA_CHAR_PTR:
+        case DATA_INT_PTR: {reg = regs64[regid];} break;
+        default: {
+            printf("internal error: not implemented\n");
+            exit(1);
+        }
+    }
+
     fprintf(info->asmfile,
         "\tmov\t\t%s, [rsp+%d]\n",
-        regs32[regid], mem_location
+        reg, mem_location
     );
 
     return regid;
@@ -123,7 +134,7 @@ static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int l
     int regid_rhs = CgX86Expr(info, binaryop->rhs, FALSE, -1);
     switch (binaryop->optype) {
         case OP_ADD: {
-            fprintf(info->asmfile, "\tadd\t\t%s, %s\n", regs32[regid_lhs], regs32[regid_rhs]);
+            fprintf(info->asmfile, "\tadd\t\t%s, %s\n", regs64[regid_lhs], regs64[regid_rhs]);
             FreeReg(regid_rhs);
             return regid_lhs;
         } break;
@@ -197,7 +208,7 @@ static void CgX86VarAssign(FileInfo *info, VarAssign *varassign) {
             case DATA_CHAR_PTR: {reg = regs8[regid];} break;
             case DATA_INT_PTR:  {reg = regs32[regid];} break;
             default: {
-                printf("internal error: invalid variable type1\n");
+                printf("internal error: invalid variable type, cannot dereference\n");
                 exit(1);
             } break;
         }
@@ -217,7 +228,7 @@ static void CgX86VarAssign(FileInfo *info, VarAssign *varassign) {
             case DATA_CHAR_PTR:
             case DATA_INT_PTR: {reg = regs64[regid];} break;
             default: {
-                printf("internal error: invalid variable type2\n");
+                printf("internal error: invalid variable type\n");
                 exit(1);
             } break;
         }

@@ -15,6 +15,12 @@ BUGS:
                  maybe call function before calculating expr?
     int Test() {return 10;}
     void main() {PrintInt(Test() + 5 + Test());}
+
+- pointer add: program has 'ptr += 4' but should be
+               'ptr += 1' and typecheck should make
+               the '1' to a '4' because it is sizeof(int)
+    int x = 123; int y = 234; int *ptr = &x;
+    PrintInt(*ptr); ptr = ptr + 4; PrintInt(*ptr);
 */
 
 int main(int argc, char **argv) {
