@@ -152,7 +152,13 @@ static VarDecl *ParseVarDecl(Lexer *lexer, DataType datatype) {
     vardecl->expr = 0;
     ReadToken(lexer);
     if (lexer->token.type == TOKEN_STAR) {
-        datatype = DATA_INT_PTR;
+        if (datatype == DATA_INT) {
+            datatype = DATA_INT_PTR;
+        }
+        else if (datatype == DATA_CHAR) {
+            datatype = DATA_CHAR_PTR;
+        }
+
         ReadToken(lexer);
     }
 
@@ -181,12 +187,13 @@ static VarDecl *ParseVarDecl(Lexer *lexer, DataType datatype) {
     return vardecl;
 }
 
-static VarAssign *ParseVarAssign(Lexer *lexer, Bool expect_semicolon) {
+static VarAssign *ParseVarAssign(Lexer *lexer, Bool expect_semicolon, Bool is_deref) {
     ASSERT(lexer->token.type == TOKEN_IDENT);
     ReadToken(lexer); // TOKEN_IDENT
     VarAssign *varassign = NEW_AST(VarAssign);
     varassign->info.type = AST_VARASSIGN;
     varassign->ident = strdup(lexer->token.strvalue);
+    varassign->is_deref = is_deref;
     Expect(lexer, TOKEN_EQUAL);
 
     ReadToken(lexer);
@@ -283,11 +290,11 @@ static ForLoop *ParseForLoop(Lexer *lexer) {
     ReadToken(lexer);
     Expect(lexer, TOKEN_LEFT_PAREN);
     ReadToken(lexer);
-    forloop->pre_operation = ParseVarAssign(lexer, TRUE);
+    forloop->pre_operation = ParseVarAssign(lexer, TRUE, FALSE);
     forloop->condition = ParseExpr(lexer);
     Expect(lexer, TOKEN_SEMICOLON);
     ReadToken(lexer);
-    forloop->post_operation = ParseVarAssign(lexer, FALSE);
+    forloop->post_operation = ParseVarAssign(lexer, FALSE, FALSE);
     Expect(lexer, TOKEN_RIGHT_PAREN);
     forloop->block = ParseBlock(lexer);
     return forloop;
@@ -324,10 +331,13 @@ static Block *ParseBlock(Lexer *lexer) {
             case TOKEN_IF:     {child_block->stmt = (Ast *) ParseIfStmt(lexer);} break;
             case TOKEN_WHILE:  {child_block->stmt = (Ast *) ParseWhileLoop(lexer);} break;
             case TOKEN_FOR:    {child_block->stmt = (Ast *) ParseForLoop(lexer);} break;
-            // case TOKEN_STAR:   {child_block->stmt = (Ast *)} break;
+            case TOKEN_STAR:   {
+                ReadToken(lexer); // TOKEN_STAR
+                child_block->stmt = (Ast *) ParseVarAssign(lexer, TRUE, TRUE);
+            } break;
             case TOKEN_IDENT:  {
                 if (lexer->peek.type == TOKEN_EQUAL) {
-                    child_block->stmt = (Ast *) ParseVarAssign(lexer, TRUE);
+                    child_block->stmt = (Ast *) ParseVarAssign(lexer, TRUE, FALSE);
                 }
                 else if (lexer->peek.type == TOKEN_LEFT_PAREN) {
                     child_block->stmt = (Ast *) ParseFuncCall(lexer, TRUE);

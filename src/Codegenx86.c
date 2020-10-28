@@ -191,22 +191,44 @@ static void CgX86VarAssign(FileInfo *info, VarAssign *varassign) {
     VarInfo varinfo = GetVarInfo(info, varassign->ident);
     int var_location = FindMemLocation(info, varassign->ident);
     int regid = CgX86Expr(info, varassign->expr, FALSE, -1);
-    FreeRegs();
     char *reg;
-    switch (varinfo.datatype) {
-        case DATA_CHAR:    {reg = regs8[regid];} break;
-        case DATA_INT:     {reg = regs32[regid];} break;
-        case DATA_INT_PTR: {reg = regs64[regid];} break;
-        default: {
-            printf("internal error: invalid variable type\n");
-            exit(1);
-        } break;
+    if (varassign->is_deref) {
+        switch (varinfo.datatype) {
+            case DATA_CHAR_PTR: {reg = regs8[regid];} break;
+            case DATA_INT_PTR:  {reg = regs32[regid];} break;
+            default: {
+                printf("internal error: invalid variable type1\n");
+                exit(1);
+            } break;
+        }
+
+        int regid2 = AllocRegister();
+        fprintf(info->asmfile,
+            "\tmov\t\t%s, [rsp+%d]\n"
+            "\tmov\t\t[%s], %s\n",
+            regs64[regid2], var_location,
+            regs64[regid2], reg
+        );
+    }
+    else {
+        switch (varinfo.datatype) {
+            case DATA_CHAR:    {reg = regs8[regid];} break;
+            case DATA_INT:     {reg = regs32[regid];} break;
+            case DATA_CHAR_PTR:
+            case DATA_INT_PTR: {reg = regs64[regid];} break;
+            default: {
+                printf("internal error: invalid variable type2\n");
+                exit(1);
+            } break;
+        }
+
+        fprintf(info->asmfile,
+            "\tmov\t\t[rsp+%d], %s\n",
+            var_location, reg
+        );
     }
 
-    fprintf(info->asmfile,
-        "\tmov\t\t[rsp+%d], %s\n",
-        var_location, reg
-    );
+    FreeRegs();
 }
 
 static void CgX86IfStmtElse(FileInfo *info, IfStmt *elsestmt, int end_label) {

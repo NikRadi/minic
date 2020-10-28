@@ -13,7 +13,6 @@ IF "%1" == "" (
     IF NOT EXIST %ObjDir% MKDIR %ObjDir%
     SET Flags=/nologo /cgthreads1 /Od /W4 /ZI /sdl
     CL %Flags% src\*.c /Fo./%ObjDir%/ /Fe:minic.exe
-    IF EXIST *.asm MOVE *.asm %BinDir% >NUL
     IF EXIST *.exe MOVE *.exe %BinDir% >NUL
     IF EXIST *.idb MOVE *.idb %BinDir% >NUL
     IF EXIST *.ilk MOVE *.ilk %BinDir% >NUL

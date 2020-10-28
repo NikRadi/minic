@@ -47,6 +47,7 @@ static void TypecheckVarDecl(FileInfo *info, VarDecl *vardecl) {
         varassign->info.parent = vardecl->info.parent;
         varassign->ident = vardecl->ident;
         varassign->expr = vardecl->expr;
+        varassign->is_deref = FALSE;
         parent_block->stmt = (Ast *) varassign;
     }
     else {

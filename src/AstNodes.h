@@ -33,7 +33,7 @@ enum OperatorType {
 
 enum DataType {
     DATA_INT, DATA_CHAR, DATA_VOID,
-    DATA_INT_PTR
+    DATA_INT_PTR, DATA_CHAR_PTR
 } typedef DataType;
 
 struct Ast {
@@ -67,6 +67,7 @@ struct VarAssign {
     Ast info;
     char *ident;
     Ast *expr;
+    Bool is_deref;
 } typedef VarAssign;
 
 struct Block {
