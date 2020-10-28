@@ -63,7 +63,7 @@ static int FindMemLocation(FileInfo *info, char *ident) {
         exit(1);
     }
 
-    return regid * 4;
+    return regid * 8;
 }
 
 static int NewLabel() {
@@ -88,6 +88,8 @@ static int CgX86LiteralIdent(FileInfo *info, Literal *literal) {
     int mem_location = FindMemLocation(info, literal->strvalue);
     char *reg;
     switch (varinfo.datatype) {
+        case DATA_CHAR:    {reg = regs8[regid];} break;
+        case DATA_INT:     {reg = regs32[regid];} break;
         case DATA_CHAR_PTR:
         case DATA_INT_PTR: {reg = regs64[regid];} break;
         default: {

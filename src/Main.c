@@ -21,6 +21,11 @@ BUGS:
                the '1' to a '4' because it is sizeof(int)
     int x = 123; int y = 234; int *ptr = &x;
     PrintInt(*ptr); ptr = ptr + 4; PrintInt(*ptr);
+
+- register use: need to add 'FreeRegs()' to somewhere in codegenx86
+                sometimes, e.g. after two 'PrintInt()', it uses first
+                r8 then r9 even when r8 should be free after first call
+                probably should be added in 'CgX86Block()'
 */
 
 int main(int argc, char **argv) {
