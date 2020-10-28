@@ -3,12 +3,12 @@
 
 static void CgX86Block(FileInfo *info, Block *block);
 static int CgX86Expr(FileInfo *info, Ast *expr, Bool is_jump, int label);
-static int CgX86FuncCall(FileInfo *info, FuncCall *funccall);
+static void CgX86FuncCall(FileInfo *info, FuncCall *funccall);
 
 
 static Bool is_reg_free[4];
-static char *regs64[] = {"r8", "r9", "r10", "r11", "rax"};
-static char *regs32[] = {"r8d", "r9d", "r10d", "r11d", "eax"};
+static char *regs64[] = {"r8", "r9", "r10", "r11"};
+static char *regs32[] = {"r8d", "r9d", "r10d", "r11d"};
 static char *regs8[] = {"r8b", "r9b", "r10b", "r11b"};
 static char *compares[] = {"sete", "setne", "setl", "setle", "setg", "setge"};
 static char *inverse_branch_compares[] = {"jne", "je", "jge", "jg", "jle", "je"};
@@ -19,6 +19,10 @@ static void FreeRegs() {
     for (int i = 0; i < 4; ++i) {
         is_reg_free[i] = TRUE;
     }
+}
+
+static void FreeReg(int regid) {
+    is_reg_free[regid] = TRUE;
 }
 
 static int AllocRegister() {
@@ -89,11 +93,40 @@ static int CgX86LiteralIdent(FileInfo *info, Literal *literal) {
     return regid;
 }
 
+static int CgX86LiteralPtr(FileInfo *info, Literal *literal) {
+    int regid = AllocRegister();
+    int mem_location = FindMemLocation(info, literal->strvalue);
+    fprintf(info->asmfile,
+        "\tlea\t\t%s, [rsp+%d]\n",
+        regs64[regid], mem_location
+    );
+
+    return regid;
+}
+
+static int CgX86LiteralDeref(FileInfo *info, Literal *literal) {
+    int regid1 = AllocRegister();
+    int mem_location = FindMemLocation(info, literal->strvalue);
+    fprintf(info->asmfile,
+        "\tmov\t\t%s, [rsp+%d]\n"
+        "\tmov\t\t%s, [%s]\n",
+        regs64[regid1], mem_location,
+        regs64[regid1], regs64[regid1]
+    );
+
+    FreeReg(regid1);
+    return regid1;
+}
+
 static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int label) {
     int regid_lhs = CgX86Expr(info, binaryop->lhs, FALSE, -1);
     int regid_rhs = CgX86Expr(info, binaryop->rhs, FALSE, -1);
     switch (binaryop->optype) {
-        case OP_ADD: {fprintf(info->asmfile, "\tadd\t\t%s, %s\n", regs32[regid_lhs], regs32[regid_rhs]);} break;
+        case OP_ADD: {
+            fprintf(info->asmfile, "\tadd\t\t%s, %s\n", regs32[regid_lhs], regs32[regid_rhs]);
+            FreeReg(regid_rhs);
+            return regid_lhs;
+        } break;
         case OP_ISEQUAL:
         case OP_NOTEQUAL:
         case OP_ISLESS_THAN:
@@ -125,15 +158,27 @@ static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int l
         };
     }
 
-    return 0;
+    printf("internal error: ?\n");
+    exit(1);
 }
 
 static int CgX86Expr(FileInfo *info, Ast *expr, Bool is_jump, int label) {
     switch (expr->type) {
         case AST_LITERAL_INT:   return CgX86LiteralInt(info, (Literal *) expr);
         case AST_LITERAL_IDENT: return CgX86LiteralIdent(info, (Literal *) expr);
+        case AST_LITERAL_PTR:   return CgX86LiteralPtr(info, (Literal *) expr);
+        case AST_LITERAL_DEREF: return CgX86LiteralDeref(info, (Literal *) expr);
         case AST_BINARYOP:      return CgX86BinaryOp(info, (BinaryOp *) expr, is_jump, label);
-        case AST_FUNCCALL:      return CgX86FuncCall(info, (FuncCall *) expr);
+        case AST_FUNCCALL: {
+            CgX86FuncCall(info, (FuncCall *) expr);
+            int regid = AllocRegister();
+            fprintf(info->asmfile,
+                "\tmov\t\t%s, eax\n",
+                regs32[regid]
+            );
+
+            return regid;
+        }
         default: {
             printf("internal error: invalid expression type '%d'\n", expr->type);
             exit(1);
@@ -146,7 +191,17 @@ static void CgX86VarAssign(FileInfo *info, VarAssign *varassign) {
     int var_location = FindMemLocation(info, varassign->ident);
     int regid = CgX86Expr(info, varassign->expr, FALSE, -1);
     FreeRegs();
-    char *reg = (varinfo.datatype == DATA_CHAR) ? regs8[regid] : regs32[regid];
+    char *reg;
+    switch (varinfo.datatype) {
+        case DATA_CHAR:    {reg = regs8[regid];} break;
+        case DATA_INT:     {reg = regs32[regid];} break;
+        case DATA_INT_PTR: {reg = regs64[regid];} break;
+        default: {
+            printf("internal error: invalid variable type\n");
+            exit(1);
+        } break;
+    }
+
     fprintf(info->asmfile,
         "\tmov\t\t[rsp+%d], %s\n",
         var_location, reg
@@ -213,15 +268,13 @@ static void CgX86WhileLoop(FileInfo *info, WhileLoop *whileloop) {
     );
 }
 
-static int CgX86FuncCall(FileInfo *info, FuncCall *funccall) {
+static void CgX86FuncCall(FileInfo *info, FuncCall *funccall) {
     if (funccall->arg != 0) {
         int regid = CgX86Expr(info, funccall->arg, FALSE, -1);
-        FreeRegs();
         fprintf(info->asmfile, "\tmov\t\tecx, %s\n", regs32[regid]);
     }
 
     fprintf(info->asmfile, "\tcall\t%s\n", funccall->ident);
-    return 4;
 }
 
 static void CgX86Block(FileInfo *info, Block *block) {
@@ -260,6 +313,7 @@ static void CgX86FuncDecl(FileInfo *info, FuncDecl *funcdecl) {
     );
 
     CgX86Block(info, funcdecl->block);
+    FreeRegs();
     fprintf(info->asmfile,
         "\tadd\t\trsp, %d\n",
         bytes

@@ -1,6 +1,7 @@
 @ECHO OFF
 SET BinDir=bin
 SET ObjDir=obj
+SET Libs=/DEFAULTLIB:msvcrt.lib /DEFAULTLIB:legacy_stdio_definitions.lib /DEFAULTLIB:Kernel32.lib
 
 IF NOT DEFINED DevEnvDir (
     CALL "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall" x64
@@ -21,7 +22,6 @@ IF "%1" == "" (
 
 IF "%1" == "test" (
     ECHO Testing...
-    SET Libs=/DEFAULTLIB:msvcrt.lib /DEFAULTLIB:legacy_stdio_definitions.lib /DEFAULTLIB:Kernel32.lib
     FOR %%f in (tests/Test*.c) DO (
         ECHO %%~nf.c
         bin\minic.exe tests\%%f
@@ -36,23 +36,21 @@ IF "%1" == "test" (
 
 IF "%1" == "testmain" (
     ECHO Testing...
-    SET Libs=/DEFAULTLIB:msvcrt.lib /DEFAULTLIB:legacy_stdio_definitions.lib /DEFAULTLIB:Kernel32.lib
     ECHO TestMain.c
     bin\minic.exe TestMain.c
     nasm -f win64 -o TestMain.obj TestMain.asm
     LINK /NOLOGO %Libs% /SUBSYSTEM:console TestMain.obj /OUT:TestMain.exe
     TestMain.exe
-    DEL TestMain.obj TestMain.exe
+    DEL TestMain.obj
 )
 
 IF "%1" == "nasm" (
     ECHO Testing...
-    SET Libs=/DEFAULTLIB:msvcrt.lib /DEFAULTLIB:legacy_stdio_definitions.lib /DEFAULTLIB:Kernel32.lib
     ECHO TestMain.asm
     nasm -f win64 -o TestMain.obj TestMain.asm
     LINK /NOLOGO %Libs% /SUBSYSTEM:console TestMain.obj /OUT:TestMain.exe
     TestMain.exe
-    DEL TestMain.obj TestMain.exe
+    DEL TestMain.obj
 )
 
 IF "%1" == "clean" (

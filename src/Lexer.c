@@ -102,6 +102,7 @@ void ReadToken(struct Lexer *lexer) {
         case '!': {TryReadPair(lexer, TOKEN_INVALID, '=', TOKEN_EXMARK_EQUAL);} break;
         case '<': {TryReadPair(lexer, TOKEN_LESS_THAN, '=', TOKEN_LESS_THAN_EQUAL);} break;
         case '>': {TryReadPair(lexer, TOKEN_GREATER_THAN, '=', TOKEN_GREATER_THAN_EQUAL);} break;
+        case '&': {TryReadPair(lexer, TOKEN_AMPERSAND, '&', TOKEN_TWO_AMPERSAND);} break;
         default: {
             if (IS_DIGIT(c)) {
                 lexer->peek.intvalue = ReadNumber(lexer);

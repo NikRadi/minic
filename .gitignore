@@ -8,5 +8,6 @@
 TestMain.c
 
 # Folders
+.vs/
 bin/
 obj/

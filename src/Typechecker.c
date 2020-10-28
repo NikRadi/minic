@@ -18,7 +18,9 @@ static void TypecheckBinaryOp(FileInfo *info, BinaryOp *binaryop) {
 static void TypecheckExpr(FileInfo *info, Ast *expr) {
     switch (expr->type) {
         case AST_LITERAL_INT:
-        case AST_LITERAL_IDENT: {TypecheckLiteral(info, (Literal *) expr);} break;
+        case AST_LITERAL_IDENT:
+        case AST_LITERAL_PTR:
+        case AST_LITERAL_DEREF: {TypecheckLiteral(info, (Literal *) expr);} break;
         case AST_BINARYOP:      {TypecheckBinaryOp(info, (BinaryOp *) expr);} break;
         case AST_FUNCCALL:      {TypecheckFuncCall(info, (FuncCall *) expr);} break;
         default: {
@@ -34,7 +36,6 @@ static void TypecheckVarDecl(FileInfo *info, VarDecl *vardecl) {
     varinfo.datatype = vardecl->datatype;
     info->var_infos[info->num_vars] = varinfo;
 
-    //info->var_idents[info->num_vars] = vardecl->ident;
     info->num_vars += 1;
     info->current_func->stack_depth_bytes += 4;
     ASSERT(vardecl->info.parent->type == AST_BLOCK);
@@ -76,9 +77,14 @@ static void TypecheckVarDecl(FileInfo *info, VarDecl *vardecl) {
                     FuncDecl *funcdecl = (FuncDecl *) parent_block->info.parent;
                     funcdecl->block = 0;
                 } break;
+                case AST_BLOCK: {
+                    Block *block = (Block *) parent_block->info.parent;
+                    block->glue = 0;
+                } break;
                 default: {
-                    printf("internal error: not implemented2 %d\n",
-                        parent_block->info.parent->type
+                    printf("internal error: not implemented2 %d, %s\n",
+                        parent_block->info.parent->type,
+                        vardecl->ident
                     );
                     exit(1);
                 }

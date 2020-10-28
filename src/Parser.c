@@ -43,7 +43,10 @@ static void ThrowError(Lexer *lexer, char *msg) {
 static void Expect(Lexer *lexer, TokenType type) {
     if (lexer->token.type != type) {
         char msg[200];
-        sprintf(msg, "expected '%c' but got '%c'", type, lexer->token.type);
+        sprintf(msg,
+            "expected '%c' (%d) but got '%c' (%d)",
+            type, type,
+            lexer->token.type, lexer->token.type);
         ThrowError(lexer, msg);
     }
 }
@@ -89,7 +92,25 @@ static Ast *ParseLiteral(Lexer *lexer) {
         }
     }
 
-    ThrowError(lexer, "invalid literal ?");
+    if (lexer->token.type == TOKEN_AMPERSAND) {
+        ReadToken(lexer); // TOKEN_AMPERSAND
+        Literal *literal = NEW_AST(Literal);
+        literal->info.type = AST_LITERAL_PTR;
+        literal->strvalue = strdup(lexer->token.strvalue);
+        ReadToken(lexer);
+        return (Ast *) literal;
+    }
+
+    if (lexer->token.type == TOKEN_STAR) {
+        ReadToken(lexer); // TOKEN_STAR
+        Literal *literal = NEW_AST(Literal);
+        literal->info.type = AST_LITERAL_DEREF;
+        literal->strvalue = strdup(lexer->token.strvalue);
+        ReadToken(lexer);
+        return (Ast *) literal;
+    }
+
+    ThrowError(lexer, "invalid literal ?\n");
     return 0; // Just to get rid of Warning C4715
 }
 
@@ -127,10 +148,15 @@ static VarDecl *ParseVarDecl(Lexer *lexer, DataType datatype) {
     ASSERT(lexer->token.type == TOKEN_INT || lexer->token.type == TOKEN_CHAR);
     VarDecl *vardecl = NEW_AST(VarDecl);
     vardecl->info.type = AST_VARDECL;
-    vardecl->datatype = datatype;
     vardecl->ident = 0;
     vardecl->expr = 0;
     ReadToken(lexer);
+    if (lexer->token.type == TOKEN_STAR) {
+        datatype = DATA_INT_PTR;
+        ReadToken(lexer);
+    }
+
+    vardecl->datatype = datatype;
     Expect(lexer, TOKEN_IDENT);
 
     vardecl->ident = strdup(lexer->token.strvalue);
@@ -298,6 +324,7 @@ static Block *ParseBlock(Lexer *lexer) {
             case TOKEN_IF:     {child_block->stmt = (Ast *) ParseIfStmt(lexer);} break;
             case TOKEN_WHILE:  {child_block->stmt = (Ast *) ParseWhileLoop(lexer);} break;
             case TOKEN_FOR:    {child_block->stmt = (Ast *) ParseForLoop(lexer);} break;
+            // case TOKEN_STAR:   {child_block->stmt = (Ast *)} break;
             case TOKEN_IDENT:  {
                 if (lexer->peek.type == TOKEN_EQUAL) {
                     child_block->stmt = (Ast *) ParseVarAssign(lexer, TRUE);

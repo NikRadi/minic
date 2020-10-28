@@ -6,6 +6,16 @@
 #include "Parser.h"
 #include "Typechecker.h"
 
+/*
+BUGS:
+- function call: program prints '20' but should print '25'
+                 because 'Test' uses same registers as 'main'
+                 what to do with registers when calling a function
+                 in expr?
+                 maybe call function before calculating expr?
+    int Test() {return 10;}
+    void main() {PrintInt(Test() + 5 + Test());}
+*/
 
 int main(int argc, char **argv) {
     if (argc < 2) {

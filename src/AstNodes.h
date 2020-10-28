@@ -9,6 +9,8 @@
 enum AstType {
     AST_LITERAL_INT,
     AST_LITERAL_IDENT,
+    AST_LITERAL_PTR,
+    AST_LITERAL_DEREF,
     AST_BINARYOP,
     AST_VARDECL,
     AST_VARASSIGN,
@@ -30,7 +32,8 @@ enum OperatorType {
 } typedef OperatorType;
 
 enum DataType {
-    DATA_INT, DATA_CHAR, DATA_VOID
+    DATA_INT, DATA_CHAR, DATA_VOID,
+    DATA_INT_PTR
 } typedef DataType;
 
 struct Ast {
