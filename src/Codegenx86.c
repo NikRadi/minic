@@ -158,8 +158,9 @@ static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int l
         };
     }
 
-    printf("internal error: ?\n");
-    exit(1);
+    // TODO: Unsure why I must return 0 here and not some
+    //       register in case OP_ISGREATER_THAN_EQUAL
+    return 0;
 }
 
 static int CgX86Expr(FileInfo *info, Ast *expr, Bool is_jump, int label) {
