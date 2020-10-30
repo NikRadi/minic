@@ -98,6 +98,8 @@ void ReadToken(struct Lexer *lexer) {
         case '}': {lexer->peek.type = TOKEN_RIGHT_CURLY_BRAC;} break;
         case '(': {lexer->peek.type = TOKEN_LEFT_PAREN;} break;
         case ')': {lexer->peek.type = TOKEN_RIGHT_PAREN;} break;
+        case '[': {lexer->peek.type = TOKEN_LEFT_SQUARE_BRAC;} break;
+        case ']': {lexer->peek.type = TOKEN_RIGHT_SQUARE_BRAC;} break;
         case '=': {TryReadPair(lexer, TOKEN_EQUAL, '=', TOKEN_TWO_EQUAL);} break;
         case '!': {TryReadPair(lexer, TOKEN_INVALID, '=', TOKEN_EXMARK_EQUAL);} break;
         case '<': {TryReadPair(lexer, TOKEN_LESS_THAN, '=', TOKEN_LESS_THAN_EQUAL);} break;

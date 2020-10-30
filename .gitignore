@@ -10,5 +10,6 @@ TestMain2.c
 
 # Folders
 .vs/
+.vscode/
 bin/
 obj/

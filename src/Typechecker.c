@@ -40,7 +40,7 @@ static void TypecheckVarDecl(FileInfo *info, VarDecl *vardecl) {
     info->current_func->stack_depth_bytes += 4;
     ASSERT(vardecl->info.parent->type == AST_BLOCK);
     Block *parent_block = (Block *) vardecl->info.parent;
-    if (vardecl->expr != 0) {
+    if (vardecl->expr != NULL) {
         TypecheckExpr(info, vardecl->expr);
         VarAssign *varassign = NEW_AST(VarAssign);
         varassign->info.type = AST_VARASSIGN;
@@ -51,8 +51,8 @@ static void TypecheckVarDecl(FileInfo *info, VarDecl *vardecl) {
         parent_block->stmt = (Ast *) varassign;
     }
     else {
-        ASSERT(parent_block->info.parent != 0);
-        if (parent_block->glue != 0) {
+        ASSERT(parent_block->info.parent != NULL);
+        if (parent_block->glue != NULL) {
             switch (parent_block->info.parent->type) {
                 case AST_FUNCDECL: {
                     FuncDecl *funcdecl = (FuncDecl *) parent_block->info.parent;
@@ -76,11 +76,11 @@ static void TypecheckVarDecl(FileInfo *info, VarDecl *vardecl) {
             switch (parent_block->info.parent->type) {
                 case AST_FUNCDECL: {
                     FuncDecl *funcdecl = (FuncDecl *) parent_block->info.parent;
-                    funcdecl->block = 0;
+                    funcdecl->block = NULL;
                 } break;
                 case AST_BLOCK: {
                     Block *block = (Block *) parent_block->info.parent;
-                    block->glue = 0;
+                    block->glue = NULL;
                 } break;
                 default: {
                     printf("internal error: not implemented2 %d, %s\n",
@@ -105,8 +105,8 @@ static void TypecheckReturnStmt(FileInfo *info, ReturnStmt *returnstmt) {
 static void TypecheckIfStmt(FileInfo *info, IfStmt *ifstmt) {
     TypecheckExpr(info, ifstmt->condition);
     TypecheckBlock(info, ifstmt->block);
-    if (ifstmt->elsestmt != 0) {
-        if (ifstmt->elsestmt->condition != 0) {
+    if (ifstmt->elsestmt != NULL) {
+        if (ifstmt->elsestmt->condition != NULL) {
             TypecheckIfStmt(info, ifstmt->elsestmt);
         }
         else {
@@ -133,7 +133,7 @@ static void TypecheckForLoop(FileInfo *info, ForLoop *forloop) {
 
     // Insert forloop->post_operation as last statement in loop->block
     Block *child_block = loop->block;
-    if (child_block->stmt == 0) {
+    if (child_block->stmt == NULL) {
         child_block->stmt = (Ast *) forloop->post_operation;
     }
     else {
@@ -141,8 +141,8 @@ static void TypecheckForLoop(FileInfo *info, ForLoop *forloop) {
             Block *glue_postop = NEW_AST(Block);
             glue_postop->info.type = AST_BLOCK;
             glue_postop->stmt = (Ast *) forloop->post_operation;
-            glue_postop->glue = 0;
-            if (child_block->glue == 0) {
+            glue_postop->glue = NULL;
+            if (child_block->glue == NULL) {
                 child_block->glue = glue_postop;
                 break;
             }
@@ -165,14 +165,14 @@ static void TypecheckForLoop(FileInfo *info, ForLoop *forloop) {
 }
 
 static void TypecheckFuncCall(FileInfo *info, FuncCall *funccall) {
-    if (funccall->arg != 0) {
+    if (funccall->arg != NULL) {
         TypecheckExpr(info, funccall->arg);
     }
 }
 
 static void TypecheckBlock(FileInfo *info, Block *block) {
     Block *child_block = block;
-    while (child_block != 0 && child_block->stmt != 0) {
+    while (child_block != NULL && child_block->stmt != NULL) {
         switch (child_block->stmt->type) {
             case AST_VARDECL:    {TypecheckVarDecl(info, (VarDecl *) child_block->stmt);} break;
             case AST_VARASSIGN:  {TypecheckVarAssign(info, (VarAssign *) child_block->stmt);} break;
@@ -201,7 +201,7 @@ static void TypecheckFuncDecl(FileInfo *info, FuncDecl *funcdecl) {
 
 void TypecheckFile(FileInfo *info, File *file) {
     File *child_file = file;
-    while (child_file != 0 && child_file->funcdecl != 0) {
+    while (child_file != NULL && child_file->funcdecl != NULL) {
         TypecheckFuncDecl(info, child_file->funcdecl);
         child_file = child_file->glue;
     }

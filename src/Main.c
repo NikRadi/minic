@@ -35,6 +35,12 @@ TODO:
 - binaryop: previously there was a bug with binaryop not calculating
             the correct answer when there is both TOKEN_STAR and
             TOKEN_ADD
+
+- using all regs: can minic calculate '3+4+5*6*7+8-9' without
+                  throwing a 'ran out of registers' error?
+
+- make a 'defs' file with TOKEN(';', TOKEN_SEMICOLON) or something
+  to make it easier to debug and prints tokens
 */
 
 int main(int argc, char **argv) {
@@ -45,7 +51,7 @@ int main(int argc, char **argv) {
 
     char *filename = argv[1];
     FILE *file = fopen(filename, "rb");
-    if (file == 0) {
+    if (file == NULL) {
         printf("minic: could not read from file '%s'\n", filename);
         return 1;
     }
@@ -67,7 +73,7 @@ int main(int argc, char **argv) {
     info.num_funcs = 0;
     info.num_vars = 0;
     info.filename = lexer.filename;
-    info.current_func = 0;
+    info.current_func = NULL;
     TypecheckFile(&info, cfile);
 
     size_t filename_len = strlen(filename);
@@ -78,7 +84,7 @@ int main(int argc, char **argv) {
     asmfilename[filename_len + 1] = 'm';
     asmfilename[filename_len + 2] = '\0';
     info.asmfile = fopen(asmfilename, "w");
-    if (info.asmfile == 0) {
+    if (info.asmfile == NULL) {
         printf("could not write to file\n");
         return 1;
     }

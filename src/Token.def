@@ -1,0 +1,45 @@
+TOKEN(EOF, "end of file")
+TOKEN(INVALID, "invalid")
+
+// Operators
+TOKEN(OPS_START, "OPS_START")
+TOKEN(PLUS, "+")
+TOKEN(MINUS, "-")
+TOKEN(STAR, "*")
+TOKEN(SLASH, "/")
+TOKEN(TWO_EQUAL, "==")
+TOKEN(EXMARK_EQUAL, "!=")
+TOKEN(LESS_THAN, "<")
+TOKEN(LESS_THAN_EQUAL, "<=")
+TOKEN(GREATER_THAN, ">")
+TOKEN(GREATER_THAN_EQUAL, ">=")
+TOKEN(OP_END, "OP_END")
+// Operators not in 'op_precedence' in Parser.c
+TOKEN(AMPERSAND, "&")
+TOKEN(TWO_AMPERSAND, "&&")
+TOKEN(EQUAL, "=")
+
+// Keywords
+TOKEN(CHAR, "char")
+TOKEN(INT, "int")
+TOKEN(VOID, "void")
+TOKEN(LONG, "long")
+TOKEN(WHILE, "while")
+TOKEN(FOR, "for")
+TOKEN(IF, "if")
+TOKEN(ELSE, "else")
+TOKEN(RETURN, "return")
+
+TOKEN(INT_LITERAL, "int literal")
+TOKEN(IDENT, "identifer")
+
+// Separators
+TOKEN(LEFT_PAREN, "(")
+TOKEN(RIGHT_PAREN, ")")
+TOKEN(LEFT_CURLY_BRAC, "{")
+TOKEN(RIGHT_CURLY_BRAC, "}")
+TOKEN(LEFT_SQUARE_BRAC, "[")
+TOKEN(RIGHT_SQUARE_BRAC, "]")
+TOKEN(SEMICOLON, ";")
+TOKEN(COMMA, ",")
+#undef TOKEN

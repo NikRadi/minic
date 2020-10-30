@@ -51,7 +51,6 @@ static VarInfo GetVarInfo(FileInfo *info, char *ident) {
 static int FindMemLocation(FileInfo *info, char *ident) {
     int regid = -1;
     for (int i = 0; i < info->num_vars; ++i) {
-        //if (strcmp(ident, info->var_idents[i]) == 0) {
         if (strcmp(ident, info->var_infos[i].ident) == 0) {
             regid = i;
             break;
@@ -245,9 +244,9 @@ static void CgX86VarAssign(FileInfo *info, VarAssign *varassign) {
 }
 
 static void CgX86IfStmtElse(FileInfo *info, IfStmt *elsestmt, int end_label) {
-    Bool has_elsestmt = elsestmt->elsestmt != 0;
+    Bool has_elsestmt = elsestmt->elsestmt != NULL;
     int false_label = (has_elsestmt) ? NewLabel() : end_label;
-    if (elsestmt->condition != 0) {
+    if (elsestmt->condition != NULL) {
         CgX86Expr(info, elsestmt->condition, TRUE, false_label);
         FreeRegs();
     }
@@ -278,13 +277,13 @@ static void CgX86IfStmt(FileInfo *info, IfStmt *ifstmt) {
     CgX86Expr(info, ifstmt->condition, TRUE, false_label);
     FreeRegs();
     CgX86Block(info, ifstmt->block);
-    if (ifstmt->elsestmt != 0) {
+    if (ifstmt->elsestmt != NULL) {
         end_label = NewLabel();
         fprintf(info->asmfile, "\tjmp\t\tL%d\n", end_label);
     }
 
     fprintf(info->asmfile, "L%d:\n", false_label);
-    if (ifstmt->elsestmt != 0) {
+    if (ifstmt->elsestmt != NULL) {
         CgX86IfStmtElse(info, ifstmt->elsestmt, end_label);
         fprintf(info->asmfile, "L%d:\n", end_label);
     }
@@ -305,7 +304,7 @@ static void CgX86WhileLoop(FileInfo *info, WhileLoop *whileloop) {
 }
 
 static void CgX86FuncCall(FileInfo *info, FuncCall *funccall) {
-    if (funccall->arg != 0) {
+    if (funccall->arg != NULL) {
         int regid = CgX86Expr(info, funccall->arg, FALSE, -1);
         fprintf(info->asmfile, "\tmov\t\tecx, %s\n", regs32[regid]);
     }
@@ -315,7 +314,7 @@ static void CgX86FuncCall(FileInfo *info, FuncCall *funccall) {
 
 static void CgX86Block(FileInfo *info, Block *block) {
     Block *child_block = block;
-    while (child_block != 0 && child_block->stmt != 0) {
+    while (child_block != NULL && child_block->stmt != NULL) {
         switch (child_block->stmt->type) {
             case AST_VARASSIGN:  {CgX86VarAssign(info, (VarAssign *) child_block->stmt);} break;
             case AST_RETURNSTMT: {CgX86ReturnStmt(info, (ReturnStmt *) child_block->stmt);} break;
@@ -382,7 +381,7 @@ void CgX86File(FileInfo *info, File *cfile) {
 
     FreeRegs();
     File *child_file = cfile;
-    while (child_file != 0 && child_file->funcdecl != 0) {
+    while (child_file != NULL && child_file->funcdecl != NULL) {
         fputs("\n\n", info->asmfile);
         CgX86FuncDecl(info, child_file->funcdecl);
         child_file = child_file->glue;

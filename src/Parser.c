@@ -1,30 +1,36 @@
 #include "Parser.h"
 
 
-static int op_precedence[] = {
-    0,              // EOF
-    10, 10,         //  +,  -
-    20, //20,       //  *,  /
-    30, 30,         // ==, !=
-    40, 40, 40, 40  //  <, <=, >, >=
-    // Non-operators
-    -1, -1, -1, -1,
-    -1, -1, -1, -1,
-    -1, -1, -1, -1,
-    -1, -1, -1, -1,
-    -1, -1, -1, -1,
-    -1, -1, -1, -1,
-    -1, -1, -1, -1,
-    -1, -1, -1, -1,
-    -1, -1, -1, -1,
-    -1, -1, -1, -1,
-    -1, -1, -1, -1,
-    -1, -1, -1, -1,
-    -1, -1, -1, -1,
-    -1, -1, -1, -1,
-    -1, -1, -1, -1,
-    -1, -1, -1, -1,
-    -1, -1, -1, -1,
+static int op_precedences[] = {
+    10, 10, // + ,  -
+    20, 20, //  *,  /
+    30, 30, // ==, !=
+    40, 40, //  <, <=
+    40, 40, //  >, >=
+
+    // 0,              // EOF
+    // 10, 10,         //  +,  -
+    // 20, //20,       //  *,  /
+    // 30, 30,         // ==, !=
+    // 40, 40, 40, 40  //  <, <=, >, >=
+    // // Non-operators
+    // -1, -1, -1, -1,
+    // -1, -1, -1, -1,
+    // -1, -1, -1, -1,
+    // -1, -1, -1, -1,
+    // -1, -1, -1, -1,
+    // -1, -1, -1, -1,
+    // -1, -1, -1, -1,
+    // -1, -1, -1, -1,
+    // -1, -1, -1, -1,
+    // -1, -1, -1, -1,
+    // -1, -1, -1, -1,
+    // -1, -1, -1, -1,
+    // -1, -1, -1, -1,
+    // -1, -1, -1, -1,
+    // -1, -1, -1, -1,
+    // -1, -1, -1, -1,
+    // -1, -1, -1, -1,
 };
 
 
@@ -44,9 +50,11 @@ static void Expect(Lexer *lexer, TokenType type) {
     if (lexer->token.type != type) {
         char msg[200];
         sprintf(msg,
-            "expected '%c' (%d) but got '%c' (%d)",
-            type, type,
-            lexer->token.type, lexer->token.type);
+            "expected '%s' but got '%s'",
+            GetTokenTypeStr(type),
+            GetTokenTypeStr(lexer->token.type)
+        );
+
         ThrowError(lexer, msg);
     }
 }
@@ -116,13 +124,22 @@ static Ast *ParseLiteral(Lexer *lexer) {
 
 static Ast *ParseExpr_(Lexer *lexer, int min_precedence) {
     Ast *lhs = ParseLiteral(lexer);
-    while (op_precedence[lexer->token.type] > min_precedence) {
-        int precedence = op_precedence[lexer->token.type];
+    while (TRUE) {
+        int op_precedence_idx = lexer->token.type - TOKEN_OPS_START;
+        if (op_precedence_idx <= 0 || op_precedence_idx >= TOKEN_OP_END) {
+            break;
+        }
+
+        int op_precedence = op_precedences[op_precedence_idx];
+        if (op_precedence < min_precedence) {
+            break;
+        }
+
         BinaryOp *binaryop = NEW_AST(BinaryOp);
         binaryop->info.type = AST_BINARYOP;
         binaryop->optype = ToOperatorType(lexer->token.type);
         ReadToken(lexer);
-        binaryop->rhs = ParseExpr_(lexer, precedence);
+        binaryop->rhs = ParseExpr_(lexer, op_precedence);
         binaryop->lhs = lhs;
         lhs = (Ast *) binaryop;
     }
@@ -137,8 +154,8 @@ static Ast *ParseExpr(Lexer *lexer) {
 static Ast *ParseParenthesizedExpr(Lexer *lexer) {
     ReadToken(lexer);
     Expect(lexer, TOKEN_LEFT_PAREN);
-
     ReadToken(lexer);
+
     Ast *expr = ParseExpr(lexer);
     Expect(lexer, TOKEN_RIGHT_PAREN);
     return expr;
@@ -148,8 +165,8 @@ static VarDecl *ParseVarDecl(Lexer *lexer, DataType datatype) {
     ASSERT(lexer->token.type == TOKEN_INT || lexer->token.type == TOKEN_CHAR);
     VarDecl *vardecl = NEW_AST(VarDecl);
     vardecl->info.type = AST_VARDECL;
-    vardecl->ident = 0;
-    vardecl->expr = 0;
+    vardecl->ident = NULL;
+    vardecl->expr = NULL;
     ReadToken(lexer);
     if (lexer->token.type == TOKEN_STAR) {
         if (datatype == DATA_INT) {
@@ -171,25 +188,22 @@ static VarDecl *ParseVarDecl(Lexer *lexer, DataType datatype) {
         ReadToken(lexer);
         vardecl->expr = (Ast *) ParseExpr(lexer);
     }
-
-    if (lexer->token.type == TOKEN_SEMICOLON) {
+    else if (lexer->token.type == TOKEN_LEFT_SQUARE_BRAC) {
+        ReadToken(lexer);
+        vardecl->arrsize = lexer->token.intvalue;
+        ReadToken(lexer);
+        Expect(lexer, TOKEN_RIGHT_SQUARE_BRAC);
         ReadToken(lexer);
     }
-    else {
-        if (vardecl->expr == 0) {
-            ThrowError(lexer, "expected ';' or '=' but got ?");
-        }
-        else {
-            ThrowError(lexer, "expected ';' but got ?");
-        }
-    }
 
+    Expect(lexer, TOKEN_SEMICOLON);
+    ReadToken(lexer);
     return vardecl;
 }
 
 static VarAssign *ParseVarAssign(Lexer *lexer, Bool expect_semicolon, Bool is_deref) {
     ASSERT(lexer->token.type == TOKEN_IDENT);
-    ReadToken(lexer); // TOKEN_IDENT
+    ReadToken(lexer);
     VarAssign *varassign = NEW_AST(VarAssign);
     varassign->info.type = AST_VARASSIGN;
     varassign->ident = strdup(lexer->token.strvalue);
@@ -212,7 +226,7 @@ static FuncCall *ParseFuncCall(Lexer *lexer, Bool expect_semicolon) {
     FuncCall *funccall = NEW_AST(FuncCall);
     funccall->info.type = AST_FUNCCALL;
     funccall->ident = strdup(lexer->token.strvalue);
-    funccall->arg = 0;
+    funccall->arg = NULL;
     Expect(lexer, TOKEN_LEFT_PAREN);
     ReadToken(lexer);
     if (lexer->token.type != TOKEN_RIGHT_PAREN) {
@@ -246,13 +260,13 @@ static IfStmt *ParseIfStmt(Lexer *lexer) {
     root_ifstmt->info.type = AST_IFSTMT;
     root_ifstmt->condition = ParseParenthesizedExpr(lexer);
     root_ifstmt->block = ParseBlock(lexer);
-    root_ifstmt->elsestmt = 0;
+    root_ifstmt->elsestmt = NULL;
     IfStmt *child_ifstmt = root_ifstmt;
     Bool is_last_else = FALSE;
     while (lexer->token.type == TOKEN_ELSE && !is_last_else) {
         IfStmt *ifstmt = NEW_AST(IfStmt);
         ifstmt->info.type = AST_IFSTMT;
-        ifstmt->condition = 0;
+        ifstmt->condition = NULL;
         if (lexer->peek.type == TOKEN_IF) {
             ReadToken(lexer);
             ifstmt->condition = ParseParenthesizedExpr(lexer);
@@ -262,7 +276,7 @@ static IfStmt *ParseIfStmt(Lexer *lexer) {
         }
 
         ifstmt->block = ParseBlock(lexer);
-        ifstmt->elsestmt = 0;
+        ifstmt->elsestmt = NULL;
         child_ifstmt->elsestmt = ifstmt;
         child_ifstmt = ifstmt;
     }
@@ -306,18 +320,18 @@ static Block *ParseBlock(Lexer *lexer) {
 
     Block *root_block = NEW_AST(Block);
     root_block->info.type = AST_BLOCK;
-    root_block->info.parent = 0;
-    root_block->stmt = 0;
-    root_block->glue = 0;
+    root_block->info.parent = NULL;
+    root_block->stmt = NULL;
+    root_block->glue = NULL;
     Block *child_block = root_block;
     ReadToken(lexer);
     while (lexer->token.type != TOKEN_RIGHT_CURLY_BRAC) {
-        if (child_block->stmt != 0) {
+        if (child_block->stmt != NULL) {
             Block *block = NEW_AST(Block);
             block->info.type = AST_BLOCK;
             block->info.parent = (Ast *) child_block;
-            block->stmt = 0;
-            block->glue = 0;
+            block->stmt = NULL;
+            block->glue = NULL;
 
             child_block->stmt->parent = (Ast *) child_block;
             child_block->glue = block;
@@ -332,7 +346,7 @@ static Block *ParseBlock(Lexer *lexer) {
             case TOKEN_WHILE:  {child_block->stmt = (Ast *) ParseWhileLoop(lexer);} break;
             case TOKEN_FOR:    {child_block->stmt = (Ast *) ParseForLoop(lexer);} break;
             case TOKEN_STAR:   {
-                ReadToken(lexer); // TOKEN_STAR
+                ReadToken(lexer);
                 child_block->stmt = (Ast *) ParseVarAssign(lexer, TRUE, TRUE);
             } break;
             case TOKEN_IDENT:  {
@@ -342,16 +356,26 @@ static Block *ParseBlock(Lexer *lexer) {
                 else if (lexer->peek.type == TOKEN_LEFT_PAREN) {
                     child_block->stmt = (Ast *) ParseFuncCall(lexer, TRUE);
                 }
+                else if (lexer->peek.type == TOKEN_LEFT_SQUARE_BRAC) {
+                    ReadToken(lexer);
+                    ReadToken(lexer);
+                    int arridx = lexer->token.intvalue;
+                    printf("%d\n", arridx);
+                    ReadToken(lexer);
+                    Expect(lexer, TOKEN_RIGHT_SQUARE_BRAC);
+                    ReadToken(lexer);
+                }
                 else {
                     ThrowError(lexer, "cool error message\n");
                 }
             } break;
             default: {
-                printf("Test %d\n", lexer->token.type);
+                printf("error message: '%s'\n", GetTokenTypeStr(lexer->token.type));
                 exit(1);
             }
         }
 
+        ASSERT(child_block->stmt != NULL);
         child_block->stmt->parent = (Ast *) child_block;
     }
 
@@ -364,8 +388,8 @@ static FuncDecl *ParseFuncDecl(Lexer *lexer, DataType returntype) {
     funcdecl->info.type = AST_FUNCDECL;
     funcdecl->stack_depth_bytes = 0;
     funcdecl->returntype = returntype;
-    funcdecl->ident = 0;
-    funcdecl->block = 0;
+    funcdecl->ident = NULL;
+    funcdecl->block = NULL;
     ReadToken(lexer);
     Expect(lexer, TOKEN_IDENT);
 
@@ -384,16 +408,16 @@ static FuncDecl *ParseFuncDecl(Lexer *lexer, DataType returntype) {
 File *ParseFile(Lexer *lexer) {
     File *root_file = NEW_AST(File);
     root_file->info.type = AST_FILE;
-    root_file->funcdecl = 0;
-    root_file->glue = 0;
+    root_file->funcdecl = NULL;
+    root_file->glue = NULL;
     File *child_file = root_file;
     ReadToken(lexer);
     while (lexer->token.type != TOKEN_EOF) {
-        if (child_file->funcdecl != 0) {
+        if (child_file->funcdecl != NULL) {
             File *file = NEW_AST(File);
             file->info.type = AST_FILE;
-            file->funcdecl = 0;
-            file->glue = 0;
+            file->funcdecl = NULL;
+            file->glue = NULL;
 
             child_file->glue = file;
             child_file = child_file->glue;

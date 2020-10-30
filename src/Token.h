@@ -4,33 +4,8 @@
 
 
 enum TokenType {
-    // Operators
-    TOKEN_EOF,
-    TOKEN_PLUS, TOKEN_MINUS,
-    TOKEN_STAR, // TOKEN_SLASH,
-    TOKEN_TWO_EQUAL, TOKEN_EXMARK_EQUAL,
-    TOKEN_LESS_THAN, TOKEN_LESS_THAN_EQUAL, TOKEN_GREATER_THAN, TOKEN_GREATER_THAN_EQUAL,
-    TOKEN_AMPERSAND, TOKEN_TWO_AMPERSAND,
-    // Keywords
-    TOKEN_INT,
-    TOKEN_IF,
-    TOKEN_ELSE,
-    TOKEN_WHILE,
-    TOKEN_FOR,
-    TOKEN_VOID,
-    TOKEN_CHAR,
-    TOKEN_RETURN,
-
-    TOKEN_INVALID,
-    TOKEN_INT_LITERAL,
-    TOKEN_IDENT,
-    TOKEN_LEFT_PAREN        = '(',
-    TOKEN_RIGHT_PAREN       = ')',
-    TOKEN_SEMICOLON         = ';',
-    TOKEN_EQUAL             = '=',
-    TOKEN_LEFT_CURLY_BRAC   = '{',
-    TOKEN_RIGHT_CURLY_BRAC  = '}',
-
+#define TOKEN(name, str) TOKEN_##name,
+#include "Token.def"
 } typedef TokenType;
 
 struct Token {
@@ -41,5 +16,8 @@ struct Token {
         char *strvalue;
     };
 } typedef Token;
+
+
+char *GetTokenTypeStr(TokenType type);
 
 #endif // MINIC_TOKEN_H
