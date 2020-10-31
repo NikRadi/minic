@@ -3,4 +3,6 @@ void main() {
     while (i < 10) {
         i = i + 2;
     }
+
+    PrintInt(i == 10);
 }

@@ -10,8 +10,8 @@ static Bool is_reg_free[4];
 static char *regs64[] = {"r8", "r9", "r10", "r11"};
 static char *regs32[] = {"r8d", "r9d", "r10d", "r11d"};
 static char *regs8[] = {"r8b", "r9b", "r10b", "r11b"};
-static char *compares[] = {"sete", "setne", "setl", "setle", "setg", "setge"};
-static char *inverse_branch_compares[] = {"jne", "je", "jge", "jg", "jle", "je"};
+static char *set_compares[] = {"sete", "setne", "setl", "setle", "setg", "setge"};
+static char *inverse_jump_compares[] = {"jne", "je", "jge", "jg", "jle", "je"};
 static int num_labels = 0;
 
 
@@ -126,7 +126,6 @@ static int CgX86LiteralDeref(FileInfo *info, Literal *literal) {
         regs64[regid1], regs64[regid1]
     );
 
-    FreeReg(regid1);
     return regid1;
 }
 
@@ -150,7 +149,7 @@ static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int l
                     "\tcmp\t\t%s, %s\n"
                     "\t%s\t\tL%d\n",
                     regs32[regid_lhs], regs32[regid_rhs],
-                    inverse_branch_compares[binaryop->optype - OP_ISEQUAL], label
+                    inverse_jump_compares[binaryop->optype - OP_ISEQUAL], label
                 );
             }
             else {
@@ -159,7 +158,7 @@ static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int l
                     "\t%s\t%s\n"
                     "\tand\t\t%s, 0xff\n",
                     regs32[regid_lhs], regs32[regid_rhs],
-                    compares[binaryop->optype - OP_ISEQUAL], regs8[regid_lhs],
+                    set_compares[binaryop->optype - OP_ISEQUAL], regs8[regid_lhs],
                     regs32[regid_lhs]
                 );
             }
@@ -328,6 +327,7 @@ static void CgX86Block(FileInfo *info, Block *block) {
         }
 
         child_block = child_block->glue;
+        FreeRegs();
     }
 }
 

@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "Codegenx86.h"
+#include "CodegenX86.h"
 #include "Common.h"
 #include "Lexer.h"
 #include "Parser.h"
@@ -36,11 +36,14 @@ TODO:
             the correct answer when there is both TOKEN_STAR and
             TOKEN_ADD
 
-- using all regs: can minic calculate '3+4+5*6*7+8-9' without
-                  throwing a 'ran out of registers' error?
+- using all regs: cannot calculate e.g. '123+3+2+3+3' because
+                  'internal error: out of registers'
 
 - make a 'defs' file with TOKEN(';', TOKEN_SEMICOLON) or something
   to make it easier to debug and prints tokens
+
+- CodegenX86 using 'FreeReg()' many places, some of which probably
+  are unneccesary
 */
 
 int main(int argc, char **argv) {

@@ -12,4 +12,6 @@ void main() {
     else {
         x = 4;
     }
+
+    PrintInt(x == 1);
 }

@@ -4,4 +4,5 @@ void main() {
     int z = x + y + x;
     int f;
     f = 123 + z;
+    PrintInt(f == 131);
 }
