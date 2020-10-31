@@ -25,10 +25,13 @@ IF "%1" == "test" (
         ECHO | SET /p="%%~nf.c ... "
         bin\minic.exe tests\%%f
         CD tests
-        nasm -f win64 -o %%~nf.obj %%~nf.asm
-        LINK /NOLOGO %Libs% /SUBSYSTEM:console %%~nf.obj /OUT:%%~nf.exe
-        %%~nf.exe
-        DEL %%~nf.asm %%~nf.obj %%~nf.exe
+        IF EXIST %%~nf.asm (
+            nasm -f win64 -o %%~nf.obj %%~nf.asm
+            LINK /NOLOGO %Libs% /SUBSYSTEM:console %%~nf.obj /OUT:%%~nf.exe
+            %%~nf.exe
+            DEL %%~nf.asm %%~nf.obj %%~nf.exe
+        )
+
         CD ..
     )
 )

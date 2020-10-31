@@ -25,10 +25,12 @@ enum AstType {
 } typedef AstType;
 
 enum OperatorType {
+    OP_INVALID, // needed because 'op_precedences[0]' is -1
     OP_ADD, OP_SUB,
     OP_MUL, OP_DIV,
     OP_ISEQUAL, OP_NOTEQUAL,
-    OP_ISLESS_THAN, OP_ISLESS_THAN_EQUAL, OP_ISGREATER_THAN, OP_ISGREATER_THAN_EQUAL
+    OP_ISLESS_THAN, OP_ISLESS_THAN_EQUAL,
+    OP_ISGREATER_THAN, OP_ISGREATER_THAN_EQUAL
 } typedef OperatorType;
 
 enum DataType {

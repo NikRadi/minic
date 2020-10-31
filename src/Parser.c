@@ -2,6 +2,7 @@
 
 
 static int op_precedences[] = {
+    -1,      // not an operator
     10, 10, // + ,  -
     20, 20, //  *,  /
     30, 30, // ==, !=
@@ -48,10 +49,7 @@ static OperatorType ToOperatorType(TokenType type) {
         case TOKEN_LESS_THAN_EQUAL:     return OP_ISLESS_THAN_EQUAL;
         case TOKEN_GREATER_THAN:        return OP_ISGREATER_THAN;
         case TOKEN_GREATER_THAN_EQUAL:  return OP_ISGREATER_THAN_EQUAL;
-        default: {
-            printf("invalid operator of type %d\n", type);
-            exit(1);
-        }
+        default:                        return 0;
     }
 }
 
@@ -116,27 +114,29 @@ static Ast *ParseLiteral(Lexer *lexer) {
         return expr;
     }
 
-    ThrowError(lexer, "invalid literal ?\n");
+    char msg[200];
+    sprintf(msg,
+        "invalid literal '%s'",
+        GetTokenTypeStr(lexer->token.type)
+    );
+
+    ThrowError(lexer, msg);
     return 0; // Just to get rid of Warning C4715
 }
 
 static Ast *ParseExpr_(Lexer *lexer, int min_precedence) {
     Ast *lhs = ParseLiteral(lexer);
     while (TRUE) {
-        int op_precedence_idx = lexer->token.type - TOKEN_OPS_START;
-        if (op_precedence_idx <= 0 || op_precedence_idx >= TOKEN_OP_END) {
-            break;
-        }
-
-        int op_precedence = op_precedences[op_precedence_idx];
+        int optype = ToOperatorType(lexer->token.type);
+        int op_precedence = op_precedences[optype];
         if (op_precedence < min_precedence) {
             break;
         }
 
+        ReadToken(lexer); // operator
         BinaryOp *binaryop = NEW_AST(BinaryOp);
         binaryop->info.type = AST_BINARYOP;
-        binaryop->optype = ToOperatorType(lexer->token.type);
-        ReadToken(lexer);
+        binaryop->optype = optype;
         binaryop->rhs = ParseExpr_(lexer, op_precedence);
         binaryop->lhs = lhs;
         lhs = (Ast *) binaryop;
