@@ -138,6 +138,11 @@ static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int l
             FreeReg(regid_rhs);
             return regid_lhs;
         } break;
+        case OP_SUB: {
+            fprintf(info->asmfile, "\tsub\t\t%s, %s\n", regs64[regid_lhs], regs64[regid_rhs]);
+            FreeReg(regid_rhs);
+            return regid_lhs;
+        } break;
         case OP_ISEQUAL:
         case OP_NOTEQUAL:
         case OP_ISLESS_THAN:

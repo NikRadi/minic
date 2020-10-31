@@ -1,6 +1,6 @@
 void main() {
     int x;
-    if (1 == 1) {
+    if (1 != 1) {
         x = 1;
     }
     else if (1 > 2) {
@@ -13,5 +13,5 @@ void main() {
         x = 4;
     }
 
-    PrintInt(x == 1);
+    PrintInt(x == 3);
 }
