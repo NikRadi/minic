@@ -26,7 +26,7 @@ enum AstType {
 
 enum OperatorType {
     OP_ADD, OP_SUB,
-    OP_MUL, //OP_DIV,
+    OP_MUL, OP_DIV,
     OP_ISEQUAL, OP_NOTEQUAL,
     OP_ISLESS_THAN, OP_ISLESS_THAN_EQUAL, OP_ISGREATER_THAN, OP_ISGREATER_THAN_EQUAL
 } typedef OperatorType;
@@ -46,7 +46,10 @@ struct Literal {
     Ast info;
     union {
         int intvalue;
-        char *strvalue;
+        struct {
+            char *strvalue;
+            int arridx;
+        };
     };
 } typedef Literal;
 

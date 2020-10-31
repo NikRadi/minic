@@ -7,35 +7,12 @@ static int op_precedences[] = {
     30, 30, // ==, !=
     40, 40, //  <, <=
     40, 40, //  >, >=
-
-    // 0,              // EOF
-    // 10, 10,         //  +,  -
-    // 20, //20,       //  *,  /
-    // 30, 30,         // ==, !=
-    // 40, 40, 40, 40  //  <, <=, >, >=
-    // // Non-operators
-    // -1, -1, -1, -1,
-    // -1, -1, -1, -1,
-    // -1, -1, -1, -1,
-    // -1, -1, -1, -1,
-    // -1, -1, -1, -1,
-    // -1, -1, -1, -1,
-    // -1, -1, -1, -1,
-    // -1, -1, -1, -1,
-    // -1, -1, -1, -1,
-    // -1, -1, -1, -1,
-    // -1, -1, -1, -1,
-    // -1, -1, -1, -1,
-    // -1, -1, -1, -1,
-    // -1, -1, -1, -1,
-    // -1, -1, -1, -1,
-    // -1, -1, -1, -1,
-    // -1, -1, -1, -1,
 };
 
 
 static Block *ParseBlock(Lexer *lexer);
 static FuncCall *ParseFuncCall(Lexer *lexer, Bool expect_semicolon);
+static Ast *ParseExpr(Lexer *lexer);
 
 
 static void ThrowError(Lexer *lexer, char *msg) {
@@ -64,7 +41,7 @@ static OperatorType ToOperatorType(TokenType type) {
         case TOKEN_PLUS:                return OP_ADD;
         case TOKEN_MINUS:               return OP_SUB;
         case TOKEN_STAR:                return OP_MUL;
-        //case TOKEN_SLASH:             return OP_DIV;
+        case TOKEN_SLASH:               return OP_DIV;
         case TOKEN_TWO_EQUAL:           return OP_ISEQUAL;
         case TOKEN_EXMARK_EQUAL:        return OP_NOTEQUAL;
         case TOKEN_LESS_THAN:           return OP_ISLESS_THAN;
@@ -91,6 +68,19 @@ static Ast *ParseLiteral(Lexer *lexer) {
         if (lexer->peek.type == TOKEN_LEFT_PAREN) {
             return (Ast *) ParseFuncCall(lexer, FALSE);
         }
+        else if (lexer->peek.type == TOKEN_LEFT_SQUARE_BRAC) {
+            Literal *literal = NEW_AST(Literal);
+            literal->info.type = AST_LITERAL_IDENT;
+            literal->strvalue = strdup(lexer->token.strvalue);
+            ReadToken(lexer); // TOKEN_IDENT
+            ReadToken(lexer); // TOKEN_LEFT_SQUARE_BRAC
+            Expect(lexer, TOKEN_INT_LITERAL);
+            literal->arridx = lexer->token.intvalue;
+            ReadToken(lexer);
+            Expect(lexer, TOKEN_RIGHT_SQUARE_BRAC);
+            ReadToken(lexer);
+            return (Ast *) literal;
+        }
         else {
             Literal *literal = NEW_AST(Literal);
             literal->info.type = AST_LITERAL_IDENT;
@@ -116,6 +106,14 @@ static Ast *ParseLiteral(Lexer *lexer) {
         literal->strvalue = strdup(lexer->token.strvalue);
         ReadToken(lexer);
         return (Ast *) literal;
+    }
+
+    if (lexer->token.type == TOKEN_LEFT_PAREN) {
+        ReadToken(lexer);
+        Ast * expr = ParseExpr(lexer);
+        Expect(lexer, TOKEN_RIGHT_PAREN);
+        ReadToken(lexer);
+        return expr;
     }
 
     ThrowError(lexer, "invalid literal ?\n");
@@ -208,6 +206,15 @@ static VarAssign *ParseVarAssign(Lexer *lexer, Bool expect_semicolon, Bool is_de
     varassign->info.type = AST_VARASSIGN;
     varassign->ident = strdup(lexer->token.strvalue);
     varassign->is_deref = is_deref;
+    if (lexer->token.type == TOKEN_LEFT_SQUARE_BRAC) {
+        ReadToken(lexer);
+        int arridx = lexer->token.intvalue;
+        Expect(lexer, TOKEN_INT_LITERAL);
+        ReadToken(lexer);
+        Expect(lexer, TOKEN_RIGHT_SQUARE_BRAC);
+        ReadToken(lexer);
+    }
+
     Expect(lexer, TOKEN_EQUAL);
 
     ReadToken(lexer);
@@ -350,20 +357,11 @@ static Block *ParseBlock(Lexer *lexer) {
                 child_block->stmt = (Ast *) ParseVarAssign(lexer, TRUE, TRUE);
             } break;
             case TOKEN_IDENT:  {
-                if (lexer->peek.type == TOKEN_EQUAL) {
+                if (lexer->peek.type == TOKEN_EQUAL || lexer->peek.type == TOKEN_LEFT_SQUARE_BRAC) {
                     child_block->stmt = (Ast *) ParseVarAssign(lexer, TRUE, FALSE);
                 }
                 else if (lexer->peek.type == TOKEN_LEFT_PAREN) {
                     child_block->stmt = (Ast *) ParseFuncCall(lexer, TRUE);
-                }
-                else if (lexer->peek.type == TOKEN_LEFT_SQUARE_BRAC) {
-                    ReadToken(lexer);
-                    ReadToken(lexer);
-                    int arridx = lexer->token.intvalue;
-                    printf("%d\n", arridx);
-                    ReadToken(lexer);
-                    Expect(lexer, TOKEN_RIGHT_SQUARE_BRAC);
-                    ReadToken(lexer);
                 }
                 else {
                     ThrowError(lexer, "cool error message\n");
