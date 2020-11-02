@@ -48,6 +48,7 @@ static Ast *ParseLiteral(Lexer *lexer) {
         case TOKEN_INT_LITERAL: {
             Literal *literal = NEW_AST(Literal);
             literal->info.type = AST_LITERAL_INT;
+            literal->arridx = -1;
             literal->intvalue = lexer->token.intvalue;
             ReadToken(lexer);
             return (Ast *) literal;
@@ -56,9 +57,23 @@ static Ast *ParseLiteral(Lexer *lexer) {
             if (lexer->peek.type == TOKEN_LEFT_PAREN) {
                 return (Ast *) ParseFuncCall(lexer, FALSE);
             }
+            else if (lexer->peek.type == TOKEN_LEFT_SQUARE_BRAC) {
+                Literal *literal = NEW_AST(Literal);
+                literal->info.type = AST_LITERAL_IDENT;
+                literal->strvalue = strdup(lexer->token.strvalue);
+                ReadToken(lexer); // TOKEN_IDENT
+                ReadToken(lexer); // TOKEN_LEFT_SQUARE_BRAC
+                Expect(lexer, TOKEN_INT_LITERAL);
+                literal->arridx = lexer->token.intvalue;
+                ReadToken(lexer);
+                Expect(lexer, TOKEN_RIGHT_SQUARE_BRAC);
+                ReadToken(lexer);
+                return (Ast *) literal;
+            }
             else {
                 Literal *literal = NEW_AST(Literal);
                 literal->info.type = AST_LITERAL_IDENT;
+                literal->arridx = -1;
                 literal->strvalue = strdup(lexer->token.strvalue);
                 ReadToken(lexer);
                 return (Ast *) literal;
@@ -157,6 +172,7 @@ static VarDecl *ParseVarDecl(Lexer *lexer, DataType datatype) {
     Expect(lexer, TOKEN_IDENT);
 
     vardecl->ident = strdup(lexer->token.strvalue);
+    vardecl->arrsize = -1;
     ReadToken(lexer);
     if (lexer->token.type == TOKEN_EQUAL) {
         ReadToken(lexer);

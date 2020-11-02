@@ -33,6 +33,12 @@ static void TypecheckExpr(FileInfo *info, Ast *expr) {
 }
 
 static void TypecheckVarDecl(FileInfo *info, VarDecl *vardecl) {
+    if (vardecl->arrsize != -1) {
+        if (vardecl->datatype == DATA_INT) {
+            vardecl->datatype = DATA_INT_PTR;
+        }
+    }
+
     if (vardecl->expr != NULL) {
         TypecheckExpr(info, vardecl->expr);
         BinaryOp *varassign = NEW_AST(BinaryOp);
@@ -41,6 +47,7 @@ static void TypecheckVarDecl(FileInfo *info, VarDecl *vardecl) {
 
         Literal *literal = NEW_AST(Literal);
         literal->info.type = AST_LITERAL_IDENT;
+        literal->arridx = -1;
         literal->strvalue = vardecl->ident;
         varassign->lhs = (Ast *) literal;
 
@@ -58,7 +65,8 @@ static void TypecheckVarDecl(FileInfo *info, VarDecl *vardecl) {
 }
 
 static void TypecheckVarAssign(FileInfo *info, BinaryOp *varassign) {
-
+    TypecheckExpr(info, varassign->lhs);
+    TypecheckExpr(info, varassign->rhs);
 }
 
 static void TypecheckReturnStmt(FileInfo *info, ReturnStmt *returnstmt) {

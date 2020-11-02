@@ -83,24 +83,36 @@ static int CgX86LiteralInt(FileInfo *info, Literal *literal) {
 
 static int CgX86LiteralIdent(FileInfo *info, Literal *literal) {
     int regid = AllocRegister();
-    VarInfo varinfo = GetVarInfo(info, literal->strvalue);
     int mem_location = FindMemLocation(info, literal->strvalue);
-    char *reg;
-    switch (varinfo.datatype) {
-        case DATA_CHAR:    {reg = regs8[regid];} break;
-        case DATA_INT:     {reg = regs32[regid];} break;
-        case DATA_CHAR_PTR:
-        case DATA_INT_PTR: {reg = regs64[regid];} break;
-        default: {
-            printf("internal error: not implemented\n");
-            exit(1);
+    if (literal->arridx == -1) {
+        VarInfo varinfo = GetVarInfo(info, literal->strvalue);
+        char *reg;
+        switch (varinfo.datatype) {
+            case DATA_CHAR:    {reg = regs8[regid];} break;
+            case DATA_INT:     {reg = regs32[regid];} break;
+            case DATA_CHAR_PTR:
+            case DATA_INT_PTR: {reg = regs64[regid];} break;
+            default: {
+                printf("internal error: not implemented\n");
+                exit(1);
+            }
         }
-    }
 
-    fprintf(info->asmfile,
-        "\tmov\t\t%s, [rsp+%d]\n",
-        reg, mem_location
-    );
+        fprintf(info->asmfile,
+            "\tmov\t\t%s, [rsp+%d]\n",
+            reg, mem_location
+        );
+    }
+    else {
+        fprintf(info->asmfile,
+            "\tmov\t\t%s, 8\n"
+            "\timul\t%s, %s, %d\n"
+            "\tmov\t\t%s, [rsp+%d+%s]\n",
+            regs64[regid],
+            regs64[regid], regs64[regid], literal->arridx,
+            regs64[regid], mem_location, regs64[regid]
+        );
+    }
 
     return regid;
 }
@@ -239,24 +251,47 @@ static void CgX86VarAssign(FileInfo *info, BinaryOp *varassign) {
     switch (varassign->lhs->type) {
         case AST_LITERAL_IDENT: {
             Literal *literal = (Literal *) varassign->lhs;
-            int var_location = FindMemLocation(info, literal->strvalue);
-            fprintf(info->asmfile,
-                "\tmov\t\t[rsp+%d], %s\n",
-                var_location, regs64[regid]
-            );
+            int mem_location = FindMemLocation(info, literal->strvalue);
+            if (literal->arridx == -1) {
+                fprintf(info->asmfile,
+                    "\tmov\t\t[rsp+%d], %s\n",
+                    mem_location, regs64[regid]
+                );
+            }
+            else {
+                int regid2 = AllocRegister();
+                fprintf(info->asmfile,
+                    "\tmov\t\t%s, 8\n"
+                    "\timul\t%s, %s, %d\n"
+                    "\tmov\t\t[rsp+%d+%s], %s\n",
+                    regs64[regid2],
+                    regs64[regid2], regs64[regid2], literal->arridx,
+                    mem_location, regs64[regid2], regs64[regid]
+                );
+
+                FreeReg(regid2);
+            }
         } break;
         case AST_UNARYOP: {
             UnaryOp *unaryop = (UnaryOp *) varassign->lhs;
             switch (unaryop->optype) {
                 case UNOP_DEREF: {
-                    ASSERT(unaryop->expr->type == AST_LITERAL_IDENT);
-                    Literal *literal = (Literal *) unaryop->expr;
-                    int var_location = FindMemLocation(info, literal->strvalue);
-                    int regid2 = AllocRegister();
+                    int regid2;
+                    if (unaryop->expr->type == AST_LITERAL_IDENT) {
+                        Literal *literal = (Literal *) unaryop->expr;
+                        int mem_location = FindMemLocation(info, literal->strvalue);
+                        regid2 = AllocRegister();
+                        fprintf(info->asmfile,
+                            "\tmov\t\t%s, [rsp+%d]\n",
+                            regs64[regid2], mem_location
+                        );
+                    }
+                    else {
+                        regid2 = CgX86Expr(info, unaryop->expr, FALSE, -1);
+                    }
+
                     fprintf(info->asmfile,
-                        "\tmov\t\t%s, [rsp+%d]\n"
                         "\tmov\t\t[%s], %s\n",
-                        regs64[regid2], var_location,
                         regs64[regid2], regs32[regid]
                     );
                 } break;
