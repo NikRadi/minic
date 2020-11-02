@@ -1,4 +1,5 @@
 AST(LITERAL_INT, "integer literal")
+AST(LITERAL_CHAR, "character literal")
 AST(LITERAL_IDENT, "identifier literal")
 AST(LITERAL_PTR, "pointer literal")
 AST(LITERAL_DEREF, "dereference literal")

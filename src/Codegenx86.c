@@ -226,7 +226,8 @@ static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int l
 
 static int CgX86Expr(FileInfo *info, Ast *expr, Bool is_jump, int label) {
     switch (expr->type) {
-        case AST_LITERAL_INT:   return CgX86LiteralInt(info, (Literal *) expr);
+        case AST_LITERAL_INT:
+        case AST_LITERAL_CHAR:  return CgX86LiteralInt(info, (Literal *) expr);
         case AST_LITERAL_IDENT: return CgX86LiteralIdent(info, (Literal *) expr);
         case AST_LITERAL_PTR:   return CgX86LiteralPtr(info, (Literal *) expr);
         case AST_LITERAL_DEREF: return CgX86LiteralDeref(info, (Literal *) expr);
@@ -434,7 +435,8 @@ void CgX86File(FileInfo *info, File *cfile) {
         "default rel\n"
         "\n"
         "segment .data\n"
-        "\tfmt:\tdb \"%d\", 0xD, 0xA, 0x0\n"
+        "\tifmt:\tdb \"%d\", 0xD, 0xA, 0x0\n"
+        "\tcfmt:\tdb \"%c\", 0xD, 0xA, 0x0\n"
         "\n"
         "segment .text\n"
         "\tglobal main\n"
@@ -443,7 +445,15 @@ void CgX86File(FileInfo *info, File *cfile) {
         "PrintInt:\n"
         "\tsub\t\trsp, 40\n"
         "\tmov\t\trdx, rcx\n"
-        "\tlea\t\trcx, [fmt]\n"
+        "\tlea\t\trcx, [ifmt]\n"
+        "\tcall\tprintf\n"
+        "\tadd\t\trsp, 40\n"
+        "\tret"
+        "\n"
+        "PrintChar:\n"
+        "\tsub\t\trsp, 40\n"
+        "\tmov\t\trdx, rcx\n"
+        "\tlea\t\trcx, [cfmt]\n"
         "\tcall\tprintf\n"
         "\tadd\t\trsp, 40\n"
         "\tret",
