@@ -6,45 +6,6 @@
 #include "Parser.h"
 #include "Typechecker.h"
 
-/*
-TODO:
-- function call: program prints '20' but should print '25'
-                 because 'Test' uses same registers as 'main'
-                 what to do with registers when calling a function
-                 in expr?
-                 maybe call function before calculating expr?
-    int Test() {return 10;}
-    void main() {PrintInt(Test() + 5 + Test());}
-
-- pointer add: program has 'ptr += 4' but should be
-               'ptr += 1' and typecheck should make
-               the '1' to a '4' because it is sizeof(int)
-    int x = 123; int y = 234; int *ptr = &x;
-    PrintInt(*ptr); ptr = ptr + 4; PrintInt(*ptr);
-
-- register use: need to add 'FreeRegs()' to somewhere in codegenx86
-                sometimes, e.g. after two 'PrintInt()', it uses first
-                r8 then r9 even when r8 should be free after first call
-                probably should be added in 'CgX86Block()'
-
-- stack offset: currently all variables are gives 8 bytes on stack
-                e.g. first variable on [rsp+0], second on [rsp+8]
-                this is so pointers (need 8 bytes) work
-                but maybe char only needs 1
-
-- binaryop: previously there was a bug with binaryop not calculating
-            the correct answer when there is both TOKEN_STAR and
-            TOKEN_ADD
-
-- using all regs: cannot calculate e.g. '123+3+2+3+3' because
-                  'internal error: out of registers'
-
-- make a 'defs' file with TOKEN(';', TOKEN_SEMICOLON) or something
-  to make it easier to debug and prints tokens
-
-- CodegenX86 using 'FreeReg()' many places, some of which probably
-  are unneccesary
-*/
 
 int main(int argc, char **argv) {
     if (argc < 2) {

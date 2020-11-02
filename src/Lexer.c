@@ -55,7 +55,6 @@ static void TryReadPair(Lexer *lexer, TokenType type1, char char2, TokenType typ
         lexer->peek.type = type2;
     }
     else {
-        // TODO: Probably should be removed sometime
         if (type1 == TOKEN_INVALID) {
             printf("invalid character\n");
             exit(1);

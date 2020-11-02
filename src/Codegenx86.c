@@ -175,16 +175,18 @@ static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int l
     int regid_lhs = CgX86Expr(info, binaryop->lhs, FALSE, -1);
     int regid_rhs = CgX86Expr(info, binaryop->rhs, FALSE, -1);
     switch (binaryop->optype) {
-        case BIOP_ADD: {
-            fprintf(info->asmfile, "\tadd\t\t%s, %s\n", regs64[regid_lhs], regs64[regid_rhs]);
+        case BIOP_ADD:
+        case BIOP_SUB:
+        case BIOP_MUL: {
+            char *optypes[3] = {"add\t", "sub\t", "imul"};
+            fprintf(info->asmfile,
+                "\t%s\t%s, %s\n",
+                optypes[binaryop->optype - BIOP_ADD], regs64[regid_lhs], regs64[regid_rhs]
+            );
+
             FreeReg(regid_rhs);
             return regid_lhs;
-        } break;
-        case BIOP_SUB: {
-            fprintf(info->asmfile, "\tsub\t\t%s, %s\n", regs64[regid_lhs], regs64[regid_rhs]);
-            FreeReg(regid_rhs);
-            return regid_lhs;
-        } break;
+        }
         case BIOP_ISEQUAL:
         case BIOP_NOTEQUAL:
         case BIOP_LESS:
