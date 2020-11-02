@@ -1,4 +1,4 @@
-#include "Codegenx86.h"
+#include "CodegenX86.h"
 
 
 static void CgX86Block(FileInfo *info, Block *block);
@@ -129,32 +129,62 @@ static int CgX86LiteralDeref(FileInfo *info, Literal *literal) {
     return regid1;
 }
 
+static int CgX86UnaryOp(FileInfo *info, UnaryOp *unaryop) {
+    switch (unaryop->optype) {
+        case UNOP_ADDRESS: {
+            ASSERT(unaryop->expr->type == AST_LITERAL_IDENT);
+            int regid = AllocRegister();
+            Literal *literal = (Literal *) unaryop->expr;
+            int mem_location = FindMemLocation(info, literal->strvalue);
+            fprintf(info->asmfile,
+                "\tlea\t\t%s, [rsp+%d]\n",
+                regs64[regid], mem_location
+            );
+
+            return regid;
+        };
+        case UNOP_DEREF: {
+            int regid = CgX86Expr(info, unaryop->expr, FALSE, -1);
+            fprintf(info->asmfile,
+                "\tmov\t\t%s, [%s]\n",
+                regs64[regid], regs64[regid]
+            );
+
+            return regid;
+        };
+        default: {
+            printf("err\n");
+            exit(1);
+        }
+    }
+}
+
 static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int label) {
     int regid_lhs = CgX86Expr(info, binaryop->lhs, FALSE, -1);
     int regid_rhs = CgX86Expr(info, binaryop->rhs, FALSE, -1);
     switch (binaryop->optype) {
-        case OP_ADD: {
+        case BIOP_ADD: {
             fprintf(info->asmfile, "\tadd\t\t%s, %s\n", regs64[regid_lhs], regs64[regid_rhs]);
             FreeReg(regid_rhs);
             return regid_lhs;
         } break;
-        case OP_SUB: {
+        case BIOP_SUB: {
             fprintf(info->asmfile, "\tsub\t\t%s, %s\n", regs64[regid_lhs], regs64[regid_rhs]);
             FreeReg(regid_rhs);
             return regid_lhs;
         } break;
-        case OP_ISEQUAL:
-        case OP_NOTEQUAL:
-        case OP_ISLESS_THAN:
-        case OP_ISLESS_THAN_EQUAL:
-        case OP_ISGREATER_THAN:
-        case OP_ISGREATER_THAN_EQUAL: {
+        case BIOP_ISEQUAL:
+        case BIOP_NOTEQUAL:
+        case BIOP_LESS:
+        case BIOP_LESS_EQUAL:
+        case BIOP_GREATER:
+        case BIOP_GREATER_EQUAL: {
             if (is_jump) {
                 fprintf(info->asmfile,
                     "\tcmp\t\t%s, %s\n"
                     "\t%s\t\tL%d\n",
                     regs32[regid_lhs], regs32[regid_rhs],
-                    inverse_jump_compares[binaryop->optype - OP_ISEQUAL], label
+                    inverse_jump_compares[binaryop->optype - BIOP_ISEQUAL], label
                 );
             }
             else {
@@ -163,7 +193,7 @@ static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int l
                     "\t%s\t%s\n"
                     "\tand\t\t%s, 0xff\n",
                     regs32[regid_lhs], regs32[regid_rhs],
-                    set_compares[binaryop->optype - OP_ISEQUAL], regs8[regid_lhs],
+                    set_compares[binaryop->optype - BIOP_ISEQUAL], regs8[regid_lhs],
                     regs32[regid_lhs]
                 );
             }
@@ -185,6 +215,7 @@ static int CgX86Expr(FileInfo *info, Ast *expr, Bool is_jump, int label) {
         case AST_LITERAL_IDENT: return CgX86LiteralIdent(info, (Literal *) expr);
         case AST_LITERAL_PTR:   return CgX86LiteralPtr(info, (Literal *) expr);
         case AST_LITERAL_DEREF: return CgX86LiteralDeref(info, (Literal *) expr);
+        case AST_UNARYOP:       return CgX86UnaryOp(info, (UnaryOp *) expr);
         case AST_BINARYOP:      return CgX86BinaryOp(info, (BinaryOp *) expr, is_jump, label);
         case AST_FUNCCALL: {
             CgX86FuncCall(info, (FuncCall *) expr);
@@ -197,54 +228,49 @@ static int CgX86Expr(FileInfo *info, Ast *expr, Bool is_jump, int label) {
             return regid;
         }
         default: {
-            printf("internal error: invalid expression type '%d'\n", expr->type);
+            printf("internal error: invalid expression type '%s'\n", GetAstTypeStr(expr->type));
             exit(1);
         };
     }
 }
 
-static void CgX86VarAssign(FileInfo *info, VarAssign *varassign) {
-    VarInfo varinfo = GetVarInfo(info, varassign->ident);
-    int var_location = FindMemLocation(info, varassign->ident);
-    int regid = CgX86Expr(info, varassign->expr, FALSE, -1);
-    char *reg;
-    if (varassign->is_deref) {
-        switch (varinfo.datatype) {
-            case DATA_CHAR_PTR: {reg = regs8[regid];} break;
-            case DATA_INT_PTR:  {reg = regs32[regid];} break;
-            default: {
-                printf("internal error: invalid variable type, cannot dereference\n");
-                exit(1);
-            } break;
+static void CgX86VarAssign(FileInfo *info, BinaryOp *varassign) {
+    int regid = CgX86Expr(info, varassign->rhs, FALSE, -1);
+    switch (varassign->lhs->type) {
+        case AST_LITERAL_IDENT: {
+            Literal *literal = (Literal *) varassign->lhs;
+            int var_location = FindMemLocation(info, literal->strvalue);
+            fprintf(info->asmfile,
+                "\tmov\t\t[rsp+%d], %s\n",
+                var_location, regs64[regid]
+            );
+        } break;
+        case AST_UNARYOP: {
+            UnaryOp *unaryop = (UnaryOp *) varassign->lhs;
+            switch (unaryop->optype) {
+                case UNOP_DEREF: {
+                    ASSERT(unaryop->expr->type == AST_LITERAL_IDENT);
+                    Literal *literal = (Literal *) unaryop->expr;
+                    int var_location = FindMemLocation(info, literal->strvalue);
+                    int regid2 = AllocRegister();
+                    fprintf(info->asmfile,
+                        "\tmov\t\t%s, [rsp+%d]\n"
+                        "\tmov\t\t[%s], %s\n",
+                        regs64[regid2], var_location,
+                        regs64[regid2], regs32[regid]
+                    );
+                } break;
+                default: {
+                    printf("internal error: still not implemented op '%d'\n", unaryop->optype);
+                    exit(1);
+                }
+            }
+        } break;
+        default: {
+            printf("internal error: not implemented '%s'\n", GetAstTypeStr(varassign->lhs->type));
+            exit(1);
         }
-
-        int regid2 = AllocRegister();
-        fprintf(info->asmfile,
-            "\tmov\t\t%s, [rsp+%d]\n"
-            "\tmov\t\t[%s], %s\n",
-            regs64[regid2], var_location,
-            regs64[regid2], reg
-        );
     }
-    else {
-        switch (varinfo.datatype) {
-            case DATA_CHAR:    {reg = regs8[regid];} break;
-            case DATA_INT:     {reg = regs32[regid];} break;
-            case DATA_CHAR_PTR:
-            case DATA_INT_PTR: {reg = regs64[regid];} break;
-            default: {
-                printf("internal error: invalid variable type\n");
-                exit(1);
-            } break;
-        }
-
-        fprintf(info->asmfile,
-            "\tmov\t\t[rsp+%d], %s\n",
-            var_location, reg
-        );
-    }
-
-    FreeRegs();
 }
 
 static void CgX86IfStmtElse(FileInfo *info, IfStmt *elsestmt, int end_label) {
@@ -320,13 +346,15 @@ static void CgX86Block(FileInfo *info, Block *block) {
     Block *child_block = block;
     while (child_block != NULL && child_block->stmt != NULL) {
         switch (child_block->stmt->type) {
-            case AST_VARASSIGN:  {CgX86VarAssign(info, (VarAssign *) child_block->stmt);} break;
+            case AST_VARDECL:    {} break;
+            case AST_BINARYOP:   {CgX86VarAssign(info, (BinaryOp *) child_block->stmt);} break;
             case AST_RETURNSTMT: {CgX86ReturnStmt(info, (ReturnStmt *) child_block->stmt);} break;
             case AST_IFSTMT:     {CgX86IfStmt(info, (IfStmt *) child_block->stmt);} break;
             case AST_WHILELOOP:  {CgX86WhileLoop(info, (WhileLoop *) child_block->stmt);} break;
             case AST_FUNCCALL:   {CgX86FuncCall(info, (FuncCall *) child_block->stmt);} break;
             default: {
-                printf("internal error: invalid statement type '%d'\n", child_block->stmt->type);
+                ASSERT(child_block != NULL);
+                printf("internal error: invalid statement type '%s'\n", GetAstTypeStr(child_block->stmt->type));
                 exit(1);
             };
         }

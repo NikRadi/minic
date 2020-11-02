@@ -7,6 +7,7 @@ enum TokenType {
 #define TOKEN(name, str) TOKEN_##name,
 #include "Token.def"
 } typedef TokenType;
+char *GetTokenTypeStr(TokenType type);
 
 struct Token {
     int line;
@@ -17,7 +18,5 @@ struct Token {
     };
 } typedef Token;
 
-
-char *GetTokenTypeStr(TokenType type);
 
 #endif // MINIC_TOKEN_H

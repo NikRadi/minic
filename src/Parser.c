@@ -1,16 +1,6 @@
 #include "Parser.h"
 
 
-static int op_precedences[] = {
-    -1,      // not an operator
-    10, 10, // + ,  -
-    20, 20, //  *,  /
-    30, 30, // ==, !=
-    40, 40, //  <, <=
-    40, 40, //  >, >=
-};
-
-
 static Block *ParseBlock(Lexer *lexer);
 static FuncCall *ParseFuncCall(Lexer *lexer, Bool expect_semicolon);
 static Ast *ParseExpr(Lexer *lexer);
@@ -39,89 +29,75 @@ static void Expect(Lexer *lexer, TokenType type) {
 
 static OperatorType ToOperatorType(TokenType type) {
     switch (type) {
-        case TOKEN_PLUS:                return OP_ADD;
-        case TOKEN_MINUS:               return OP_SUB;
-        case TOKEN_STAR:                return OP_MUL;
-        case TOKEN_SLASH:               return OP_DIV;
-        case TOKEN_TWO_EQUAL:           return OP_ISEQUAL;
-        case TOKEN_EXMARK_EQUAL:        return OP_NOTEQUAL;
-        case TOKEN_LESS_THAN:           return OP_ISLESS_THAN;
-        case TOKEN_LESS_THAN_EQUAL:     return OP_ISLESS_THAN_EQUAL;
-        case TOKEN_GREATER_THAN:        return OP_ISGREATER_THAN;
-        case TOKEN_GREATER_THAN_EQUAL:  return OP_ISGREATER_THAN_EQUAL;
+        case TOKEN_PLUS:                return BIOP_ADD;
+        case TOKEN_MINUS:               return BIOP_SUB;
+        case TOKEN_STAR:                return BIOP_MUL;
+        case TOKEN_SLASH:               return BIOP_DIV;
+        case TOKEN_TWO_EQUAL:           return BIOP_ISEQUAL;
+        case TOKEN_EXMARK_EQUAL:        return BIOP_NOTEQUAL;
+        case TOKEN_LESS_THAN:           return BIOP_LESS;
+        case TOKEN_LESS_THAN_EQUAL:     return BIOP_LESS_EQUAL;
+        case TOKEN_GREATER_THAN:        return BIOP_GREATER;
+        case TOKEN_GREATER_THAN_EQUAL:  return BIOP_GREATER_EQUAL;
         default:                        return 0;
     }
 }
 
 static Ast *ParseLiteral(Lexer *lexer) {
-    if (lexer->token.type == TOKEN_INT_LITERAL) {
-        Literal *literal = NEW_AST(Literal);
-        literal->info.type = AST_LITERAL_INT;
-        literal->intvalue = lexer->token.intvalue;
-        ReadToken(lexer);
-        return (Ast *) literal;
-    }
-
-    if (lexer->token.type == TOKEN_IDENT) {
-        if (lexer->peek.type == TOKEN_LEFT_PAREN) {
-            return (Ast *) ParseFuncCall(lexer, FALSE);
-        }
-        else if (lexer->peek.type == TOKEN_LEFT_SQUARE_BRAC) {
+    switch (lexer->token.type) {
+        case TOKEN_INT_LITERAL: {
             Literal *literal = NEW_AST(Literal);
-            literal->info.type = AST_LITERAL_IDENT;
-            literal->strvalue = strdup(lexer->token.strvalue);
-            ReadToken(lexer); // TOKEN_IDENT
-            ReadToken(lexer); // TOKEN_LEFT_SQUARE_BRAC
-            Expect(lexer, TOKEN_INT_LITERAL);
-            literal->arridx = lexer->token.intvalue;
-            ReadToken(lexer);
-            Expect(lexer, TOKEN_RIGHT_SQUARE_BRAC);
+            literal->info.type = AST_LITERAL_INT;
+            literal->intvalue = lexer->token.intvalue;
             ReadToken(lexer);
             return (Ast *) literal;
         }
-        else {
-            Literal *literal = NEW_AST(Literal);
-            literal->info.type = AST_LITERAL_IDENT;
-            literal->strvalue = strdup(lexer->token.strvalue);
+        case TOKEN_IDENT: {
+            if (lexer->peek.type == TOKEN_LEFT_PAREN) {
+                return (Ast *) ParseFuncCall(lexer, FALSE);
+            }
+            else {
+                Literal *literal = NEW_AST(Literal);
+                literal->info.type = AST_LITERAL_IDENT;
+                literal->strvalue = strdup(lexer->token.strvalue);
+                ReadToken(lexer);
+                return (Ast *) literal;
+            }
+        }
+        case TOKEN_AMPERSAND: {
             ReadToken(lexer);
-            return (Ast *) literal;
+            UnaryOp *unaryop = NEW_AST(UnaryOp);
+            unaryop->info.type = AST_UNARYOP;
+            unaryop->optype = UNOP_ADDRESS;
+            unaryop->expr = ParseLiteral(lexer);
+            return (Ast *) unaryop;
+        }
+        case TOKEN_STAR: {
+            ReadToken(lexer);
+            UnaryOp *unaryop = NEW_AST(UnaryOp);
+            unaryop->info.type = AST_UNARYOP;
+            unaryop->optype = UNOP_DEREF;
+            unaryop->expr = ParseLiteral(lexer);
+            return (Ast *) unaryop;
+        }
+        case TOKEN_LEFT_PAREN: {
+            ReadToken(lexer);
+            Ast *expr = ParseExpr(lexer);
+            Expect(lexer, TOKEN_RIGHT_PAREN);
+            ReadToken(lexer);
+            return expr;
+        }
+        default: {
+            char msg[200];
+            sprintf(msg,
+                "invalid literal '%s'",
+                GetTokenTypeStr(lexer->token.type)
+            );
+
+            ThrowError(lexer, msg);
+            return 0; // Just to get rid of warning C4715
         }
     }
-
-    if (lexer->token.type == TOKEN_AMPERSAND) {
-        ReadToken(lexer); // TOKEN_AMPERSAND
-        Literal *literal = NEW_AST(Literal);
-        literal->info.type = AST_LITERAL_PTR;
-        literal->strvalue = strdup(lexer->token.strvalue);
-        ReadToken(lexer);
-        return (Ast *) literal;
-    }
-
-    if (lexer->token.type == TOKEN_STAR) {
-        ReadToken(lexer); // TOKEN_STAR
-        Literal *literal = NEW_AST(Literal);
-        literal->info.type = AST_LITERAL_DEREF;
-        literal->strvalue = strdup(lexer->token.strvalue);
-        ReadToken(lexer);
-        return (Ast *) literal;
-    }
-
-    if (lexer->token.type == TOKEN_LEFT_PAREN) {
-        ReadToken(lexer);
-        Ast * expr = ParseExpr(lexer);
-        Expect(lexer, TOKEN_RIGHT_PAREN);
-        ReadToken(lexer);
-        return expr;
-    }
-
-    char msg[200];
-    sprintf(msg,
-        "invalid literal '%s'",
-        GetTokenTypeStr(lexer->token.type)
-    );
-
-    ThrowError(lexer, msg);
-    return 0; // Just to get rid of Warning C4715
 }
 
 static Ast *ParseExpr_(Lexer *lexer, int min_precedence) {
@@ -129,7 +105,7 @@ static Ast *ParseExpr_(Lexer *lexer, int min_precedence) {
     while (TRUE) {
         int optype = ToOperatorType(lexer->token.type);
         int op_precedence = op_precedences[optype];
-        if (op_precedence < min_precedence) {
+        if (op_precedence <= min_precedence) {
             break;
         }
 
@@ -199,26 +175,13 @@ static VarDecl *ParseVarDecl(Lexer *lexer, DataType datatype) {
     return vardecl;
 }
 
-static VarAssign *ParseVarAssign(Lexer *lexer, Bool expect_semicolon, Bool is_deref) {
-    ASSERT(lexer->token.type == TOKEN_IDENT);
+static BinaryOp *ParseVarAssign(Lexer *lexer, Bool expect_semicolon) {
+    BinaryOp *varassign = NEW_AST(BinaryOp);
+    varassign->info.type = AST_BINARYOP;
+    varassign->lhs = ParseExpr(lexer);
+    varassign->optype = ToOperatorType(lexer->token.type);
     ReadToken(lexer);
-    VarAssign *varassign = NEW_AST(VarAssign);
-    varassign->info.type = AST_VARASSIGN;
-    varassign->ident = strdup(lexer->token.strvalue);
-    varassign->is_deref = is_deref;
-    if (lexer->token.type == TOKEN_LEFT_SQUARE_BRAC) {
-        ReadToken(lexer);
-        int arridx = lexer->token.intvalue;
-        Expect(lexer, TOKEN_INT_LITERAL);
-        ReadToken(lexer);
-        Expect(lexer, TOKEN_RIGHT_SQUARE_BRAC);
-        ReadToken(lexer);
-    }
-
-    Expect(lexer, TOKEN_EQUAL);
-
-    ReadToken(lexer);
-    varassign->expr = ParseExpr(lexer);
+    varassign->rhs = ParseExpr(lexer);
     if (expect_semicolon) {
         Expect(lexer, TOKEN_SEMICOLON);
         ReadToken(lexer);
@@ -311,11 +274,11 @@ static ForLoop *ParseForLoop(Lexer *lexer) {
     ReadToken(lexer);
     Expect(lexer, TOKEN_LEFT_PAREN);
     ReadToken(lexer);
-    forloop->pre_operation = ParseVarAssign(lexer, TRUE, FALSE);
+    forloop->pre_operation = ParseVarAssign(lexer, TRUE);
     forloop->condition = ParseExpr(lexer);
     Expect(lexer, TOKEN_SEMICOLON);
     ReadToken(lexer);
-    forloop->post_operation = ParseVarAssign(lexer, FALSE, FALSE);
+    forloop->post_operation = ParseVarAssign(lexer, FALSE);
     Expect(lexer, TOKEN_RIGHT_PAREN);
     forloop->block = ParseBlock(lexer);
     return forloop;
@@ -352,13 +315,10 @@ static Block *ParseBlock(Lexer *lexer) {
             case TOKEN_IF:     {child_block->stmt = (Ast *) ParseIfStmt(lexer);} break;
             case TOKEN_WHILE:  {child_block->stmt = (Ast *) ParseWhileLoop(lexer);} break;
             case TOKEN_FOR:    {child_block->stmt = (Ast *) ParseForLoop(lexer);} break;
-            case TOKEN_STAR:   {
-                ReadToken(lexer);
-                child_block->stmt = (Ast *) ParseVarAssign(lexer, TRUE, TRUE);
-            } break;
+            case TOKEN_STAR:   {child_block->stmt = (Ast *) ParseVarAssign(lexer, TRUE);} break;
             case TOKEN_IDENT:  {
                 if (lexer->peek.type == TOKEN_EQUAL || lexer->peek.type == TOKEN_LEFT_SQUARE_BRAC) {
-                    child_block->stmt = (Ast *) ParseVarAssign(lexer, TRUE, FALSE);
+                    child_block->stmt = (Ast *) ParseVarAssign(lexer, TRUE);
                 }
                 else if (lexer->peek.type == TOKEN_LEFT_PAREN) {
                     child_block->stmt = (Ast *) ParseFuncCall(lexer, TRUE);

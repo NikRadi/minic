@@ -7,30 +7,30 @@
 
 
 enum AstType {
-    AST_LITERAL_INT,
-    AST_LITERAL_IDENT,
-    AST_LITERAL_PTR,
-    AST_LITERAL_DEREF,
-    AST_BINARYOP,
-    AST_VARDECL,
-    AST_VARASSIGN,
-    AST_BLOCK,
-    AST_RETURNSTMT,
-    AST_IFSTMT,
-    AST_WHILELOOP,
-    AST_FORLOOP,
-    AST_FUNCDECL,
-    AST_FUNCCALL,
-    AST_FILE,
+#define AST(name, str) AST_##name,
+#include "AstNodes.def"
 } typedef AstType;
+char *GetAstTypeStr(AstType type);
+
+
+static int op_precedences[] = {
+    -1,     // OP_INVALID
+    10, 10, // ==, !=
+    20, 20, //  <, <=
+    20, 20, //  >, >=
+    30, 30, //  +,  -
+    40, 40, //  *,  /   (BIOP_ADD, BIOP_DIV)
+    50, 50, //  *,  &   (UNOP_DEREF, UNOP_ADDRESS)
+};
 
 enum OperatorType {
-    OP_INVALID, // needed because 'op_precedences[0]' is -1
-    OP_ADD, OP_SUB,
-    OP_MUL, OP_DIV,
-    OP_ISEQUAL, OP_NOTEQUAL,
-    OP_ISLESS_THAN, OP_ISLESS_THAN_EQUAL,
-    OP_ISGREATER_THAN, OP_ISGREATER_THAN_EQUAL
+    OP_INVALID,
+    BIOP_ISEQUAL,   BIOP_NOTEQUAL,
+    BIOP_LESS,      BIOP_LESS_EQUAL,
+    BIOP_GREATER,   BIOP_GREATER_EQUAL,
+    BIOP_ADD,       BIOP_SUB,
+    BIOP_MUL,       BIOP_DIV,
+    UNOP_DEREF,     UNOP_ADDRESS,
 } typedef OperatorType;
 
 enum DataType {
@@ -55,6 +55,12 @@ struct Literal {
     };
 } typedef Literal;
 
+struct UnaryOp {
+    Ast info;
+    OperatorType optype;
+    Ast *expr;
+} typedef UnaryOp;
+
 struct BinaryOp {
     Ast info;
     OperatorType optype;
@@ -69,13 +75,6 @@ struct VarDecl {
     Ast *expr;
     int arrsize;
 } typedef VarDecl;
-
-struct VarAssign {
-    Ast info;
-    char *ident;
-    Ast *expr;
-    Bool is_deref;
-} typedef VarAssign;
 
 struct Block {
     Ast info;
@@ -103,9 +102,9 @@ struct WhileLoop {
 
 struct ForLoop {
     Ast info;
-    VarAssign *pre_operation;
+    BinaryOp *pre_operation;
     Ast *condition;
-    VarAssign *post_operation;
+    BinaryOp *post_operation;
     Block *block;
 } typedef ForLoop;
 

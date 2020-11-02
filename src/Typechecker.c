@@ -7,7 +7,10 @@ static void TypecheckFuncCall(FileInfo *info, FuncCall *funccall);
 
 
 static void TypecheckLiteral(FileInfo *info, Literal *literal) {
+}
 
+static void TypecheckUnaryOp(FileInfo *info, UnaryOp *unaryop) {
+    TypecheckExpr(info, unaryop->expr);
 }
 
 static void TypecheckBinaryOp(FileInfo *info, BinaryOp *binaryop) {
@@ -18,84 +21,44 @@ static void TypecheckBinaryOp(FileInfo *info, BinaryOp *binaryop) {
 static void TypecheckExpr(FileInfo *info, Ast *expr) {
     switch (expr->type) {
         case AST_LITERAL_INT:
-        case AST_LITERAL_IDENT:
-        case AST_LITERAL_PTR:
-        case AST_LITERAL_DEREF: {TypecheckLiteral(info, (Literal *) expr);} break;
+        case AST_LITERAL_IDENT: {TypecheckLiteral(info, (Literal *) expr);} break;
+        case AST_UNARYOP:       {TypecheckUnaryOp(info, (UnaryOp *) expr);} break;
         case AST_BINARYOP:      {TypecheckBinaryOp(info, (BinaryOp *) expr);} break;
         case AST_FUNCCALL:      {TypecheckFuncCall(info, (FuncCall *) expr);} break;
         default: {
-            printf("is this even possible\n");
+            printf("internal error: unimplemented expr case '%s'\n", GetAstTypeStr(expr->type));
             exit(1);
         };
     }
 }
 
 static void TypecheckVarDecl(FileInfo *info, VarDecl *vardecl) {
+    if (vardecl->expr != NULL) {
+        TypecheckExpr(info, vardecl->expr);
+        BinaryOp *varassign = NEW_AST(BinaryOp);
+        varassign->info.type = AST_BINARYOP;
+        varassign->rhs = vardecl->expr;
+
+        Literal *literal = NEW_AST(Literal);
+        literal->info.type = AST_LITERAL_IDENT;
+        literal->strvalue = vardecl->ident;
+        varassign->lhs = (Ast *) literal;
+
+        ASSERT(vardecl->info.parent->type == AST_BLOCK);
+        Block *parent_block = (Block *) vardecl->info.parent;
+        parent_block->stmt = (Ast *) varassign;
+    }
+
     VarInfo varinfo;
     varinfo.ident = vardecl->ident;
     varinfo.datatype = vardecl->datatype;
     info->var_infos[info->num_vars] = varinfo;
-
     info->num_vars += 1;
     info->current_func->stack_depth_bytes += 4;
-    ASSERT(vardecl->info.parent->type == AST_BLOCK);
-    Block *parent_block = (Block *) vardecl->info.parent;
-    if (vardecl->expr != NULL) {
-        TypecheckExpr(info, vardecl->expr);
-        VarAssign *varassign = NEW_AST(VarAssign);
-        varassign->info.type = AST_VARASSIGN;
-        varassign->info.parent = vardecl->info.parent;
-        varassign->ident = vardecl->ident;
-        varassign->expr = vardecl->expr;
-        varassign->is_deref = FALSE;
-        parent_block->stmt = (Ast *) varassign;
-    }
-    else {
-        ASSERT(parent_block->info.parent != NULL);
-        if (parent_block->glue != NULL) {
-            switch (parent_block->info.parent->type) {
-                case AST_FUNCDECL: {
-                    FuncDecl *funcdecl = (FuncDecl *) parent_block->info.parent;
-                    funcdecl->block = parent_block->glue;
-                    funcdecl->block->info.parent = (Ast *) funcdecl;
-                } break;
-                case AST_BLOCK: {
-                    Block *block = (Block *) parent_block->info.parent;
-                    block->glue = parent_block->glue;
-                    block->glue->info.parent = (Ast *) block;
-                } break;
-                default: {
-                    printf("internal error: not implemented1 %d\n",
-                        parent_block->info.parent->type
-                    );
-                    exit(1);
-                }
-            }
-        }
-        else {
-            switch (parent_block->info.parent->type) {
-                case AST_FUNCDECL: {
-                    FuncDecl *funcdecl = (FuncDecl *) parent_block->info.parent;
-                    funcdecl->block = NULL;
-                } break;
-                case AST_BLOCK: {
-                    Block *block = (Block *) parent_block->info.parent;
-                    block->glue = NULL;
-                } break;
-                default: {
-                    printf("internal error: not implemented2 %d, %s\n",
-                        parent_block->info.parent->type,
-                        vardecl->ident
-                    );
-                    exit(1);
-                }
-            }
-        }
-    }
 }
 
-static void TypecheckVarAssign(FileInfo *info, VarAssign *varassign) {
-    TypecheckExpr(info, varassign->expr);
+static void TypecheckVarAssign(FileInfo *info, BinaryOp *varassign) {
+
 }
 
 static void TypecheckReturnStmt(FileInfo *info, ReturnStmt *returnstmt) {
@@ -121,14 +84,14 @@ static void TypecheckWhileLoop(FileInfo *info, WhileLoop *whileloop) {
 }
 
 static void TypecheckForLoop(FileInfo *info, ForLoop *forloop) {
-    TypecheckVarAssign(info, forloop->pre_operation);
-    TypecheckExpr(info, forloop->condition);
-    TypecheckVarAssign(info, forloop->post_operation);
+    TypecheckExpr(info, (Ast *) forloop->pre_operation);
+    TypecheckExpr(info, (Ast *) forloop->condition);
+    TypecheckExpr(info, (Ast *) forloop->post_operation);
     TypecheckBlock(info, forloop->block);
 
     WhileLoop *loop = NEW_AST(WhileLoop);
     loop->info.type = AST_WHILELOOP;
-    loop->condition = forloop->condition;
+    loop->condition = (Ast *) forloop->condition;
     loop->block = forloop->block;
 
     // Insert forloop->post_operation as last statement in loop->block
@@ -175,14 +138,14 @@ static void TypecheckBlock(FileInfo *info, Block *block) {
     while (child_block != NULL && child_block->stmt != NULL) {
         switch (child_block->stmt->type) {
             case AST_VARDECL:    {TypecheckVarDecl(info, (VarDecl *) child_block->stmt);} break;
-            case AST_VARASSIGN:  {TypecheckVarAssign(info, (VarAssign *) child_block->stmt);} break;
+            case AST_BINARYOP:   {TypecheckVarAssign(info, (BinaryOp *) child_block->stmt);} break;
             case AST_RETURNSTMT: {TypecheckReturnStmt(info, (ReturnStmt *) child_block->stmt);} break;
             case AST_IFSTMT:     {TypecheckIfStmt(info, (IfStmt *) child_block->stmt);} break;
             case AST_WHILELOOP:  {TypecheckWhileLoop(info, (WhileLoop *) child_block->stmt);} break;
             case AST_FORLOOP:    {TypecheckForLoop(info, (ForLoop *) child_block->stmt);} break;
             case AST_FUNCCALL:   {TypecheckFuncCall(info, (FuncCall *) child_block->stmt);} break;
             default: {
-                printf("invalid statement '%d'\n", child_block->stmt->type);
+                printf("invalid statement '%s'\n", GetAstTypeStr(child_block->stmt->type));
                 exit(1);
             };
         }
