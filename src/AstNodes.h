@@ -13,16 +13,6 @@ enum AstType {
 char *GetAstTypeStr(AstType type);
 
 
-static int op_precedences[] = {
-    -1,     // OP_INVALID
-    10, 10, // ==, !=
-    20, 20, //  <, <=
-    20, 20, //  >, >=
-    30, 30, //  +,  -
-    40, 40, //  *,  /   (BIOP_ADD, BIOP_DIV)
-    50, 50, //  *,  &   (UNOP_DEREF, UNOP_ADDRESS)
-};
-
 enum OperatorType {
     OP_INVALID,
     BIOP_ISEQUAL,   BIOP_NOTEQUAL,

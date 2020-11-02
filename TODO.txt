@@ -8,23 +8,14 @@
     void main() {PrintInt(Test() + 5 + Test());}
 
 - pointer add
-    program has 'ptr += 4' but should be
+    program has 'ptr += 8' but should be
     'ptr += 1' and typecheck should make
-    the '1' to a '4' because it is sizeof(int)
+    the '1' to a '8' because it is sizeof(int)
     int x = 123; int y = 234; int *ptr = &x;
-    PrintInt(*ptr); ptr = ptr + 4; PrintInt(*ptr);
-
-- register use
-    need to add 'FreeRegs()' to somewhere in codegenx86
-    sometimes, e.g. after two 'PrintInt()', it uses first
-    r8 then r9 even when r8 should be free after first call
-    probably should be added in 'CgX86Block()'
+    PrintInt(*ptr); ptr = ptr + 8; PrintInt(*ptr);
 
 - stack offset
     currently all variables are gives 8 bytes on stack
     e.g. first variable on [rsp+0], second on [rsp+8]
     this is so pointers (need 8 bytes) work
     but maybe char only needs 1
-
-- CodegenX86 using 'FreeReg()' many places, some of which probably
-  are unneccesary

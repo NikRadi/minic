@@ -10,8 +10,9 @@ static Bool is_reg_free[4];
 static char *regs64[] = {"r8", "r9", "r10", "r11"};
 static char *regs32[] = {"r8d", "r9d", "r10d", "r11d"};
 static char *regs8[] = {"r8b", "r9b", "r10b", "r11b"};
-static char *set_compares[] = {"sete", "setne", "setl", "setle", "setg", "setge"};
-static char *inverse_jump_compares[] = {"jne", "je", "jge", "jg", "jle", "je"};
+// Index 0 is NULL because OP_ISINVALID is value 0 and BIOP_ISEQUAL is value 1
+static char *compares_set[] = {NULL, "sete", "setne", "setl", "setle", "setg", "setge"};
+static char *compares_inverse_jump[] = {NULL, "jne", "je", "jge", "jg", "jle", "je"};
 static int num_labels = 0;
 
 
@@ -198,7 +199,7 @@ static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int l
                     "\tcmp\t\t%s, %s\n"
                     "\t%s\t\tL%d\n",
                     regs32[regid_lhs], regs32[regid_rhs],
-                    inverse_jump_compares[binaryop->optype - BIOP_ISEQUAL], label
+                    compares_inverse_jump[binaryop->optype], label
                 );
             }
             else {
@@ -207,7 +208,7 @@ static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int l
                     "\t%s\t%s\n"
                     "\tand\t\t%s, 0xff\n",
                     regs32[regid_lhs], regs32[regid_rhs],
-                    set_compares[binaryop->optype - BIOP_ISEQUAL], regs8[regid_lhs],
+                    compares_set[binaryop->optype], regs8[regid_lhs],
                     regs32[regid_lhs]
                 );
             }

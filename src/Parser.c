@@ -6,6 +6,17 @@ static FuncCall *ParseFuncCall(Lexer *lexer, Bool expect_semicolon);
 static Ast *ParseExpr(Lexer *lexer);
 
 
+static int op_precedences[] = {
+    -1,     // OP_INVALID
+    10, 10, // ==, !=
+    20, 20, //  <, <=
+    20, 20, //  >, >=
+    30, 30, //  +,  -
+    40, 40, //  *,  /   (BIOP_ADD, BIOP_DIV)
+    50, 50, //  *,  &   (UNOP_DEREF, UNOP_ADDRESS)
+};
+
+
 static void ThrowError(Lexer *lexer, char *msg) {
     printf("%s(%d) error: %s\n",
         lexer->filename, lexer->token.line, msg
