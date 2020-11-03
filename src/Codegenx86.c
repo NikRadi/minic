@@ -82,11 +82,6 @@ static int CgX86LiteralInt(FileInfo *info, Literal *literal) {
     return regid;
 }
 
-static int CgX86LiteralStr(FileInfo *info, Literal *literal) {
-    // TODO: Implement this
-    ASSERT(FALSE);
-}
-
 static int CgX86LiteralIdent(FileInfo *info, Literal *literal) {
     int regid = AllocRegister();
     int mem_location = FindMemLocation(info, literal->strvalue);
@@ -170,9 +165,20 @@ static int CgX86UnaryOp(FileInfo *info, UnaryOp *unaryop) {
 
             return regid;
         };
+        case UNOP_NOT: {
+            int regid = CgX86Expr(info, unaryop->expr, FALSE, -1);
+            fprintf(info->asmfile,
+                "\ttest\t%s, %s\n"
+                "\tsete\t%s\n",
+                regs64[regid], regs64[regid],
+                regs8[regid]
+            );
+
+            return regid;
+        }
         default: {
-            printf("err\n");
-            exit(1);
+            ThrowInternalError("unaryop operator '%d' not implemented", unaryop->optype);
+            return -1; // To get rid of warning C4715
         }
     }
 }
@@ -190,7 +196,8 @@ static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int l
                 regs64[regid_lhs], regs64[regid_rhs]
             );
 
-            FreeReg(regid_lhs);
+            FreeReg(regid_rhs);
+            return regid_lhs;
         } break;
         case BIOP_ISEQUAL:
         case BIOP_NOTEQUAL:
@@ -207,6 +214,9 @@ static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int l
                     regs32[regid_lhs], regs32[regid_rhs],
                     compares_jmp_inverse[compares_idx], label
                 );
+
+                // TODO: What does the caller use this value for?
+                return -1;
             }
             else {
                 fprintf(info->asmfile,
@@ -217,6 +227,9 @@ static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int l
                     compares_set[compares_idx], regs8[regid_lhs],
                     regs32[regid_lhs]
                 );
+
+                FreeReg(regid_rhs);
+                return regid_lhs;
             }
         } break;
         case BIOP_ADD:
@@ -232,20 +245,17 @@ static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int l
             return regid_lhs;
         }
         default: {
-            ThrowInternalError("binary operator '%d' is not implemented\n", binaryop->optype);
+            ThrowInternalError("binary operator '%ld' is not implemented\n", binaryop->optype);
+            return -1; // To get rid of warning C4715
         };
     }
-
-    // TODO: Unsure why I must return 0 here and not some
-    //       register in case OP_ISGREATER_THAN_EQUAL
-    return 0;
 }
 
 static int CgX86Expr(FileInfo *info, Ast *expr, Bool is_jump, int label) {
     switch (expr->type) {
         case AST_LITERAL_INT:
         case AST_LITERAL_CHAR:  return CgX86LiteralInt(info, (Literal *) expr);
-        case AST_LITERAL_STR:   return CgX86LiteralStr(info, (Literal *) expr);
+        case AST_LITERAL_STR:   ASSERT(FALSE); // Not implemented
         case AST_LITERAL_IDENT: return CgX86LiteralIdent(info, (Literal *) expr);
         case AST_LITERAL_PTR:   return CgX86LiteralPtr(info, (Literal *) expr);
         case AST_LITERAL_DEREF: return CgX86LiteralDeref(info, (Literal *) expr);
@@ -262,8 +272,8 @@ static int CgX86Expr(FileInfo *info, Ast *expr, Bool is_jump, int label) {
             return regid;
         }
         default: {
-            printf("internal error: invalid expression type '%s'\n", GetAstTypeStr(expr->type));
-            exit(1);
+            ThrowInternalError("invalid expression type '%s'", GetAstTypeStr(expr->type));
+            return -1; // To get rid of warning C4715
         };
     }
 }

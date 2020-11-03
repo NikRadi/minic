@@ -11,7 +11,7 @@
 #define ASSERT(x) \
     if(!(x)) { \
         fprintf(stderr, \
-            "%s(%d): assertion failed\n" \
+            "%s(%ld): assertion failed\n" \
             "%s\n", \
             __FILE__, __LINE__, \
             #x \

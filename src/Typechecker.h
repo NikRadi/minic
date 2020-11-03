@@ -4,8 +4,8 @@
 
 
 struct VarInfo {
-    char *ident;
     DataType datatype;
+    char *ident;
 } typedef VarInfo;
 
 struct FileInfo {

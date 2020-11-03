@@ -121,6 +121,14 @@ static Ast *ParseLiteral(Lexer *lexer) {
             unaryop->expr = ParseLiteral(lexer);
             return (Ast *) unaryop;
         }
+        case TOKEN_EXMARK: {
+            ReadToken(lexer);
+            UnaryOp *unaryop = NEW_AST(UnaryOp);
+            unaryop->info.type = AST_UNARYOP;
+            unaryop->optype = UNOP_NOT;
+            unaryop->expr = ParseLiteral(lexer);
+            return (Ast *) unaryop;
+        }
         case TOKEN_LEFT_PAREN: {
             ReadToken(lexer);
             Ast *expr = ParseExpr(lexer);
@@ -130,7 +138,7 @@ static Ast *ParseLiteral(Lexer *lexer) {
         }
         default: {
             ThrowError(lexer, "invalid literal '%s'", GetTokenTypeStr(lexer->token.type));
-            return 0; // Just to get rid of warning C4715
+            return 0; // To get rid of warning C4715
         }
     }
 }

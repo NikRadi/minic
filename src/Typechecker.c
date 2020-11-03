@@ -1,13 +1,11 @@
 #include "Typechecker.h"
+#include "ErrorPrint.h"
 
 
 static void TypecheckBlock(FileInfo *info, Block *block);
 static void TypecheckExpr(FileInfo *info, Ast *expr);
 static void TypecheckFuncCall(FileInfo *info, FuncCall *funccall);
 
-
-static void TypecheckLiteral(FileInfo *info, Literal *literal) {
-}
 
 static void TypecheckUnaryOp(FileInfo *info, UnaryOp *unaryop) {
     TypecheckExpr(info, unaryop->expr);
@@ -23,13 +21,13 @@ static void TypecheckExpr(FileInfo *info, Ast *expr) {
         case AST_LITERAL_INT:
         case AST_LITERAL_CHAR:
         case AST_LITERAL_STR:
-        case AST_LITERAL_IDENT: {TypecheckLiteral(info, (Literal *) expr);} break;
+        case AST_LITERAL_PTR:
+        case AST_LITERAL_IDENT: {} break;
         case AST_UNARYOP:       {TypecheckUnaryOp(info, (UnaryOp *) expr);} break;
         case AST_BINARYOP:      {TypecheckBinaryOp(info, (BinaryOp *) expr);} break;
         case AST_FUNCCALL:      {TypecheckFuncCall(info, (FuncCall *) expr);} break;
         default: {
-            printf("internal error: unimplemented expr case '%s'\n", GetAstTypeStr(expr->type));
-            exit(1);
+            ThrowInternalError("operator '%d' not implemented", GetAstTypeStr(expr->type));
         };
     }
 }
@@ -173,8 +171,7 @@ static void TypecheckBlock(FileInfo *info, Block *block) {
             case AST_FORLOOP:    {TypecheckForLoop(info, (ForLoop *) child_block->stmt);} break;
             case AST_FUNCCALL:   {TypecheckFuncCall(info, (FuncCall *) child_block->stmt);} break;
             default: {
-                printf("invalid statement '%s'\n", GetAstTypeStr(child_block->stmt->type));
-                exit(1);
+                ThrowInternalError("invalid statement '%s'", GetAstTypeStr(child_block->stmt->type));
             };
         }
 

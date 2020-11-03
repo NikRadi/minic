@@ -96,7 +96,6 @@ static void TryReadPair(Lexer *lexer, TokenType type1, char char2, TokenType typ
         lexer->peek.type = type2;
     }
     else {
-        ASSERT(type1 != TOKEN_INVALID);
         lexer->peek.type = type1;
     }
 }
@@ -138,7 +137,7 @@ void ReadToken(struct Lexer *lexer) {
         case '*':  {TryReadPair(lexer, TOKEN_STAR, '=', TOKEN_STAR_EQUAL);} break;
         case '/':  {TryReadPair(lexer, TOKEN_SLASH, '=', TOKEN_SLASH_EQUAL);} break;
         case '=':  {TryReadPair(lexer, TOKEN_EQUAL, '=', TOKEN_TWO_EQUAL);} break;
-        case '!':  {TryReadPair(lexer, TOKEN_INVALID, '=', TOKEN_EXMARK_EQUAL);} break;
+        case '!':  {TryReadPair(lexer, TOKEN_EXMARK, '=', TOKEN_EXMARK_EQUAL);} break;
         case '<':  {TryReadPair(lexer, TOKEN_LESS_THAN, '=', TOKEN_LESS_THAN_EQUAL);} break;
         case '>':  {TryReadPair(lexer, TOKEN_GREATER_THAN, '=', TOKEN_GREATER_THAN_EQUAL);} break;
         case '&':  {TryReadPair(lexer, TOKEN_AMPERSAND, '&', TOKEN_TWO_AMPERSAND);} break;
