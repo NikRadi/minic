@@ -9,12 +9,13 @@ static Ast *ParseExpr(Lexer *lexer);
 
 static int op_precedences[] = {
     -1,     // OP_INVALID
-    10, 10, // ==, !=
-    20, 20, //  <, <=
-    20, 20, //  >, >=
-    30, 30, //  +,  -
-    40, 40, //  *,  /   (BIOP_ADD, BIOP_DIV)
-    50, 50, //  *,  &   (UNOP_DEREF, UNOP_ADDRESS)
+    10, 10, // &&, ||
+    20, 20, // ==, !=
+    30, 30, //  <, <=
+    30, 30, //  >, >=
+    40, 40, //  +,  -
+    50, 50, //  *,  /   (BIOP_ADD, BIOP_DIV)
+    60, 60, //  *,  &   (UNOP_DEREF, UNOP_ADDRESS)
 };
 
 
@@ -30,16 +31,18 @@ static void Expect(Lexer *lexer, TokenType type) {
 
 static OperatorType ToOperatorType(TokenType type) {
     switch (type) {
-        case TOKEN_PLUS:                return BIOP_ADD;
-        case TOKEN_MINUS:               return BIOP_SUB;
-        case TOKEN_STAR:                return BIOP_MUL;
-        case TOKEN_SLASH:               return BIOP_DIV;
+        case TOKEN_TWO_AMPERSAND:       return BIOP_AND;
+        case TOKEN_TWO_VERT_BAR:        return BIOP_OR;
         case TOKEN_TWO_EQUAL:           return BIOP_ISEQUAL;
         case TOKEN_EXMARK_EQUAL:        return BIOP_NOTEQUAL;
         case TOKEN_LESS_THAN:           return BIOP_LESS;
         case TOKEN_LESS_THAN_EQUAL:     return BIOP_LESS_EQUAL;
         case TOKEN_GREATER_THAN:        return BIOP_GREATER;
         case TOKEN_GREATER_THAN_EQUAL:  return BIOP_GREATER_EQUAL;
+        case TOKEN_PLUS:                return BIOP_ADD;
+        case TOKEN_MINUS:               return BIOP_SUB;
+        case TOKEN_STAR:                return BIOP_MUL;
+        case TOKEN_SLASH:               return BIOP_DIV;
         default:                        return 0;
     }
 }

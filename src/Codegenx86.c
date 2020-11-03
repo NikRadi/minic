@@ -1,4 +1,5 @@
 #include "CodegenX86.h"
+#include "ErrorPrint.h"
 
 
 static void CgX86Block(FileInfo *info, Block *block);
@@ -10,9 +11,8 @@ static Bool is_reg_free[4];
 static char *regs64[] = {"r8", "r9", "r10", "r11"};
 static char *regs32[] = {"r8d", "r9d", "r10d", "r11d"};
 static char *regs8[] = {"r8b", "r9b", "r10b", "r11b"};
-// Index 0 is NULL because OP_ISINVALID is value 0 and BIOP_ISEQUAL is value 1
-static char *compares_set[] = {NULL, "sete", "setne", "setl", "setle", "setg", "setge"};
-static char *compares_inverse_jump[] = {NULL, "jne", "je", "jge", "jg", "jle", "je"};
+static char *compares_set[] = {"sete", "setne", "setl", "setle", "setg", "setge"};
+static char *compares_jmp_inverse[] = {"jne", "je", "jge", "jg", "jle", "je"};
 static int num_labels = 0;
 
 
@@ -181,6 +181,44 @@ static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int l
     int regid_lhs = CgX86Expr(info, binaryop->lhs, FALSE, -1);
     int regid_rhs = CgX86Expr(info, binaryop->rhs, FALSE, -1);
     switch (binaryop->optype) {
+        case BIOP_AND:
+        case BIOP_OR: {
+            char *compares[2] = {"and", "or"};
+            fprintf(info->asmfile,
+                "\t%s\t\t%s, %s\n",
+                compares[binaryop->optype - BIOP_AND],
+                regs64[regid_lhs], regs64[regid_rhs]
+            );
+
+            FreeReg(regid_lhs);
+        } break;
+        case BIOP_ISEQUAL:
+        case BIOP_NOTEQUAL:
+        case BIOP_LESS:
+        case BIOP_LESS_EQUAL:
+        case BIOP_GREATER:
+        case BIOP_GREATER_EQUAL: {
+            int compares_idx = binaryop->optype - BIOP_ISEQUAL;
+            ASSERT(0 <= compares_idx  && compares_idx <= 6);
+            if (is_jump) {
+                fprintf(info->asmfile,
+                    "\tcmp\t\t%s, %s\n"
+                    "\t%s\t\tL%d\n",
+                    regs32[regid_lhs], regs32[regid_rhs],
+                    compares_jmp_inverse[compares_idx], label
+                );
+            }
+            else {
+                fprintf(info->asmfile,
+                    "\tcmp\t\t%s, %s\n"
+                    "\t%s\t%s\n"
+                    "\tand\t\t%s, 0xff\n",
+                    regs32[regid_lhs], regs32[regid_rhs],
+                    compares_set[compares_idx], regs8[regid_lhs],
+                    regs32[regid_lhs]
+                );
+            }
+        } break;
         case BIOP_ADD:
         case BIOP_SUB:
         case BIOP_MUL: {
@@ -193,34 +231,8 @@ static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int l
             FreeReg(regid_rhs);
             return regid_lhs;
         }
-        case BIOP_ISEQUAL:
-        case BIOP_NOTEQUAL:
-        case BIOP_LESS:
-        case BIOP_LESS_EQUAL:
-        case BIOP_GREATER:
-        case BIOP_GREATER_EQUAL: {
-            if (is_jump) {
-                fprintf(info->asmfile,
-                    "\tcmp\t\t%s, %s\n"
-                    "\t%s\t\tL%d\n",
-                    regs32[regid_lhs], regs32[regid_rhs],
-                    compares_inverse_jump[binaryop->optype], label
-                );
-            }
-            else {
-                fprintf(info->asmfile,
-                    "\tcmp\t\t%s, %s\n"
-                    "\t%s\t%s\n"
-                    "\tand\t\t%s, 0xff\n",
-                    regs32[regid_lhs], regs32[regid_rhs],
-                    compares_set[binaryop->optype], regs8[regid_lhs],
-                    regs32[regid_lhs]
-                );
-            }
-        } break;
         default: {
-            printf("internal error: binary operator '%d' not implemented\n", binaryop->optype);
-            exit(1);
+            ThrowInternalError("binary operator '%d' is not implemented\n", binaryop->optype);
         };
     }
 

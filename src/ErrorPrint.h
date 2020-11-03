@@ -5,5 +5,6 @@
 
 
 void ThrowError(Lexer *lexer, char *format, ...);
+void ThrowInternalError(char *format, ...);
 
 #endif // MINIC_ERRORPRINT_H

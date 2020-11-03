@@ -69,7 +69,6 @@ static void TypecheckVarDecl(FileInfo *info, VarDecl *vardecl) {
 static void TypecheckVarAssign(FileInfo *info, BinaryOp *varassign) {
     TypecheckExpr(info, varassign->lhs);
     TypecheckExpr(info, varassign->rhs);
-    printf("%d\n", varassign->optype);
     if (ASOP_ADD_EQUAL <= varassign->optype && varassign->optype <= ASOP_DIV_EQUAL) {
         OperatorType optypes[4] = {BIOP_ADD, BIOP_SUB, BIOP_MUL, BIOP_DIV};
         BinaryOp *binaryop = NEW_AST(BinaryOp);

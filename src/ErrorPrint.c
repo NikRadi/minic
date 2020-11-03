@@ -9,3 +9,12 @@ void ThrowError(Lexer *lexer, char *format, ...) {
     fprintf(stderr, "\n");
     exit(1);
 }
+
+void ThrowInternalError(char *format, ...) {
+    va_list arglist;
+    va_start(arglist, format);
+    printf("internal error: ");
+    vfprintf(stderr, format, arglist);
+    fprintf(stderr, "\n");
+    exit(1);
+}

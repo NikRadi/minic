@@ -14,7 +14,9 @@ char *GetAstTypeStr(AstType type);
 
 
 enum OperatorType {
+    // Parser.c::op_precedences depends on the order of these
     OP_INVALID,
+    BIOP_AND,        BIOP_OR,
     BIOP_ISEQUAL,    BIOP_NOTEQUAL,
     BIOP_LESS,       BIOP_LESS_EQUAL,
     BIOP_GREATER,    BIOP_GREATER_EQUAL,
