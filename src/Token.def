@@ -25,10 +25,11 @@ TOKEN(SLASH_EQUAL, "/=")
 TOKEN(EXMARK, "!")
 
 // Keywords
+// Order used in ParseFuncDecl
 TOKEN(CHAR, "char")
 TOKEN(INT, "int")
+
 TOKEN(VOID, "void")
-TOKEN(LONG, "long")
 TOKEN(WHILE, "while")
 TOKEN(FOR, "for")
 TOKEN(IF, "if")

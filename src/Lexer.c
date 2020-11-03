@@ -125,6 +125,7 @@ void ReadToken(struct Lexer *lexer) {
 
     lexer->peek.line = lexer->line;
     switch (c) {
+        case ',':  {lexer->peek.type = TOKEN_COMMA;} break;
         case ';':  {lexer->peek.type = TOKEN_SEMICOLON;} break;
         case '{':  {lexer->peek.type = TOKEN_LEFT_CURLY_BRAC;} break;
         case '}':  {lexer->peek.type = TOKEN_RIGHT_CURLY_BRAC;} break;

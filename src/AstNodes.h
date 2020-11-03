@@ -113,6 +113,7 @@ struct FuncCall {
 struct FuncDecl {
     Ast info;
     int stack_depth_bytes;
+    int num_params;
     DataType returntype;
     char *ident;
     Block *block;
