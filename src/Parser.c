@@ -1,4 +1,5 @@
 #include "Parser.h"
+#include "ErrorPrint.h"
 
 
 static Block *ParseBlock(Lexer *lexer);
@@ -17,24 +18,13 @@ static int op_precedences[] = {
 };
 
 
-static void ThrowError(Lexer *lexer, char *msg) {
-    printf("%s(%d) error: %s\n",
-        lexer->filename, lexer->token.line, msg
-    );
-
-    exit(1);
-}
-
 static void Expect(Lexer *lexer, TokenType type) {
     if (lexer->token.type != type) {
-        char msg[200];
-        sprintf(msg,
+        ThrowError(lexer,
             "expected '%s' but got '%s'",
             GetTokenTypeStr(type),
             GetTokenTypeStr(lexer->token.type)
         );
-
-        ThrowError(lexer, msg);
     }
 }
 
@@ -56,22 +46,14 @@ static OperatorType ToOperatorType(TokenType type) {
 
 static Ast *ParseLiteral(Lexer *lexer) {
     switch (lexer->token.type) {
-        case TOKEN_INT_LITERAL: {
+        case TOKEN_LITERAL_INT:
+        case TOKEN_LITERAL_CHAR: {
+            ASSERT(TOKEN_LITERAL_INT == TOKEN_LITERAL_CHAR - 1);
+            AstType asttypes[2] = {AST_LITERAL_INT, AST_LITERAL_CHAR};
             Literal *literal = NEW_AST(Literal);
-            literal->info.type = AST_LITERAL_INT;
+            literal->info.type = asttypes[lexer->token.type - TOKEN_LITERAL_INT];
             literal->arridx = -1;
             literal->intvalue = lexer->token.intvalue;
-            ReadToken(lexer);
-            return (Ast *) literal;
-        }
-        case TOKEN_APOSTROPHE: {
-            ReadToken(lexer);
-            Literal *literal = NEW_AST(Literal);
-            literal->info.type = AST_LITERAL_CHAR;
-            literal->arridx = -1;
-            literal->intvalue = lexer->token.strvalue[0];
-            ReadToken(lexer);
-            Expect(lexer, TOKEN_APOSTROPHE);
             ReadToken(lexer);
             return (Ast *) literal;
         }
@@ -85,7 +67,7 @@ static Ast *ParseLiteral(Lexer *lexer) {
                 literal->strvalue = strdup(lexer->token.strvalue);
                 ReadToken(lexer); // TOKEN_IDENT
                 ReadToken(lexer); // TOKEN_LEFT_SQUARE_BRAC
-                Expect(lexer, TOKEN_INT_LITERAL);
+                Expect(lexer, TOKEN_LITERAL_INT);
                 literal->arridx = lexer->token.intvalue;
                 ReadToken(lexer);
                 Expect(lexer, TOKEN_RIGHT_SQUARE_BRAC);
@@ -125,13 +107,7 @@ static Ast *ParseLiteral(Lexer *lexer) {
             return expr;
         }
         default: {
-            char msg[200];
-            sprintf(msg,
-                "invalid literal '%s'",
-                GetTokenTypeStr(lexer->token.type)
-            );
-
-            ThrowError(lexer, msg);
+            ThrowError(lexer, "invalid literal '%s'", GetTokenTypeStr(lexer->token.type));
             return 0; // Just to get rid of warning C4715
         }
     }

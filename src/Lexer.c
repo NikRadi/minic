@@ -1,6 +1,7 @@
 #include "Lexer.h"
 #include <stdio.h>
 #include "Common.h"
+#include "ErrorPrint.h"
 
 #define IS_ALPHA(x) (('a' <= x && x <= 'z') || ('A' <= x && x <= 'Z'))
 #define IS_DIGIT(x) ('0' <= x && x <= '9')
@@ -48,6 +49,31 @@ static int ReadNumber(Lexer *lexer) {
     return result;
 }
 
+static int ReadChar(Lexer *lexer) {
+    if (lexer->text[lexer->char_idx] == '\\') {
+        lexer->char_idx += 1;
+        switch (lexer->text[lexer->char_idx]) {
+            case 'a':  return '\a';
+            case 'b':  return '\b';
+            case 'f':  return '\f';
+            case 'n':  return '\n';
+            case 'r':  return '\r';
+            case 't':  return '\t';
+            case 'v':  return '\v';
+            case '\\': return '\\';
+            case '"':  return '"' ;
+            case '\'': return '\'';
+            default: {
+                ThrowError(lexer, "invalid escape sequence");
+            }
+        }
+    }
+
+    int idx = lexer->char_idx;
+    lexer->char_idx += 1;
+    return lexer->text[idx];
+}
+
 static void TryReadPair(Lexer *lexer, TokenType type1, char char2, TokenType type2) {
     int peek_idx = lexer->char_idx + 1;
     if (peek_idx < lexer->text_size && lexer->text[peek_idx] == char2) {
@@ -55,11 +81,7 @@ static void TryReadPair(Lexer *lexer, TokenType type1, char char2, TokenType typ
         lexer->peek.type = type2;
     }
     else {
-        if (type1 == TOKEN_INVALID) {
-            printf("invalid character\n");
-            exit(1);
-        }
-
+        ASSERT(type1 != TOKEN_INVALID);
         lexer->peek.type = type1;
     }
 }
@@ -99,16 +121,26 @@ void ReadToken(struct Lexer *lexer) {
         case ')':  {lexer->peek.type = TOKEN_RIGHT_PAREN;} break;
         case '[':  {lexer->peek.type = TOKEN_LEFT_SQUARE_BRAC;} break;
         case ']':  {lexer->peek.type = TOKEN_RIGHT_SQUARE_BRAC;} break;
-        case '\'': {lexer->peek.type = TOKEN_APOSTROPHE;} break;
         case '=':  {TryReadPair(lexer, TOKEN_EQUAL, '=', TOKEN_TWO_EQUAL);} break;
         case '!':  {TryReadPair(lexer, TOKEN_INVALID, '=', TOKEN_EXMARK_EQUAL);} break;
         case '<':  {TryReadPair(lexer, TOKEN_LESS_THAN, '=', TOKEN_LESS_THAN_EQUAL);} break;
         case '>':  {TryReadPair(lexer, TOKEN_GREATER_THAN, '=', TOKEN_GREATER_THAN_EQUAL);} break;
         case '&':  {TryReadPair(lexer, TOKEN_AMPERSAND, '&', TOKEN_TWO_AMPERSAND);} break;
+        case '\'': {
+            lexer->char_idx += 1;
+            lexer->peek.intvalue = ReadChar(lexer);
+            lexer->peek.type = TOKEN_LITERAL_CHAR;
+            if (lexer->text[lexer->char_idx] != '\'') {
+                ThrowError(lexer,
+                    "%s(%d) error: char literal must end with an apostrophe",
+                    lexer->filename, lexer->peek.line
+                );
+            }
+        } break;
         default: {
             if (IS_DIGIT(c)) {
                 lexer->peek.intvalue = ReadNumber(lexer);
-                lexer->peek.type = TOKEN_INT_LITERAL;
+                lexer->peek.type = TOKEN_LITERAL_INT;
             }
             else if (IS_ALPHA(c) || c == '_') {
                 lexer->peek.strvalue = ReadIdent(lexer);
@@ -123,8 +155,7 @@ void ReadToken(struct Lexer *lexer) {
                 else lexer->peek.type = TOKEN_IDENT;
             }
             else {
-                printf("invalid character '%c'\n", c);
-                exit(1);
+                ThrowError(lexer, "invalid character '%c'", c);
             }
         };
     }

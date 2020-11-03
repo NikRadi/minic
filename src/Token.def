@@ -30,7 +30,8 @@ TOKEN(IF, "if")
 TOKEN(ELSE, "else")
 TOKEN(RETURN, "return")
 
-TOKEN(INT_LITERAL, "int literal")
+TOKEN(LITERAL_INT, "int literal")
+TOKEN(LITERAL_CHAR, "char literal")
 TOKEN(IDENT, "identifer")
 
 // Separators
@@ -42,5 +43,4 @@ TOKEN(LEFT_SQUARE_BRAC, "[")
 TOKEN(RIGHT_SQUARE_BRAC, "]")
 TOKEN(SEMICOLON, ";")
 TOKEN(COMMA, ",")
-TOKEN(APOSTROPHE, "'")
 #undef TOKEN
