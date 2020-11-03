@@ -74,6 +74,21 @@ static int ReadChar(Lexer *lexer) {
     return lexer->text[idx];
 }
 
+static char *ReadStr(Lexer *lexer) {
+    int strstart = lexer->char_idx;
+    int strend = strstart;
+    while (lexer->text[strend] != '\"' && strend < lexer->text_size) {
+        strend += 1;
+    }
+
+    lexer->char_idx = strend;
+    int strlen = strend - strstart;
+    char *str = (char *) malloc(strlen + 1);
+    strncpy(str, lexer->text + strstart, strlen);
+    str[strlen] = '\0';
+    return str;
+}
+
 static void TryReadPair(Lexer *lexer, TokenType type1, char char2, TokenType type2) {
     int peek_idx = lexer->char_idx + 1;
     if (peek_idx < lexer->text_size && lexer->text[peek_idx] == char2) {
@@ -133,6 +148,17 @@ void ReadToken(struct Lexer *lexer) {
             if (lexer->text[lexer->char_idx] != '\'') {
                 ThrowError(lexer,
                     "%s(%d) error: char literal must end with an apostrophe",
+                    lexer->filename, lexer->peek.line
+                );
+            }
+        } break;
+        case '\"': {
+            lexer->char_idx += 1;
+            lexer->peek.strvalue = ReadStr(lexer);
+            lexer->peek.type = TOKEN_LITERAL_STR;
+            if (lexer->text[lexer->char_idx] != '\"') {
+                ThrowError(lexer,
+                    "%s(%d) error: string literal must end with a quotation mark",
                     lexer->filename, lexer->peek.line
                 );
             }

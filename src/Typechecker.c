@@ -22,6 +22,7 @@ static void TypecheckExpr(FileInfo *info, Ast *expr) {
     switch (expr->type) {
         case AST_LITERAL_INT:
         case AST_LITERAL_CHAR:
+        case AST_LITERAL_STR:
         case AST_LITERAL_IDENT: {TypecheckLiteral(info, (Literal *) expr);} break;
         case AST_UNARYOP:       {TypecheckUnaryOp(info, (UnaryOp *) expr);} break;
         case AST_BINARYOP:      {TypecheckBinaryOp(info, (BinaryOp *) expr);} break;

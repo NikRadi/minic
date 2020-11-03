@@ -82,6 +82,11 @@ static int CgX86LiteralInt(FileInfo *info, Literal *literal) {
     return regid;
 }
 
+static int CgX86LiteralStr(FileInfo *info, Literal *literal) {
+    // TODO: Implement this
+    ASSERT(FALSE);
+}
+
 static int CgX86LiteralIdent(FileInfo *info, Literal *literal) {
     int regid = AllocRegister();
     int mem_location = FindMemLocation(info, literal->strvalue);
@@ -228,6 +233,7 @@ static int CgX86Expr(FileInfo *info, Ast *expr, Bool is_jump, int label) {
     switch (expr->type) {
         case AST_LITERAL_INT:
         case AST_LITERAL_CHAR:  return CgX86LiteralInt(info, (Literal *) expr);
+        case AST_LITERAL_STR:   return CgX86LiteralStr(info, (Literal *) expr);
         case AST_LITERAL_IDENT: return CgX86LiteralIdent(info, (Literal *) expr);
         case AST_LITERAL_PTR:   return CgX86LiteralPtr(info, (Literal *) expr);
         case AST_LITERAL_DEREF: return CgX86LiteralDeref(info, (Literal *) expr);
@@ -448,7 +454,7 @@ void CgX86File(FileInfo *info, File *cfile) {
         "\tlea\t\trcx, [ifmt]\n"
         "\tcall\tprintf\n"
         "\tadd\t\trsp, 40\n"
-        "\tret"
+        "\tret\n"
         "\n"
         "PrintChar:\n"
         "\tsub\t\trsp, 40\n"

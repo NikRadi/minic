@@ -57,6 +57,14 @@ static Ast *ParseLiteral(Lexer *lexer) {
             ReadToken(lexer);
             return (Ast *) literal;
         }
+        case TOKEN_LITERAL_STR: {
+            Literal *literal = NEW_AST(Literal);
+            literal->info.type = AST_LITERAL_STR;
+            literal->arridx = -1;
+            literal->strvalue = lexer->token.strvalue;
+            ReadToken(lexer);
+            return (Ast *) literal;
+        }
         case TOKEN_IDENT: {
             if (lexer->peek.type == TOKEN_LEFT_PAREN) {
                 return (Ast *) ParseFuncCall(lexer, FALSE);

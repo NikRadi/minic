@@ -32,6 +32,7 @@ TOKEN(RETURN, "return")
 
 TOKEN(LITERAL_INT, "int literal")
 TOKEN(LITERAL_CHAR, "char literal")
+TOKEN(LITERAL_STR, "string literal")
 TOKEN(IDENT, "identifer")
 
 // Separators
