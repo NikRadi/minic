@@ -15,12 +15,15 @@ char *GetAstTypeStr(AstType type);
 
 enum OperatorType {
     OP_INVALID,
-    BIOP_ISEQUAL,   BIOP_NOTEQUAL,
-    BIOP_LESS,      BIOP_LESS_EQUAL,
-    BIOP_GREATER,   BIOP_GREATER_EQUAL,
-    BIOP_ADD,       BIOP_SUB,
-    BIOP_MUL,       BIOP_DIV,
-    UNOP_DEREF,     UNOP_ADDRESS,
+    BIOP_ISEQUAL,    BIOP_NOTEQUAL,
+    BIOP_LESS,       BIOP_LESS_EQUAL,
+    BIOP_GREATER,    BIOP_GREATER_EQUAL,
+    BIOP_ADD,        BIOP_SUB,
+    BIOP_MUL,        BIOP_DIV,
+    UNOP_DEREF,      UNOP_ADDRESS,
+    ASOP_EQUAL,
+    ASOP_ADD_EQUAL, ASOP_SUB_EQUAL,
+    ASOP_MUL_EQUAL, ASOP_DIV_EQUAL,
 } typedef OperatorType;
 
 enum DataType {

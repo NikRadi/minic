@@ -44,6 +44,17 @@ static OperatorType ToOperatorType(TokenType type) {
     }
 }
 
+static OperatorType ToAssignmentOperatorType(TokenType type) {
+    switch (type) {
+        case TOKEN_EQUAL:       return ASOP_EQUAL;
+        case TOKEN_PLUS_EQUAL:  return ASOP_ADD_EQUAL;
+        case TOKEN_MINUS_EQUAL: return ASOP_SUB_EQUAL;
+        case TOKEN_STAR_EQUAL:  return ASOP_MUL_EQUAL;
+        case TOKEN_SLASH_EQUAL: return ASOP_DIV_EQUAL;
+        default:                return 0;
+    }
+}
+
 static Ast *ParseLiteral(Lexer *lexer) {
     switch (lexer->token.type) {
         case TOKEN_LITERAL_INT:
@@ -201,7 +212,7 @@ static BinaryOp *ParseVarAssign(Lexer *lexer, Bool expect_semicolon) {
     BinaryOp *varassign = NEW_AST(BinaryOp);
     varassign->info.type = AST_BINARYOP;
     varassign->lhs = ParseExpr(lexer);
-    varassign->optype = ToOperatorType(lexer->token.type);
+    varassign->optype = ToAssignmentOperatorType(lexer->token.type);
     ReadToken(lexer);
     varassign->rhs = ParseExpr(lexer);
     if (expect_semicolon) {
@@ -339,14 +350,19 @@ static Block *ParseBlock(Lexer *lexer) {
             case TOKEN_FOR:    {child_block->stmt = (Ast *) ParseForLoop(lexer);} break;
             case TOKEN_STAR:   {child_block->stmt = (Ast *) ParseVarAssign(lexer, TRUE);} break;
             case TOKEN_IDENT:  {
-                if (lexer->peek.type == TOKEN_EQUAL || lexer->peek.type == TOKEN_LEFT_SQUARE_BRAC) {
+                if ((TOKEN_EQUAL <= lexer->peek.type && lexer->peek.type <= TOKEN_SLASH_EQUAL) ||
+                    lexer->peek.type == TOKEN_LEFT_SQUARE_BRAC) {
                     child_block->stmt = (Ast *) ParseVarAssign(lexer, TRUE);
                 }
                 else if (lexer->peek.type == TOKEN_LEFT_PAREN) {
                     child_block->stmt = (Ast *) ParseFuncCall(lexer, TRUE);
                 }
                 else {
-                    ThrowError(lexer, "cool error message\n");
+                    ThrowError(lexer,
+                        "identifier '%s' followed by invalid character '%s'\n",
+                        lexer->token.strvalue,
+                        GetTokenTypeStr(lexer->peek.type)
+                    );
                 }
             } break;
             default: {
