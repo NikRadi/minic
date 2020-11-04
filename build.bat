@@ -23,7 +23,7 @@ IF "%1" == "test" (
     ECHO Testing...
     FOR %%f in (tests/Test*.c) DO (
         ECHO | SET /p="%%~nf.c ... "
-        bin\minic.exe tests\%%f
+        bin\minic.exe -f tests\%%f
         CD tests
         IF EXIST %%~nf.asm (
             nasm -f win64 -o %%~nf.obj %%~nf.asm

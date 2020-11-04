@@ -19,3 +19,26 @@
     e.g. first variable on [rsp+0], second on [rsp+8]
     this is so pointers (need 8 bytes) work
     but maybe char only needs 1
+
+- local variables
+    currently all variables are in FileInfo.var_infos.
+    there should be a Scope struct or something for
+    local variables
+
+- use stack
+    if there are no registers minic throws errors.
+    change to use stack if there are no available
+    registers
+
+- better code generation without optimization
+    e.g. CgX86LiteralInt is forced to create and return
+    a new register. it can avoid creating a new register
+    if it is given the instruction as parameter e.g.
+    CgX86LiteralInt(literal, instruction, target) {
+        fprintf("<instruction> <target>, literal->intvalue)
+    }
+    the caller would then call
+    CgX86LiteralInt(literal, "mov", "[rsp]")
+    this specific implementation requires too much string
+    manipulation for e.g. [rsp+8]. how to do this without
+    string manipulation or without string?

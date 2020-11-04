@@ -1,20 +1,29 @@
 #include "ErrorPrint.h"
 
 
-void ThrowError(Lexer *lexer, char *format, ...) {
-    va_list arglist;
-    va_start(arglist, format);
-    printf("%s(%d) error: ", lexer->filename, lexer->token.line);
+static void ThrowError(char *format, va_list arglist) {
     vfprintf(stderr, format, arglist);
     fprintf(stderr, "\n");
     exit(1);
 }
 
-void ThrowInternalError(char *format, ...) {
+void ThrowErrorAt(Lexer *lexer, char *format, ...) {
+    printf("%s(%d) error: ", lexer->filename, lexer->token.line);
     va_list arglist;
     va_start(arglist, format);
-    printf("internal error: ");
-    vfprintf(stderr, format, arglist);
-    fprintf(stderr, "\n");
-    exit(1);
+    ThrowError(format, arglist);
+}
+
+void ThrowFatalError(char *format, ...) {
+    printf("minic fatal error: ");
+    va_list arglist;
+    va_start(arglist, format);
+    ThrowError(format, arglist);
+}
+
+void ThrowInternalError(char *format, ...) {
+    printf("minic internal error: ");
+    va_list arglist;
+    va_start(arglist, format);
+    ThrowError(format, arglist);
 }

@@ -15,13 +15,12 @@ static int op_precedences[] = {
     30, 30, //  >, >=
     40, 40, //  +,  -
     50, 50, //  *,  /   (BIOP_ADD, BIOP_DIV)
-    60, 60, //  *,  &   (UNOP_DEREF, UNOP_ADDRESS)
 };
 
 
 static void Expect(Lexer *lexer, TokenType type) {
     if (lexer->token.type != type) {
-        ThrowError(lexer,
+        ThrowErrorAt(lexer,
             "expected '%s' but got '%s'",
             GetTokenTypeStr(type),
             GetTokenTypeStr(lexer->token.type)
@@ -132,7 +131,7 @@ static Ast *ParseLiteral(Lexer *lexer) {
             return expr;
         }
         default: {
-            ThrowError(lexer, "invalid literal '%s'", GetTokenTypeStr(lexer->token.type));
+            ThrowErrorAt(lexer, "invalid literal '%s'", GetTokenTypeStr(lexer->token.type));
             return 0; // To get rid of warning C4715
         }
     }
@@ -294,7 +293,7 @@ static IfStmt *ParseIfStmt(Lexer *lexer) {
     }
 
     if (lexer->token.type == TOKEN_ELSE) {
-        ThrowError(lexer, "else-block without a previous if-block");
+        ThrowErrorAt(lexer, "else-block without a previous if-block");
     }
 
     return root_ifstmt;
@@ -370,7 +369,7 @@ static Block *ParseBlock(Lexer *lexer) {
                     child_block->stmt = (Ast *) ParseFuncCall(lexer, TRUE);
                 }
                 else {
-                    ThrowError(lexer,
+                    ThrowErrorAt(lexer,
                         "identifier '%s' followed by invalid character '%s'\n",
                         lexer->token.strvalue,
                         GetTokenTypeStr(lexer->peek.type)
@@ -378,7 +377,7 @@ static Block *ParseBlock(Lexer *lexer) {
                 }
             } break;
             default: {
-                ThrowError(lexer, "unknown statement starting with '%s'", GetTokenTypeStr(lexer->token.type));
+                ThrowErrorAt(lexer, "unknown statement starting with '%s'", GetTokenTypeStr(lexer->token.type));
             }
         }
 
@@ -448,7 +447,7 @@ File *ParseFile(Lexer *lexer) {
             case TOKEN_VOID: {child_file->funcdecl = ParseFuncDecl(lexer, DATA_INT);} break;
             case TOKEN_CHAR: {child_file->funcdecl = ParseFuncDecl(lexer, DATA_CHAR);} break;
             default: {
-                ThrowError(lexer, "?");
+                ThrowErrorAt(lexer, "?");
             }
         }
     }

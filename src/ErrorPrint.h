@@ -4,7 +4,8 @@
 #include "Lexer.h"
 
 
-void ThrowError(Lexer *lexer, char *format, ...);
+void ThrowErrorAt(Lexer *lexer, char *format, ...);
+void ThrowFatalError(char *format, ...);
 void ThrowInternalError(char *format, ...);
 
 #endif // MINIC_ERRORPRINT_H

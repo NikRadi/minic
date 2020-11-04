@@ -64,7 +64,7 @@ static int ReadChar(Lexer *lexer) {
             case '"':  return '"' ;
             case '\'': return '\'';
             default: {
-                ThrowError(lexer, "invalid escape sequence");
+                ThrowErrorAt(lexer, "invalid escape sequence");
             }
         }
     }
@@ -148,7 +148,7 @@ void ReadToken(struct Lexer *lexer) {
             lexer->peek.intvalue = ReadChar(lexer);
             lexer->peek.type = TOKEN_LITERAL_CHAR;
             if (lexer->text[lexer->char_idx] != '\'') {
-                ThrowError(lexer,
+                ThrowErrorAt(lexer,
                     "%s(%d) error: char literal must end with an apostrophe",
                     lexer->filename, lexer->peek.line
                 );
@@ -159,7 +159,7 @@ void ReadToken(struct Lexer *lexer) {
             lexer->peek.strvalue = ReadStr(lexer);
             lexer->peek.type = TOKEN_LITERAL_STR;
             if (lexer->text[lexer->char_idx] != '\"') {
-                ThrowError(lexer,
+                ThrowErrorAt(lexer,
                     "%s(%d) error: string literal must end with a quotation mark",
                     lexer->filename, lexer->peek.line
                 );
@@ -183,7 +183,7 @@ void ReadToken(struct Lexer *lexer) {
                 else lexer->peek.type = TOKEN_IDENT;
             }
             else {
-                ThrowError(lexer, "invalid character '%c'", c);
+                ThrowErrorAt(lexer, "invalid character '%c'", c);
             }
         };
     }

@@ -12,3 +12,13 @@ char *GetTokenTypeStr(TokenType type) {
         }
     }
 }
+
+void PrintTokenStr(Token token) {
+    switch (token.type) {
+#define TOKEN(name, str) case TOKEN_##name: {printf("<Token type=\"%s\"/>", #name);} break;
+#include "Token.def"
+        default: {
+            ThrowInternalError("unknown TokenType '%d'", token.type);
+        }
+    }
+}

@@ -22,11 +22,12 @@ enum OperatorType {
     BIOP_GREATER,    BIOP_GREATER_EQUAL,
     BIOP_ADD,        BIOP_SUB,
     BIOP_MUL,        BIOP_DIV,
+
     UNOP_DEREF,      UNOP_ADDRESS,
     UNOP_NOT,
     ASOP_EQUAL,
-    ASOP_ADD_EQUAL, ASOP_SUB_EQUAL,
-    ASOP_MUL_EQUAL, ASOP_DIV_EQUAL,
+    ASOP_ADD_EQUAL,  ASOP_SUB_EQUAL,
+    ASOP_MUL_EQUAL,  ASOP_DIV_EQUAL,
 } typedef OperatorType;
 
 enum DataType {
