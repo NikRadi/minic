@@ -34,8 +34,8 @@ static int AllocRegister() {
         }
     }
 
-    printf("internal error: out of registers\n");
-    exit(1);
+    ThrowInternalError("out of registers");
+    return -1; // To get rid of warning C4715
 }
 
 static VarInfo GetVarInfo(FileInfo *info, char *ident) {
@@ -45,8 +45,8 @@ static VarInfo GetVarInfo(FileInfo *info, char *ident) {
         }
     }
 
-    printf("internal error: could not find variable '%s'\n", ident);
-    exit(1);
+    ThrowInternalError("could not find variable '%s'", ident);
+    return info->var_infos[0];; // To get rid of warning C4715
 }
 
 static int FindMemLocation(FileInfo *info, char *ident) {
@@ -59,8 +59,7 @@ static int FindMemLocation(FileInfo *info, char *ident) {
     }
 
     if (regid == -1) {
-        printf("internal error: could not find memory location of variable '%s'\n", ident);
-        exit(1);
+        ThrowInternalError("could not find memory location of variable '%s'", ident);
     }
 
     return regid * 8;
@@ -94,8 +93,8 @@ static int CgX86LiteralIdent(FileInfo *info, Literal *literal) {
             case DATA_CHAR_PTR:
             case DATA_INT_PTR: {reg = regs64[regid];} break;
             default: {
-                printf("internal error: not implemented\n");
-                exit(1);
+                ThrowInternalError("variable datatype '%d' not implemented", varinfo.datatype);
+                reg = 0; // To get rid of warning C4701
             }
         }
 
@@ -290,7 +289,7 @@ static void CgX86VarAssign(FileInfo *info, BinaryOp *varassign) {
                     mem_location, regs64[regid]
                 );
             }
-            else {
+            else { // array
                 int regid2 = AllocRegister();
                 fprintf(info->asmfile,
                     "\tmov\t\t%s, 8\n"
@@ -328,14 +327,12 @@ static void CgX86VarAssign(FileInfo *info, BinaryOp *varassign) {
                     );
                 } break;
                 default: {
-                    printf("internal error: still not implemented op '%d'\n", unaryop->optype);
-                    exit(1);
+                    ThrowInternalError("assignment unary operator l-value '%d' not implemented", unaryop->optype);
                 }
             }
         } break;
         default: {
-            printf("internal error: not implemented '%s'\n", GetAstTypeStr(varassign->lhs->type));
-            exit(1);
+            ThrowInternalError("assignmen l-value '%s' not implemented", GetAstTypeStr(varassign->lhs->type));
         }
     }
 }
@@ -421,8 +418,7 @@ static void CgX86Block(FileInfo *info, Block *block) {
             case AST_FUNCCALL:   {CgX86FuncCall(info, (FuncCall *) child_block->stmt);} break;
             default: {
                 ASSERT(child_block != NULL);
-                printf("internal error: invalid statement type '%s'\n", GetAstTypeStr(child_block->stmt->type));
-                exit(1);
+                ThrowInternalError("statement '%s' not implemented", GetAstTypeStr(child_block->stmt->type));
             };
         }
 

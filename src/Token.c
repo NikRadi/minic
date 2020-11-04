@@ -1,4 +1,5 @@
 #include "Token.h"
+#include "ErrorPrint.h"
 
 
 char *GetTokenTypeStr(TokenType type) {
@@ -6,8 +7,8 @@ char *GetTokenTypeStr(TokenType type) {
 #define TOKEN(name, str) case TOKEN_##name: return ##str;
 #include "Token.def"
         default: {
-            printf("internal error: unknown TokenType '%d'\n", type);
-            exit(1);
+            ThrowInternalError("unknown TokenType '%d'", type);
+            return 0; // To get rid of warning C4701
         }
     }
 }

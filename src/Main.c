@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
     asmfilename[filename_len + 2] = '\0';
     info.asmfile = fopen(asmfilename, "w");
     if (info.asmfile == NULL) {
-        printf("could not write to file\n");
+        printf("minic: could not write to file '%s'\n", asmfilename);
         return 1;
     }
 

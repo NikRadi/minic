@@ -383,8 +383,7 @@ static Block *ParseBlock(Lexer *lexer) {
                 }
             } break;
             default: {
-                printf("error message: '%s'\n", GetTokenTypeStr(lexer->token.type));
-                exit(1);
+                ThrowError(lexer, "unknown statement starting with '%s'", GetTokenTypeStr(lexer->token.type));
             }
         }
 
