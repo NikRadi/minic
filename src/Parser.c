@@ -83,27 +83,22 @@ static Ast *ParseLiteral(Lexer *lexer) {
             if (lexer->peek.type == TOKEN_LEFT_PAREN) {
                 return (Ast *) ParseFuncCall(lexer, FALSE);
             }
-            else if (lexer->peek.type == TOKEN_LEFT_SQUARE_BRAC) {
-                Literal *literal = NEW_AST(Literal);
-                literal->info.type = AST_LITERAL_IDENT;
-                literal->strvalue = strdup(lexer->token.strvalue);
-                ReadToken(lexer); // TOKEN_IDENT
-                ReadToken(lexer); // TOKEN_LEFT_SQUARE_BRAC
+
+            Literal *literal = NEW_AST(Literal);
+            literal->info.type = AST_LITERAL_IDENT;
+            literal->arridx = -1;
+            literal->strvalue = strdup(lexer->token.strvalue);
+            ReadToken(lexer); // TOKEN_IDENT
+            if (lexer->token.type == TOKEN_LEFT_SQUARE_BRAC) {
+                ReadToken(lexer);
                 Expect(lexer, TOKEN_LITERAL_INT);
                 literal->arridx = lexer->token.intvalue;
                 ReadToken(lexer);
                 Expect(lexer, TOKEN_RIGHT_SQUARE_BRAC);
                 ReadToken(lexer);
-                return (Ast *) literal;
             }
-            else {
-                Literal *literal = NEW_AST(Literal);
-                literal->info.type = AST_LITERAL_IDENT;
-                literal->arridx = -1;
-                literal->strvalue = strdup(lexer->token.strvalue);
-                ReadToken(lexer);
-                return (Ast *) literal;
-            }
+
+            return (Ast *) literal;
         }
         case TOKEN_AMPERSAND: {
             ReadToken(lexer);
