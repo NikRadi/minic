@@ -3,8 +3,9 @@
 
 
 static Block *ParseBlock(Lexer *lexer);
-static FuncCall *ParseFuncCall(Lexer *lexer, Bool expect_semicolon);
+static FuncCall *ParseFuncCall(Lexer *lexer);
 static Ast *ParseExpr(Lexer *lexer);
+static Ast *ParseParenthesizedExpr(Lexer *lexer);
 
 
 static int op_precedences[] = {
@@ -26,6 +27,11 @@ static void Expect(Lexer *lexer, TokenType type) {
             GetTokenTypeStr(lexer->token.type)
         );
     }
+}
+
+static void ExpectAndRead(Lexer *lexer, TokenType type) {
+    Expect(lexer, type);
+    ReadToken(lexer);
 }
 
 static OperatorType ToOperatorType(TokenType type) {
@@ -80,7 +86,7 @@ static Ast *ParseLiteral(Lexer *lexer) {
         }
         case TOKEN_IDENT: {
             if (lexer->peek.type == TOKEN_LEFT_PAREN) {
-                return (Ast *) ParseFuncCall(lexer, FALSE);
+                return (Ast *) ParseFuncCall(lexer);
             }
 
             Literal *literal = NEW_AST(Literal);
@@ -93,8 +99,7 @@ static Ast *ParseLiteral(Lexer *lexer) {
                 Expect(lexer, TOKEN_LITERAL_INT);
                 literal->arridx = lexer->token.intvalue;
                 ReadToken(lexer);
-                Expect(lexer, TOKEN_RIGHT_SQUARE_BRAC);
-                ReadToken(lexer);
+                ExpectAndRead(lexer, TOKEN_RIGHT_SQUARE_BRAC);
             }
 
             return (Ast *) literal;
@@ -124,11 +129,7 @@ static Ast *ParseLiteral(Lexer *lexer) {
             return (Ast *) unaryop;
         }
         case TOKEN_LEFT_PAREN: {
-            ReadToken(lexer);
-            Ast *expr = ParseExpr(lexer);
-            Expect(lexer, TOKEN_RIGHT_PAREN);
-            ReadToken(lexer);
-            return expr;
+            return ParseParenthesizedExpr(lexer);
         }
         default: {
             ThrowErrorAt(lexer, "invalid literal '%s'", GetTokenTypeStr(lexer->token.type));
@@ -163,16 +164,13 @@ static Ast *ParseExpr(Lexer *lexer) {
 }
 
 static Ast *ParseParenthesizedExpr(Lexer *lexer) {
-    ReadToken(lexer);
-    Expect(lexer, TOKEN_LEFT_PAREN);
-    ReadToken(lexer);
-
+    ExpectAndRead(lexer, TOKEN_LEFT_PAREN);
     Ast *expr = ParseExpr(lexer);
-    Expect(lexer, TOKEN_RIGHT_PAREN);
+    ExpectAndRead(lexer, TOKEN_RIGHT_PAREN);
     return expr;
 }
 
-static VarDecl *ParseVarDecl(Lexer *lexer, DataType datatype, Bool expect_semicolon) {
+static VarDecl *ParseVarDecl(Lexer *lexer, DataType datatype) {
     ASSERT(lexer->token.type == TOKEN_INT || lexer->token.type == TOKEN_CHAR);
     VarDecl *vardecl = NEW_AST(VarDecl);
     vardecl->info.type = AST_VARDECL;
@@ -204,53 +202,35 @@ static VarDecl *ParseVarDecl(Lexer *lexer, DataType datatype, Bool expect_semico
         ReadToken(lexer);
         vardecl->arrsize = lexer->token.intvalue;
         ReadToken(lexer);
-        Expect(lexer, TOKEN_RIGHT_SQUARE_BRAC);
-        ReadToken(lexer);
-    }
-
-    if (expect_semicolon) {
-        Expect(lexer, TOKEN_SEMICOLON);
-        ReadToken(lexer);
+        ExpectAndRead(lexer, TOKEN_RIGHT_SQUARE_BRAC);
     }
 
     return vardecl;
 }
 
-static BinaryOp *ParseVarAssign(Lexer *lexer, Bool expect_semicolon) {
+static BinaryOp *ParseVarAssign(Lexer *lexer) {
     BinaryOp *varassign = NEW_AST(BinaryOp);
     varassign->info.type = AST_BINARYOP;
     varassign->lhs = ParseExpr(lexer);
     varassign->optype = ToAssignmentOperatorType(lexer->token.type);
     ReadToken(lexer);
     varassign->rhs = ParseExpr(lexer);
-    if (expect_semicolon) {
-        Expect(lexer, TOKEN_SEMICOLON);
-        ReadToken(lexer);
-    }
-
     return varassign;
 }
 
-static FuncCall *ParseFuncCall(Lexer *lexer, Bool expect_semicolon) {
+static FuncCall *ParseFuncCall(Lexer *lexer) {
     ASSERT(lexer->token.type == TOKEN_IDENT);
     ReadToken(lexer); // TOKEN_IDENT
     FuncCall *funccall = NEW_AST(FuncCall);
     funccall->info.type = AST_FUNCCALL;
     funccall->ident = strdup(lexer->token.strvalue);
     funccall->arg = NULL;
-    Expect(lexer, TOKEN_LEFT_PAREN);
-    ReadToken(lexer);
+    ExpectAndRead(lexer, TOKEN_LEFT_PAREN);
     if (lexer->token.type != TOKEN_RIGHT_PAREN) {
         funccall->arg = ParseExpr(lexer);
     }
 
-    Expect(lexer, TOKEN_RIGHT_PAREN);
-    ReadToken(lexer);
-    if (expect_semicolon) {
-        Expect(lexer, TOKEN_SEMICOLON);
-        ReadToken(lexer);
-    }
-
+    ExpectAndRead(lexer, TOKEN_RIGHT_PAREN);
     return funccall;
 }
 
@@ -260,13 +240,13 @@ static ReturnStmt *ParseReturnStmt(Lexer *lexer) {
     ReturnStmt *returnstmt = NEW_AST(ReturnStmt);
     returnstmt->info.type = AST_RETURNSTMT;
     returnstmt->expr = ParseExpr(lexer);
-    Expect(lexer, TOKEN_SEMICOLON);
-    ReadToken(lexer);
+    ExpectAndRead(lexer, TOKEN_SEMICOLON);
     return returnstmt;
 }
 
 static IfStmt *ParseIfStmt(Lexer *lexer) {
     ASSERT(lexer->token.type == TOKEN_IF);
+    ReadToken(lexer);
     IfStmt *root_ifstmt = NEW_AST(IfStmt);
     root_ifstmt->info.type = AST_IFSTMT;
     root_ifstmt->condition = ParseParenthesizedExpr(lexer);
@@ -278,7 +258,8 @@ static IfStmt *ParseIfStmt(Lexer *lexer) {
         IfStmt *ifstmt = NEW_AST(IfStmt);
         ifstmt->info.type = AST_IFSTMT;
         ifstmt->condition = NULL;
-        if (lexer->peek.type == TOKEN_IF) {
+        ReadToken(lexer);
+        if (lexer->token.type == TOKEN_IF) {
             ReadToken(lexer);
             ifstmt->condition = ParseParenthesizedExpr(lexer);
         }
@@ -301,6 +282,7 @@ static IfStmt *ParseIfStmt(Lexer *lexer) {
 
 static WhileLoop *ParseWhileLoop(Lexer *lexer) {
     ASSERT(lexer->token.type == TOKEN_WHILE);
+    ReadToken(lexer);
     WhileLoop *whileloop = NEW_AST(WhileLoop);
     whileloop->info.type = AST_WHILELOOP;
     whileloop->condition = ParseParenthesizedExpr(lexer);
@@ -310,63 +292,45 @@ static WhileLoop *ParseWhileLoop(Lexer *lexer) {
 
 static ForLoop *ParseForLoop(Lexer *lexer) {
     ASSERT(lexer->token.type == TOKEN_FOR);
+    ReadToken(lexer);
+
     ForLoop *forloop = NEW_AST(ForLoop);
     forloop->info.type = AST_FORLOOP;
-    ReadToken(lexer);
-    Expect(lexer, TOKEN_LEFT_PAREN);
-    ReadToken(lexer);
-    forloop->pre_operation = ParseVarAssign(lexer, TRUE);
+    ExpectAndRead(lexer, TOKEN_LEFT_PAREN);
+    forloop->pre_operation = ParseVarAssign(lexer);
+    ExpectAndRead(lexer, TOKEN_SEMICOLON);
     forloop->condition = ParseExpr(lexer);
-    Expect(lexer, TOKEN_SEMICOLON);
-    ReadToken(lexer);
-    forloop->post_operation = ParseVarAssign(lexer, FALSE);
-    Expect(lexer, TOKEN_RIGHT_PAREN);
+    ExpectAndRead(lexer, TOKEN_SEMICOLON);
+    forloop->post_operation = ParseVarAssign(lexer);
+    ExpectAndRead(lexer, TOKEN_RIGHT_PAREN);
     forloop->block = ParseBlock(lexer);
     return forloop;
 }
 
 static Block *ParseBlock(Lexer *lexer) {
-    // TODO: ParseBlock should be called when
-    //       lexer->token.type is TOKEN_LEFT_CURLY_BRAC
-    //       so there is no need to call ReadToken here
-    ReadToken(lexer);
-    Expect(lexer, TOKEN_LEFT_CURLY_BRAC);
-
-    Block *root_block = NEW_AST(Block);
-    root_block->info.type = AST_BLOCK;
-    root_block->info.parent = NULL;
-    root_block->stmt = NULL;
-    root_block->glue = NULL;
-    Block *child_block = root_block;
-    ReadToken(lexer);
+    ExpectAndRead(lexer, TOKEN_LEFT_CURLY_BRAC);
+    Block *block = NEW_AST(Block);
+    block->info.type = AST_BLOCK;
+    block->stmts = List2LNew();
     while (lexer->token.type != TOKEN_RIGHT_CURLY_BRAC) {
-        if (child_block->stmt != NULL) {
-            Block *block = NEW_AST(Block);
-            block->info.type = AST_BLOCK;
-            block->info.parent = (Ast *) child_block;
-            block->stmt = NULL;
-            block->glue = NULL;
-
-            child_block->stmt->parent = (Ast *) child_block;
-            child_block->glue = block;
-            child_block = child_block->glue;
-        }
-
-        switch (lexer->token.type) {
-            case TOKEN_CHAR:   {child_block->stmt = (Ast *) ParseVarDecl(lexer, DATA_CHAR, TRUE);} break;
-            case TOKEN_INT:    {child_block->stmt = (Ast *) ParseVarDecl(lexer, DATA_INT, TRUE);} break;
-            case TOKEN_RETURN: {child_block->stmt = (Ast *) ParseReturnStmt(lexer);} break;
-            case TOKEN_IF:     {child_block->stmt = (Ast *) ParseIfStmt(lexer);} break;
-            case TOKEN_WHILE:  {child_block->stmt = (Ast *) ParseWhileLoop(lexer);} break;
-            case TOKEN_FOR:    {child_block->stmt = (Ast *) ParseForLoop(lexer);} break;
-            case TOKEN_STAR:   {child_block->stmt = (Ast *) ParseVarAssign(lexer, TRUE);} break;
+        Ast *stmt = NULL;
+        switch(lexer->token.type) {
+            case TOKEN_CHAR:   {stmt = (Ast *) ParseVarDecl(lexer, DATA_CHAR); ExpectAndRead(lexer, TOKEN_SEMICOLON);} break;
+            case TOKEN_INT:    {stmt = (Ast *) ParseVarDecl(lexer, DATA_INT); ExpectAndRead(lexer, TOKEN_SEMICOLON);} break;
+            case TOKEN_STAR:   {stmt = (Ast *) ParseVarAssign(lexer); ExpectAndRead(lexer, TOKEN_SEMICOLON);} break;
+            case TOKEN_RETURN: {stmt = (Ast *) ParseReturnStmt(lexer);} break;
+            case TOKEN_IF:     {stmt = (Ast *) ParseIfStmt(lexer);} break;
+            case TOKEN_WHILE:  {stmt = (Ast *) ParseWhileLoop(lexer);} break;
+            case TOKEN_FOR:    {stmt = (Ast *) ParseForLoop(lexer);} break;
             case TOKEN_IDENT:  {
                 if ((TOKEN_EQUAL <= lexer->peek.type && lexer->peek.type <= TOKEN_SLASH_EQUAL) ||
-                    lexer->peek.type == TOKEN_LEFT_SQUARE_BRAC) {
-                    child_block->stmt = (Ast *) ParseVarAssign(lexer, TRUE);
+                        lexer->peek.type == TOKEN_LEFT_SQUARE_BRAC) {
+                    stmt = (Ast *) ParseVarAssign(lexer);
+                    ExpectAndRead(lexer, TOKEN_SEMICOLON);
                 }
                 else if (lexer->peek.type == TOKEN_LEFT_PAREN) {
-                    child_block->stmt = (Ast *) ParseFuncCall(lexer, TRUE);
+                    stmt = (Ast *) ParseFuncCall(lexer);
+                    ExpectAndRead(lexer, TOKEN_SEMICOLON);
                 }
                 else {
                     ThrowErrorAt(lexer,
@@ -377,19 +341,23 @@ static Block *ParseBlock(Lexer *lexer) {
                 }
             } break;
             default: {
-                ThrowErrorAt(lexer, "unknown statement starting with '%s'", GetTokenTypeStr(lexer->token.type));
+                ThrowErrorAt(lexer,
+                    "unknown statement starting with '%s'",
+                    GetTokenTypeStr(lexer->token.type)
+                );
             }
         }
 
-        ASSERT(child_block->stmt != NULL);
-        child_block->stmt->parent = (Ast *) child_block;
+        ASSERT(stmt != NULL);
+        List2LAdd(&block->stmts, stmt);
     }
 
-    ReadToken(lexer); // }
-    return root_block;
+    ReadToken(lexer); // TOKEN_RIGHT_CURLY_BRAC
+    return block;
 }
 
 static FuncDecl *ParseFuncDecl(Lexer *lexer, DataType returntype) {
+    ReadToken(lexer); // function return type
     FuncDecl *funcdecl = NEW_AST(FuncDecl);
     funcdecl->info.type = AST_FUNCDECL;
     funcdecl->stack_depth_bytes = 0;
@@ -397,18 +365,16 @@ static FuncDecl *ParseFuncDecl(Lexer *lexer, DataType returntype) {
     funcdecl->returntype = returntype;
     funcdecl->ident = NULL;
     funcdecl->block = NULL;
-    ReadToken(lexer);
     Expect(lexer, TOKEN_IDENT);
 
     funcdecl->ident = strdup(lexer->token.strvalue);
     ReadToken(lexer);
-    Expect(lexer, TOKEN_LEFT_PAREN);
-    ReadToken(lexer);
+    ExpectAndRead(lexer, TOKEN_LEFT_PAREN);
     if (lexer->token.type != TOKEN_RIGHT_PAREN) {
         DataType datatypes[2] = {DATA_INT, DATA_CHAR};
         while (TRUE) {
             DataType datatype = datatypes[lexer->token.type - TOKEN_INT];
-            VarDecl *vardecl = ParseVarDecl(lexer, datatype, FALSE);
+            VarDecl *vardecl = ParseVarDecl(lexer, datatype);
             if (lexer->token.type == TOKEN_COMMA) {
                 ReadToken(lexer);
             }
@@ -418,9 +384,8 @@ static FuncDecl *ParseFuncDecl(Lexer *lexer, DataType returntype) {
         }
     }
 
-    Expect(lexer, TOKEN_RIGHT_PAREN);
+    ExpectAndRead(lexer, TOKEN_RIGHT_PAREN);
     funcdecl->block = ParseBlock(lexer);
-    funcdecl->block->info.parent = (Ast *) funcdecl;
     return funcdecl;
 }
 

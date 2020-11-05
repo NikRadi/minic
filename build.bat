@@ -39,7 +39,7 @@ IF "%1" == "test" (
 IF "%1" == "testmain" (
     ECHO Testing...
     ECHO TestMain.c
-    bin\minic.exe TestMain.c
+    bin\minic.exe -f TestMain.c
     nasm -f win64 -o TestMain.obj TestMain.asm
     LINK /NOLOGO %Libs% /SUBSYSTEM:console TestMain.obj /OUT:TestMain.exe
     TestMain.exe

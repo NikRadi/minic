@@ -1,3 +1,4 @@
 # minic
+A c compiler that will (hopefully) be able to compile itself.
 
-A c compiler written in c. The purpose of the compiler is educational.
+minic compiles into NASM assembly, which can be linked by the MSVC linker. The generated assembly code is horrible but works. I will add an optimizing step sometime in the future.

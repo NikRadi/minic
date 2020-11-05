@@ -277,6 +277,17 @@ static int CgX86Expr(FileInfo *info, Ast *expr, Bool is_jump, int label) {
     }
 }
 
+static void CgX86VarDecl(FileInfo *info, VarDecl *vardecl) {
+    if (vardecl->expr != NULL) {
+        int mem_location = FindMemLocation(info, vardecl->ident);
+        int regid = CgX86Expr(info, vardecl->expr, FALSE, -1);
+        fprintf(info->asmfile,
+            "\tmov\t\t[rsp+%d], %s\n",
+            mem_location, regs64[regid]
+        );
+    }
+}
+
 static void CgX86VarAssign(FileInfo *info, BinaryOp *varassign) {
     int regid = CgX86Expr(info, varassign->rhs, FALSE, -1);
     switch (varassign->lhs->type) {
@@ -407,23 +418,34 @@ static void CgX86FuncCall(FileInfo *info, FuncCall *funccall) {
 }
 
 static void CgX86Block(FileInfo *info, Block *block) {
-    Block *child_block = block;
-    while (child_block != NULL && child_block->stmt != NULL) {
-        switch (child_block->stmt->type) {
-            case AST_VARDECL:    {} break;
-            case AST_BINARYOP:   {CgX86VarAssign(info, (BinaryOp *) child_block->stmt);} break;
-            case AST_RETURNSTMT: {CgX86ReturnStmt(info, (ReturnStmt *) child_block->stmt);} break;
-            case AST_IFSTMT:     {CgX86IfStmt(info, (IfStmt *) child_block->stmt);} break;
-            case AST_WHILELOOP:  {CgX86WhileLoop(info, (WhileLoop *) child_block->stmt);} break;
-            case AST_FUNCCALL:   {CgX86FuncCall(info, (FuncCall *) child_block->stmt);} break;
+    Node2Links *node = block->stmts.head;
+    if (node == NULL) {
+        return;
+    }
+
+    while (TRUE) {
+        switch (node->item->type) {
+            case AST_VARDECL:    {CgX86VarDecl(info, (VarDecl *) node->item);} break;
+            case AST_BINARYOP:   {CgX86VarAssign(info, (BinaryOp *) node->item);} break;
+            case AST_RETURNSTMT: {CgX86ReturnStmt(info, (ReturnStmt *) node->item);} break;
+            case AST_IFSTMT:     {CgX86IfStmt(info, (IfStmt *) node->item);} break;
+            case AST_WHILELOOP:  {CgX86WhileLoop(info, (WhileLoop *) node->item);} break;
+            case AST_FUNCCALL:   {CgX86FuncCall(info, (FuncCall *) node->item);} break;
             default: {
-                ASSERT(child_block != NULL);
-                ThrowInternalError("statement '%s' not implemented", GetAstTypeStr(child_block->stmt->type));
-            };
+                ThrowInternalError(
+                    "statement '%s' not implemented in CodegenX86",
+                    GetAstTypeStr(node->item->type)
+                );
+            }
         }
 
-        child_block = child_block->glue;
+        // This statement fails TestCharOverflow for some reason
         FreeRegs();
+        if (node == block->stmts.tail) {
+            break;
+        }
+
+        node = node->next;
     }
 }
 

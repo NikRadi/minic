@@ -39,29 +39,12 @@ static void TypecheckVarDecl(FileInfo *info, VarDecl *vardecl) {
         }
     }
 
-    if (vardecl->expr != NULL) {
-        TypecheckExpr(info, vardecl->expr);
-        BinaryOp *varassign = NEW_AST(BinaryOp);
-        varassign->info.type = AST_BINARYOP;
-        varassign->rhs = vardecl->expr;
-
-        Literal *literal = NEW_AST(Literal);
-        literal->info.type = AST_LITERAL_IDENT;
-        literal->arridx = -1;
-        literal->strvalue = vardecl->ident;
-        varassign->lhs = (Ast *) literal;
-
-        ASSERT(vardecl->info.parent->type == AST_BLOCK);
-        Block *parent_block = (Block *) vardecl->info.parent;
-        parent_block->stmt = (Ast *) varassign;
-    }
-
     VarInfo varinfo;
     varinfo.ident = vardecl->ident;
     varinfo.datatype = vardecl->datatype;
     info->var_infos[info->num_vars] = varinfo;
     info->num_vars += 1;
-    info->current_func->stack_depth_bytes += 4;
+    info->current_func->stack_depth_bytes += 8;
 }
 
 static void TypecheckVarAssign(FileInfo *info, BinaryOp *varassign) {
@@ -71,13 +54,11 @@ static void TypecheckVarAssign(FileInfo *info, BinaryOp *varassign) {
         OperatorType optypes[4] = {BIOP_ADD, BIOP_SUB, BIOP_MUL, BIOP_DIV};
         BinaryOp *binaryop = NEW_AST(BinaryOp);
         binaryop->info.type = AST_BINARYOP;
-        binaryop->info.parent = (Ast *) varassign;
         binaryop->optype = optypes[varassign->optype - ASOP_ADD_EQUAL];
         binaryop->rhs = varassign->rhs;
 
         Literal *literal = NEW_AST(Literal);
         literal->info.type = AST_LITERAL_IDENT;
-        literal->info.parent = (Ast *) varassign;
         literal->arridx = -1;
         literal->strvalue = ((Literal *) varassign->lhs)->strvalue;
         binaryop->lhs = (Ast *) literal;
@@ -110,47 +91,47 @@ static void TypecheckWhileLoop(FileInfo *info, WhileLoop *whileloop) {
 }
 
 static void TypecheckForLoop(FileInfo *info, ForLoop *forloop) {
-    TypecheckExpr(info, (Ast *) forloop->pre_operation);
-    TypecheckExpr(info, (Ast *) forloop->condition);
-    TypecheckExpr(info, (Ast *) forloop->post_operation);
-    TypecheckBlock(info, forloop->block);
+    // TypecheckExpr(info, (Ast *) forloop->pre_operation);
+    // TypecheckExpr(info, (Ast *) forloop->condition);
+    // TypecheckExpr(info, (Ast *) forloop->post_operation);
+    // TypecheckBlock(info, forloop->block);
 
-    WhileLoop *loop = NEW_AST(WhileLoop);
-    loop->info.type = AST_WHILELOOP;
-    loop->condition = (Ast *) forloop->condition;
-    loop->block = forloop->block;
+    // WhileLoop *loop = NEW_AST(WhileLoop);
+    // loop->info.type = AST_WHILELOOP;
+    // loop->condition = (Ast *) forloop->condition;
+    // loop->block = forloop->block;
 
-    // Insert forloop->post_operation as last statement in loop->block
-    Block *child_block = loop->block;
-    if (child_block->stmt == NULL) {
-        child_block->stmt = (Ast *) forloop->post_operation;
-    }
-    else {
-        while (TRUE) {
-            Block *glue_postop = NEW_AST(Block);
-            glue_postop->info.type = AST_BLOCK;
-            glue_postop->stmt = (Ast *) forloop->post_operation;
-            glue_postop->glue = NULL;
-            if (child_block->glue == NULL) {
-                child_block->glue = glue_postop;
-                break;
-            }
-            else {
-                child_block = child_block->glue;
-            }
-        }
-    }
+    // // Insert forloop->post_operation as last statement in loop->block
+    // Block *child_block = loop->block;
+    // if (child_block->stmt == NULL) {
+    //     child_block->stmt = (Ast *) forloop->post_operation;
+    // }
+    // else {
+    //     while (TRUE) {
+    //         Block *glue_postop = NEW_AST(Block);
+    //         glue_postop->info.type = AST_BLOCK;
+    //         glue_postop->stmt = (Ast *) forloop->post_operation;
+    //         glue_postop->glue = NULL;
+    //         if (child_block->glue == NULL) {
+    //             child_block->glue = glue_postop;
+    //             break;
+    //         }
+    //         else {
+    //             child_block = child_block->glue;
+    //         }
+    //     }
+    // }
 
-    ASSERT(forloop->info.parent->type == AST_BLOCK);
-    Block *parent_block = (Block *) forloop->info.parent;
-    Block *parent_glue = parent_block->glue;
-    parent_block->stmt = (Ast *) forloop->pre_operation;
+    // ASSERT(forloop->info.parent->type == AST_BLOCK);
+    // Block *parent_block = (Block *) forloop->info.parent;
+    // Block *parent_glue = parent_block->glue;
+    // parent_block->stmt = (Ast *) forloop->pre_operation;
 
-    Block *glue_loop = NEW_AST(Block);
-    glue_loop->info.type = AST_BLOCK;
-    glue_loop->stmt = (Ast *) loop;
-    parent_block->glue = glue_loop;
-    glue_loop->glue = parent_glue;
+    // Block *glue_loop = NEW_AST(Block);
+    // glue_loop->info.type = AST_BLOCK;
+    // glue_loop->stmt = (Ast *) loop;
+    // parent_block->glue = glue_loop;
+    // glue_loop->glue = parent_glue;
 }
 
 static void TypecheckFuncCall(FileInfo *info, FuncCall *funccall) {
@@ -160,23 +141,52 @@ static void TypecheckFuncCall(FileInfo *info, FuncCall *funccall) {
 }
 
 static void TypecheckBlock(FileInfo *info, Block *block) {
-    Block *child_block = block;
-    while (child_block != NULL && child_block->stmt != NULL) {
-        switch (child_block->stmt->type) {
-            case AST_VARDECL:    {TypecheckVarDecl(info, (VarDecl *) child_block->stmt);} break;
-            case AST_BINARYOP:   {TypecheckVarAssign(info, (BinaryOp *) child_block->stmt);} break;
-            case AST_RETURNSTMT: {TypecheckReturnStmt(info, (ReturnStmt *) child_block->stmt);} break;
-            case AST_IFSTMT:     {TypecheckIfStmt(info, (IfStmt *) child_block->stmt);} break;
-            case AST_WHILELOOP:  {TypecheckWhileLoop(info, (WhileLoop *) child_block->stmt);} break;
-            case AST_FORLOOP:    {TypecheckForLoop(info, (ForLoop *) child_block->stmt);} break;
-            case AST_FUNCCALL:   {TypecheckFuncCall(info, (FuncCall *) child_block->stmt);} break;
+    Node2Links *node = block->stmts.head;
+    if (node == NULL) {
+        return;
+    }
+
+    while (TRUE) {
+        switch (node->item->type) {
+            case AST_VARDECL:    {TypecheckVarDecl(info, (VarDecl *) node->item);} break;
+            case AST_BINARYOP:   {TypecheckVarAssign(info, (BinaryOp *) node->item);} break;
+            case AST_RETURNSTMT: {TypecheckReturnStmt(info, (ReturnStmt *) node->item);} break;
+            case AST_IFSTMT:     {TypecheckIfStmt(info, (IfStmt *) node->item);} break;
+            case AST_WHILELOOP:  {TypecheckWhileLoop(info, (WhileLoop *) node->item);} break;
+            case AST_FORLOOP:    {TypecheckForLoop(info, (ForLoop *) node->item);} break;
+            case AST_FUNCCALL:   {TypecheckFuncCall(info, (FuncCall *) node->item);} break;
             default: {
-                ThrowInternalError("invalid statement '%s'", GetAstTypeStr(child_block->stmt->type));
-            };
+                ThrowInternalError(
+                    "statement '%s' not implemented in Typechecker",
+                    GetAstTypeStr(node->item->type)
+                );
+            }
         }
 
-        child_block = child_block->glue;
+        if (node == block->stmts.tail) {
+            break;
+        }
+
+        node = node->next;
     }
+
+    // Block *child_block = block;
+    // while (child_block != NULL && child_block->stmt != NULL) {
+    //     switch (child_block->stmt->type) {
+    //         case AST_VARDECL:    {TypecheckVarDecl(info, (VarDecl *) child_block->stmt);} break;
+    //         case AST_BINARYOP:   {TypecheckVarAssign(info, (BinaryOp *) child_block->stmt);} break;
+    //         case AST_RETURNSTMT: {TypecheckReturnStmt(info, (ReturnStmt *) child_block->stmt);} break;
+    //         case AST_IFSTMT:     {TypecheckIfStmt(info, (IfStmt *) child_block->stmt);} break;
+    //         case AST_WHILELOOP:  {TypecheckWhileLoop(info, (WhileLoop *) child_block->stmt);} break;
+    //         case AST_FORLOOP:    {TypecheckForLoop(info, (ForLoop *) child_block->stmt);} break;
+    //         case AST_FUNCCALL:   {TypecheckFuncCall(info, (FuncCall *) child_block->stmt);} break;
+    //         default: {
+    //             ThrowInternalError("invalid statement '%s'", GetAstTypeStr(child_block->stmt->type));
+    //         };
+    //     }
+
+    //     child_block = child_block->glue;
+    // }
 }
 
 static void TypecheckFuncDecl(FileInfo *info, FuncDecl *funcdecl) {

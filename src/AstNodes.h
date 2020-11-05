@@ -1,6 +1,7 @@
 #ifndef MINIC_ASTNODES_H
 #define MINIC_ASTNODES_H
 #include "Common.h"
+#include "List2Links.h"
 
 
 #define NEW_AST(type) (type *) malloc(sizeof(type));
@@ -38,7 +39,6 @@ enum DataType {
 
 struct Ast {
     AstType type;
-    struct Ast *parent;
 } typedef Ast;
 
 struct Literal {
@@ -75,8 +75,7 @@ struct VarDecl {
 
 struct Block {
     Ast info;
-    Ast *stmt;
-    struct Block *glue;
+    List2Links stmts;
 } typedef Block;
 
 struct IfStmt {
