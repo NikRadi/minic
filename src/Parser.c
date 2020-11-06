@@ -224,10 +224,19 @@ static FuncCall *ParseFuncCall(Lexer *lexer) {
     FuncCall *funccall = NEW_AST(FuncCall);
     funccall->info.type = AST_FUNCCALL;
     funccall->ident = strdup(lexer->token.strvalue);
-    funccall->arg = NULL;
+    funccall->args = List2LNew();
     ExpectAndRead(lexer, TOKEN_LEFT_PAREN);
     if (lexer->token.type != TOKEN_RIGHT_PAREN) {
-        funccall->arg = ParseExpr(lexer);
+        while (TRUE) {
+            Ast *arg = ParseExpr(lexer);
+            List2LAdd(&funccall->args, arg);
+            if (lexer->token.type == TOKEN_COMMA) {
+                ReadToken(lexer);
+            }
+            else {
+                break;
+            }
+        }
     }
 
     ExpectAndRead(lexer, TOKEN_RIGHT_PAREN);
@@ -361,7 +370,7 @@ static FuncDecl *ParseFuncDecl(Lexer *lexer, DataType returntype) {
     FuncDecl *funcdecl = NEW_AST(FuncDecl);
     funcdecl->info.type = AST_FUNCDECL;
     funcdecl->stack_depth_bytes = 0;
-    funcdecl->num_params = 0;
+    funcdecl->params = List2LNew();
     funcdecl->returntype = returntype;
     funcdecl->ident = NULL;
     funcdecl->block = NULL;
@@ -375,6 +384,7 @@ static FuncDecl *ParseFuncDecl(Lexer *lexer, DataType returntype) {
         while (TRUE) {
             DataType datatype = datatypes[lexer->token.type - TOKEN_INT];
             VarDecl *vardecl = ParseVarDecl(lexer, datatype);
+            List2LAdd(&funcdecl->params, (Ast *) vardecl);
             if (lexer->token.type == TOKEN_COMMA) {
                 ReadToken(lexer);
             }

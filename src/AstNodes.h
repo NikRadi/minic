@@ -107,13 +107,13 @@ struct ForLoop {
 struct FuncCall {
     Ast info;
     char *ident;
-    Ast *arg;
+    List2Links args;
 } typedef FuncCall;
 
 struct FuncDecl {
     Ast info;
     int stack_depth_bytes;
-    int num_params;
+    List2Links params;
     DataType returntype;
     char *ident;
     Block *block;

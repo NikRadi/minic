@@ -11,7 +11,7 @@ struct VarInfo {
 struct FileInfo {
     int num_funcs;
     int num_vars;
-    char *func_idents[16];
+    FuncDecl *funcs[16];
     VarInfo var_infos[16];
     char *filename;
     FuncDecl *current_func;

@@ -7,6 +7,7 @@ List2Links List2LNew() {
     List2Links list;
     list.head = NULL;
     list.tail = NULL;
+    list.count = 0;
     return list;
 }
 
@@ -23,4 +24,6 @@ void List2LAdd(List2Links *list, Ast *item) {
     else {
         node->prev->next = node;
     }
+
+    list->count += 1;
 }

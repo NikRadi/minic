@@ -14,6 +14,7 @@ struct Node2Links {
 struct List2Links {
     Node2Links *head;
     Node2Links *tail;
+    int count;
 } typedef List2Links;
 
 

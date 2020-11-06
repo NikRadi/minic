@@ -91,10 +91,10 @@ static void TypecheckWhileLoop(FileInfo *info, WhileLoop *whileloop) {
 }
 
 static void TypecheckForLoop(FileInfo *info, ForLoop *forloop) {
-    // TypecheckExpr(info, (Ast *) forloop->pre_operation);
-    // TypecheckExpr(info, (Ast *) forloop->condition);
-    // TypecheckExpr(info, (Ast *) forloop->post_operation);
-    // TypecheckBlock(info, forloop->block);
+    TypecheckExpr(info, (Ast *) forloop->pre_operation);
+    TypecheckExpr(info, (Ast *) forloop->condition);
+    TypecheckExpr(info, (Ast *) forloop->post_operation);
+    TypecheckBlock(info, forloop->block);
 
     // WhileLoop *loop = NEW_AST(WhileLoop);
     // loop->info.type = AST_WHILELOOP;
@@ -135,8 +135,24 @@ static void TypecheckForLoop(FileInfo *info, ForLoop *forloop) {
 }
 
 static void TypecheckFuncCall(FileInfo *info, FuncCall *funccall) {
-    if (funccall->arg != NULL) {
-        TypecheckExpr(info, funccall->arg);
+    for (int i = 0; i < info->num_funcs; ++i) {
+        FuncDecl *func = info->funcs[i];
+        if (strcmp(func->ident, funccall->ident) == 0) {
+            if (func->params.count != funccall->args.count) {
+                printf("%s(%d) error: function call '%s' requires %d argument(s)\n",
+                    info->filename, -1,
+                    funccall->ident, func->params.count
+                );
+            }
+
+            break;
+        }
+    }
+
+    Node2Links *node = funccall->args.head;
+    for (int i = 0; i < funccall->args.count; ++i) {
+        TypecheckExpr(info, node->item);
+        node = node->next;
     }
 }
 
@@ -172,10 +188,24 @@ static void TypecheckBlock(FileInfo *info, Block *block) {
 }
 
 static void TypecheckFuncDecl(FileInfo *info, FuncDecl *funcdecl) {
-    info->func_idents[info->num_funcs] = funcdecl->ident;
-    info->num_funcs += 1;
+    for (int i = 0; i < info->num_funcs; ++i) {
+        if (strcmp(funcdecl->ident, info->funcs[i]->ident) == 0) {
+            printf("%s(%d) error: function '%s' already declared on line %d\n",
+                info->filename, -1,
+                funcdecl->ident, -1
+            );
+        }
+    }
 
+    info->funcs[info->num_funcs] = funcdecl;
+    info->num_funcs += 1;
     info->current_func = funcdecl;
+    Node2Links *node = funcdecl->params.head;
+    for (int i = 0; i < funcdecl->params.count; ++i) {
+        TypecheckVarDecl(info, (VarDecl *) node->item);
+        node = node->next;
+    }
+
     TypecheckBlock(info, funcdecl->block);
 }
 

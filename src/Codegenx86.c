@@ -409,8 +409,9 @@ static void CgX86WhileLoop(FileInfo *info, WhileLoop *whileloop) {
 }
 
 static void CgX86FuncCall(FileInfo *info, FuncCall *funccall) {
-    if (funccall->arg != NULL) {
-        int regid = CgX86Expr(info, funccall->arg, FALSE, -1);
+    ASSERT(funccall->args.count <= 1);
+    for (int i = 0; i < funccall->args.count; ++i) {
+        int regid = CgX86Expr(info, funccall->args.head->item, FALSE, -1);
         fprintf(info->asmfile, "\tmov\t\tecx, %s\n", regs32[regid]);
     }
 
