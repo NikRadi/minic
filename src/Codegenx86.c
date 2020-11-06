@@ -70,14 +70,17 @@ static int CgX86LiteralIdent(FileInfo *info, Literal *literal) {
     VarData vardata = GetVarData(info, literal->strvalue);
     if (literal->arridx == -1) {
         char *reg;
-        switch (vardata.datatype) {
-            case DATA_CHAR:     {reg = regs8[regid];} break;
-            case DATA_INT:      {reg = regs32[regid];} break;
-            case DATA_INT_PTR:
-            case DATA_CHAR_PTR: {reg = regs64[regid];} break;
-            default: {
-                ThrowInternalError("variable datatype '%d' not implemented", vardata.datatype);
-                reg = 0; // To get rid of warning C4701
+        if (vardata.lvl_indirection > 0) {
+            reg = regs64[regid];
+        }
+        else {
+            switch (vardata.datatype) {
+                case DATA_CHAR:     {reg = regs8[regid];} break;
+                case DATA_INT:      {reg = regs32[regid];} break;
+                default: {
+                    ThrowInternalError("variable datatype '%d' not implemented", vardata.datatype);
+                    reg = 0; // To get rid of warning C4701
+                }
             }
         }
 

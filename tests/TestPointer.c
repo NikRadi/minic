@@ -1,8 +1,9 @@
 void main() {
-    int x = 0;
-    int *xptr1 = &x;
-    int *xptr2 = xptr1;
-    *xptr1 = 20;
-    x = *xptr2 + 3;
-    PrintInt(x == 23);
+    int x = 2;
+    int *xp = &x;
+    int **xpp = &xp;
+    int ***xppp = &xpp;
+    int ****xpppp = &xppp;
+    ****xpppp = 20;
+    PrintInt(x == 20);
 }

@@ -43,6 +43,7 @@ static void TypecheckVarDecl(FileInfo *info, VarDecl *vardecl, StorageType stora
     vardata.datatype = vardecl->datatype;
     vardata.storagetype = storagetype;
     vardata.ident = vardecl->ident;
+    vardata.lvl_indirection = vardecl->lvl_indirection;
     vardata.mem_location = info->current_scope->num_vars * 8;
     info->current_scope->vardatas[info->current_scope->num_vars] = vardata;
     info->current_scope->num_vars += 1;

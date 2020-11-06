@@ -32,7 +32,8 @@ enum OperatorType {
 } typedef OperatorType;
 
 enum DataType {
-    DATA_INT, DATA_CHAR, DATA_VOID,
+    DATA_VOID, DATA_CHAR, DATA_INT, DATA_LONG,
+
     DATA_INT_PTR, DATA_CHAR_PTR,
     DATA_INT_ARR, DATA_CHAR_ARR,
 } typedef DataType;
@@ -46,6 +47,7 @@ struct VarData {
     StorageType storagetype;
     char *ident;
     int mem_location;
+    int lvl_indirection;
 } typedef VarData;
 
 struct Scope {
@@ -60,13 +62,9 @@ struct Ast {
 
 struct Literal {
     Ast info;
-    union {
-        int intvalue;
-        struct {
-            char *strvalue;
-            int arridx;
-        };
-    };
+    int intvalue;
+    char *strvalue;
+    int arridx;
 } typedef Literal;
 
 struct UnaryOp {
@@ -88,6 +86,7 @@ struct VarDecl {
     char *ident;
     Ast *expr;
     int arrsize;
+    int lvl_indirection;
 } typedef VarDecl;
 
 struct Block {

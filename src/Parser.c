@@ -172,21 +172,27 @@ static Ast *ParseParenthesizedExpr(Lexer *lexer) {
 
 static VarDecl *ParseVarDecl(Lexer *lexer, DataType datatype) {
     ASSERT(lexer->token.type == TOKEN_INT || lexer->token.type == TOKEN_CHAR);
+    ReadToken(lexer);
     VarDecl *vardecl = NEW_AST(VarDecl);
     vardecl->info.type = AST_VARDECL;
     vardecl->ident = NULL;
     vardecl->expr = NULL;
-    ReadToken(lexer);
-    if (lexer->token.type == TOKEN_STAR) {
-        if (datatype == DATA_INT) {
-            datatype = DATA_INT_PTR;
-        }
-        else if (datatype == DATA_CHAR) {
-            datatype = DATA_CHAR_PTR;
-        }
-
+    vardecl->lvl_indirection = 0;
+    while (lexer->token.type == TOKEN_STAR) {
         ReadToken(lexer);
+        vardecl->lvl_indirection += 1;
     }
+
+    // if (lexer->token.type == TOKEN_STAR) {
+    //     if (datatype == DATA_INT) {
+    //         datatype = DATA_INT_PTR;
+    //     }
+    //     else if (datatype == DATA_CHAR) {
+    //         datatype = DATA_CHAR_PTR;
+    //     }
+
+    //     ReadToken(lexer);
+    // }
 
     vardecl->datatype = datatype;
     Expect(lexer, TOKEN_IDENT);
