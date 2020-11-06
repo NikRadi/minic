@@ -32,18 +32,20 @@ static void TypecheckExpr(FileInfo *info, Ast *expr) {
     }
 }
 
-static void TypecheckVarDecl(FileInfo *info, VarDecl *vardecl) {
+static void TypecheckVarDecl(FileInfo *info, VarDecl *vardecl, StorageType storagetype) {
     if (vardecl->arrsize != -1) {
         if (vardecl->datatype == DATA_INT) {
             vardecl->datatype = DATA_INT_PTR;
         }
     }
 
-    VarInfo varinfo;
-    varinfo.ident = vardecl->ident;
-    varinfo.datatype = vardecl->datatype;
-    info->var_infos[info->num_vars] = varinfo;
-    info->num_vars += 1;
+    VarData vardata;
+    vardata.datatype = vardecl->datatype;
+    vardata.storagetype = storagetype;
+    vardata.ident = vardecl->ident;
+    vardata.mem_location = info->current_func->scope.num_vars * 8;
+    info->current_func->scope.vardatas[info->current_func->scope.num_vars] = vardata;
+    info->current_func->scope.num_vars += 1;
     info->current_func->stack_depth_bytes += 8;
 }
 
@@ -164,7 +166,7 @@ static void TypecheckBlock(FileInfo *info, Block *block) {
 
     while (TRUE) {
         switch (node->item->type) {
-            case AST_VARDECL:    {TypecheckVarDecl(info, (VarDecl *) node->item);} break;
+            case AST_VARDECL:    {TypecheckVarDecl(info, (VarDecl *) node->item, STOR_LOCAL);} break;
             case AST_BINARYOP:   {TypecheckVarAssign(info, (BinaryOp *) node->item);} break;
             case AST_RETURNSTMT: {TypecheckReturnStmt(info, (ReturnStmt *) node->item);} break;
             case AST_IFSTMT:     {TypecheckIfStmt(info, (IfStmt *) node->item);} break;
@@ -197,16 +199,19 @@ static void TypecheckFuncDecl(FileInfo *info, FuncDecl *funcdecl) {
         }
     }
 
+    funcdecl->scope.num_vars = 0;
+    funcdecl->scope.parent = NULL;
     info->funcs[info->num_funcs] = funcdecl;
     info->num_funcs += 1;
     info->current_func = funcdecl;
     Node2Links *node = funcdecl->params.head;
     for (int i = 0; i < funcdecl->params.count; ++i) {
-        TypecheckVarDecl(info, (VarDecl *) node->item);
+        TypecheckVarDecl(info, (VarDecl *) node->item, STOR_PARAM);
         node = node->next;
     }
 
     TypecheckBlock(info, funcdecl->block);
+    info->current_func = NULL;
 }
 
 void TypecheckFile(FileInfo *info, File *file) {

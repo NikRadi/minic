@@ -37,6 +37,23 @@ enum DataType {
     DATA_INT_ARR, DATA_CHAR_ARR,
 } typedef DataType;
 
+enum StorageType {
+    STOR_GLOBAL, STOR_LOCAL, STOR_PARAM
+} typedef StorageType;
+
+struct VarData {
+    DataType datatype;
+    StorageType storagetype;
+    char *ident;
+    int mem_location;
+} typedef VarData;
+
+struct Scope {
+    struct Scope *parent;
+    VarData vardatas[4];
+    int num_vars;
+} typedef Scope;
+
 struct Ast {
     AstType type;
 } typedef Ast;
@@ -117,6 +134,7 @@ struct FuncDecl {
     DataType returntype;
     char *ident;
     Block *block;
+    Scope scope;
 } typedef FuncDecl;
 
 struct File {

@@ -76,7 +76,6 @@ int main(int argc, char **argv) {
 
     FileInfo info;
     info.num_funcs = 0;
-    info.num_vars = 0;
     info.filename = lexer.filename;
     info.current_func = NULL;
     TypecheckFile(&info, cfile);

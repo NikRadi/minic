@@ -38,31 +38,15 @@ static int AllocRegister() {
     return -1; // To get rid of warning C4715
 }
 
-static VarInfo GetVarInfo(FileInfo *info, char *ident) {
-    for (int i = 0; i < info->num_vars; ++i) {
-        if (strcmp(ident, info->var_infos[i].ident) == 0) {
-            return info->var_infos[i];
+static VarData GetVarData(FileInfo *info, char *ident) {
+    for (int i = 0; i < info->current_func->scope.num_vars; ++i) {
+        if (strcmp(ident, info->current_func->scope.vardatas[i].ident) == 0) {
+            return info->current_func->scope.vardatas[i];
         }
     }
 
-    ThrowInternalError("could not find variable '%s'", ident);
-    return info->var_infos[0];; // To get rid of warning C4715
-}
-
-static int FindMemLocation(FileInfo *info, char *ident) {
-    int regid = -1;
-    for (int i = 0; i < info->num_vars; ++i) {
-        if (strcmp(ident, info->var_infos[i].ident) == 0) {
-            regid = i;
-            break;
-        }
-    }
-
-    if (regid == -1) {
-        ThrowInternalError("could not find memory location of variable '%s'", ident);
-    }
-
-    return regid * 8;
+    ThrowInternalError("could not find data of variable '%s'", ident);
+    return info->current_func->scope.vardatas[0]; // To get rid of warning C4715
 }
 
 static int NewLabel() {
@@ -83,25 +67,21 @@ static int CgX86LiteralInt(FileInfo *info, Literal *literal) {
 
 static int CgX86LiteralIdent(FileInfo *info, Literal *literal) {
     int regid = AllocRegister();
-    int mem_location = FindMemLocation(info, literal->strvalue);
+    VarData vardata = GetVarData(info, literal->strvalue);
     if (literal->arridx == -1) {
-        VarInfo varinfo = GetVarInfo(info, literal->strvalue);
         char *reg;
-        switch (varinfo.datatype) {
-            case DATA_CHAR:    {reg = regs8[regid];} break;
-            case DATA_INT:     {reg = regs32[regid];} break;
-            case DATA_CHAR_PTR:
-            case DATA_INT_PTR: {reg = regs64[regid];} break;
+        switch (vardata.datatype) {
+            case DATA_CHAR:     {reg = regs8[regid];} break;
+            case DATA_INT:      {reg = regs32[regid];} break;
+            case DATA_INT_PTR:
+            case DATA_CHAR_PTR: {reg = regs64[regid];} break;
             default: {
-                ThrowInternalError("variable datatype '%d' not implemented", varinfo.datatype);
+                ThrowInternalError("variable datatype '%d' not implemented", vardata.datatype);
                 reg = 0; // To get rid of warning C4701
             }
         }
 
-        fprintf(info->asmfile,
-            "\tmov\t\t%s, [rsp+%d]\n",
-            reg, mem_location
-        );
+        fprintf(info->asmfile, "\tmov\t\t%s, [rsp+%d]\n", reg, vardata.mem_location);
     }
     else {
         fprintf(info->asmfile,
@@ -110,7 +90,7 @@ static int CgX86LiteralIdent(FileInfo *info, Literal *literal) {
             "\tmov\t\t%s, [rsp+%d+%s]\n",
             regs64[regid],
             regs64[regid], regs64[regid], literal->arridx,
-            regs64[regid], mem_location, regs64[regid]
+            regs64[regid], vardata.mem_location, regs64[regid]
         );
     }
 
@@ -119,26 +99,26 @@ static int CgX86LiteralIdent(FileInfo *info, Literal *literal) {
 
 static int CgX86LiteralPtr(FileInfo *info, Literal *literal) {
     int regid = AllocRegister();
-    int mem_location = FindMemLocation(info, literal->strvalue);
+    VarData vardata = GetVarData(info, literal->strvalue);
     fprintf(info->asmfile,
         "\tlea\t\t%s, [rsp+%d]\n",
-        regs64[regid], mem_location
+        regs64[regid], vardata.mem_location
     );
 
     return regid;
 }
 
 static int CgX86LiteralDeref(FileInfo *info, Literal *literal) {
-    int regid1 = AllocRegister();
-    int mem_location = FindMemLocation(info, literal->strvalue);
+    int regid = AllocRegister();
+    VarData vardata = GetVarData(info, literal->strvalue);
     fprintf(info->asmfile,
         "\tmov\t\t%s, [rsp+%d]\n"
         "\tmov\t\t%s, [%s]\n",
-        regs64[regid1], mem_location,
-        regs64[regid1], regs64[regid1]
+        regs64[regid], vardata.mem_location,
+        regs64[regid], regs64[regid]
     );
 
-    return regid1;
+    return regid;
 }
 
 static int CgX86UnaryOp(FileInfo *info, UnaryOp *unaryop) {
@@ -147,10 +127,10 @@ static int CgX86UnaryOp(FileInfo *info, UnaryOp *unaryop) {
             ASSERT(unaryop->expr->type == AST_LITERAL_IDENT);
             int regid = AllocRegister();
             Literal *literal = (Literal *) unaryop->expr;
-            int mem_location = FindMemLocation(info, literal->strvalue);
+            VarData vardata = GetVarData(info, literal->strvalue);
             fprintf(info->asmfile,
                 "\tlea\t\t%s, [rsp+%d]\n",
-                regs64[regid], mem_location
+                regs64[regid], vardata.mem_location
             );
 
             return regid;
@@ -279,11 +259,11 @@ static int CgX86Expr(FileInfo *info, Ast *expr, Bool is_jump, int label) {
 
 static void CgX86VarDecl(FileInfo *info, VarDecl *vardecl) {
     if (vardecl->expr != NULL) {
-        int mem_location = FindMemLocation(info, vardecl->ident);
         int regid = CgX86Expr(info, vardecl->expr, FALSE, -1);
+        VarData vardata = GetVarData(info, vardecl->ident);
         fprintf(info->asmfile,
             "\tmov\t\t[rsp+%d], %s\n",
-            mem_location, regs64[regid]
+            vardata.mem_location, regs64[regid]
         );
     }
 }
@@ -293,11 +273,11 @@ static void CgX86VarAssign(FileInfo *info, BinaryOp *varassign) {
     switch (varassign->lhs->type) {
         case AST_LITERAL_IDENT: {
             Literal *literal = (Literal *) varassign->lhs;
-            int mem_location = FindMemLocation(info, literal->strvalue);
+            VarData vardata = GetVarData(info, literal->strvalue);
             if (literal->arridx == -1) {
                 fprintf(info->asmfile,
                     "\tmov\t\t[rsp+%d], %s\n",
-                    mem_location, regs64[regid]
+                    vardata.mem_location, regs64[regid]
                 );
             }
             else { // array
@@ -308,7 +288,7 @@ static void CgX86VarAssign(FileInfo *info, BinaryOp *varassign) {
                     "\tmov\t\t[rsp+%d+%s], %s\n",
                     regs64[regid2],
                     regs64[regid2], regs64[regid2], literal->arridx,
-                    mem_location, regs64[regid2], regs64[regid]
+                    vardata.mem_location, regs64[regid2], regs64[regid]
                 );
 
                 FreeReg(regid2);
@@ -321,11 +301,11 @@ static void CgX86VarAssign(FileInfo *info, BinaryOp *varassign) {
                     int regid2;
                     if (unaryop->expr->type == AST_LITERAL_IDENT) {
                         Literal *literal = (Literal *) unaryop->expr;
-                        int mem_location = FindMemLocation(info, literal->strvalue);
+                        VarData vardata = GetVarData(info, literal->strvalue);
                         regid2 = AllocRegister();
                         fprintf(info->asmfile,
                             "\tmov\t\t%s, [rsp+%d]\n",
-                            regs64[regid2], mem_location
+                            regs64[regid2], vardata.mem_location
                         );
                     }
                     else {
@@ -371,7 +351,8 @@ static void CgX86IfStmtElse(FileInfo *info, IfStmt *elsestmt, int end_label) {
 static void CgX86ReturnStmt(FileInfo *info, ReturnStmt *returnstmt) {
     int regid = CgX86Expr(info, returnstmt->expr, FALSE, -1);
     fprintf(info->asmfile,
-        "\tmov\t\teax, %s\n",
+        "\tmov\t\teax, %s\n"
+        "\tret\n",
         regs32[regid]
     );
 }
@@ -409,10 +390,13 @@ static void CgX86WhileLoop(FileInfo *info, WhileLoop *whileloop) {
 }
 
 static void CgX86FuncCall(FileInfo *info, FuncCall *funccall) {
-    ASSERT(funccall->args.count <= 1);
+    ASSERT(funccall->args.count <= 2);
+    Node2Links *node = funccall->args.head;
+    char *regs[] = {"rcx", "rdx"};
     for (int i = 0; i < funccall->args.count; ++i) {
-        int regid = CgX86Expr(info, funccall->args.head->item, FALSE, -1);
-        fprintf(info->asmfile, "\tmov\t\tecx, %s\n", regs32[regid]);
+        int regid = CgX86Expr(info, node->item, FALSE, -1);
+        fprintf(info->asmfile, "\tmov\t\t%s, %s\n", regs[i], regs64[regid]);
+        node = node->next;
     }
 
     fprintf(info->asmfile, "\tcall\t%s\n", funccall->ident);
@@ -466,7 +450,17 @@ static void CgX86FuncDecl(FileInfo *info, FuncDecl *funcdecl) {
         bytes
     );
 
+    char *regs[] = {"rcx", "rdx"};
+    for (int i = 0; i < funcdecl->scope.num_vars; ++i) {
+        VarData vardata = funcdecl->scope.vardatas[i];
+        if (vardata.storagetype == STOR_PARAM) {
+            fprintf(info->asmfile, "\tmov\t\t[rsp+%d], %s\n", i * 8, regs[i]);
+        }
+    }
+
+    info->current_func = funcdecl;
     CgX86Block(info, funcdecl->block);
+    info->current_func = NULL;
     FreeRegs();
     fprintf(info->asmfile,
         "\tadd\t\trsp, %d\n",
