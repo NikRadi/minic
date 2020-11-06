@@ -56,6 +56,7 @@ int main(int argc, char **argv) {
     lexer.text = malloc(lexer.text_size);
     fread(lexer.text, 1, lexer.text_size, file);
     ReadToken(&lexer);
+    ReadToken(&lexer);
     if (args.print_tokens) {
         printf("Printing tokens...\n");
         while (TRUE) {

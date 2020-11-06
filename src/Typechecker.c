@@ -169,24 +169,6 @@ static void TypecheckBlock(FileInfo *info, Block *block) {
 
         node = node->next;
     }
-
-    // Block *child_block = block;
-    // while (child_block != NULL && child_block->stmt != NULL) {
-    //     switch (child_block->stmt->type) {
-    //         case AST_VARDECL:    {TypecheckVarDecl(info, (VarDecl *) child_block->stmt);} break;
-    //         case AST_BINARYOP:   {TypecheckVarAssign(info, (BinaryOp *) child_block->stmt);} break;
-    //         case AST_RETURNSTMT: {TypecheckReturnStmt(info, (ReturnStmt *) child_block->stmt);} break;
-    //         case AST_IFSTMT:     {TypecheckIfStmt(info, (IfStmt *) child_block->stmt);} break;
-    //         case AST_WHILELOOP:  {TypecheckWhileLoop(info, (WhileLoop *) child_block->stmt);} break;
-    //         case AST_FORLOOP:    {TypecheckForLoop(info, (ForLoop *) child_block->stmt);} break;
-    //         case AST_FUNCCALL:   {TypecheckFuncCall(info, (FuncCall *) child_block->stmt);} break;
-    //         default: {
-    //             ThrowInternalError("invalid statement '%s'", GetAstTypeStr(child_block->stmt->type));
-    //         };
-    //     }
-
-    //     child_block = child_block->glue;
-    // }
 }
 
 static void TypecheckFuncDecl(FileInfo *info, FuncDecl *funcdecl) {
@@ -198,9 +180,17 @@ static void TypecheckFuncDecl(FileInfo *info, FuncDecl *funcdecl) {
 }
 
 void TypecheckFile(FileInfo *info, File *file) {
-    File *child_file = file;
-    while (child_file != NULL && child_file->funcdecl != NULL) {
-        TypecheckFuncDecl(info, child_file->funcdecl);
-        child_file = child_file->glue;
+    Node2Links *node = file->funcdecls.head;
+    if (node == NULL) {
+        return;
+    }
+
+    while (TRUE) {
+        TypecheckFuncDecl(info, (FuncDecl *) node->item);
+        if (node == file->funcdecls.tail) {
+            break;
+        }
+
+        node = node->next;
     }
 }

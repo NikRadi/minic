@@ -475,7 +475,12 @@ static void CgX86FuncDecl(FileInfo *info, FuncDecl *funcdecl) {
     fputs("\tret", info->asmfile);
 }
 
-void CgX86File(FileInfo *info, File *cfile) {
+void CgX86File(FileInfo *info, File *file) {
+    Node2Links *node = file->funcdecls.head;
+    if (node == NULL) {
+        return;
+    }
+
     fputs(
         "bits 64\n"
         "default rel\n"
@@ -507,10 +512,13 @@ void CgX86File(FileInfo *info, File *cfile) {
     );
 
     FreeRegs();
-    File *child_file = cfile;
-    while (child_file != NULL && child_file->funcdecl != NULL) {
+    while (TRUE) {
         fputs("\n\n", info->asmfile);
-        CgX86FuncDecl(info, child_file->funcdecl);
-        child_file = child_file->glue;
+        CgX86FuncDecl(info, (FuncDecl *) node->item);
+        if (node == file->funcdecls.tail) {
+            break;
+        }
+
+        node = node->next;
     }
 }

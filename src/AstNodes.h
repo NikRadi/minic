@@ -121,8 +121,7 @@ struct FuncDecl {
 
 struct File {
     Ast info;
-    FuncDecl *funcdecl;
-    struct File *glue;
+    List2Links funcdecls;
 } typedef File;
 
 

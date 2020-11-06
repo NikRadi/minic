@@ -392,29 +392,20 @@ static FuncDecl *ParseFuncDecl(Lexer *lexer, DataType returntype) {
 File *ParseFile(Lexer *lexer) {
     File *root_file = NEW_AST(File);
     root_file->info.type = AST_FILE;
-    root_file->funcdecl = NULL;
-    root_file->glue = NULL;
-    File *child_file = root_file;
-    ReadToken(lexer);
+    root_file->funcdecls = List2LNew();
     while (lexer->token.type != TOKEN_EOF) {
-        if (child_file->funcdecl != NULL) {
-            File *file = NEW_AST(File);
-            file->info.type = AST_FILE;
-            file->funcdecl = NULL;
-            file->glue = NULL;
-
-            child_file->glue = file;
-            child_file = child_file->glue;
-        }
-
+        FuncDecl *funcdecl = NULL;
         switch (lexer->token.type) {
-            case TOKEN_INT:  {child_file->funcdecl = ParseFuncDecl(lexer, DATA_VOID);} break;
-            case TOKEN_VOID: {child_file->funcdecl = ParseFuncDecl(lexer, DATA_INT);} break;
-            case TOKEN_CHAR: {child_file->funcdecl = ParseFuncDecl(lexer, DATA_CHAR);} break;
+            case TOKEN_INT:  {funcdecl = ParseFuncDecl(lexer, DATA_INT);} break;
+            case TOKEN_CHAR: {funcdecl = ParseFuncDecl(lexer, DATA_CHAR);} break;
+            case TOKEN_VOID: {funcdecl = ParseFuncDecl(lexer, DATA_VOID);} break;
             default: {
                 ThrowErrorAt(lexer, "?");
             }
         }
+
+        ASSERT(funcdecl != NULL);
+        List2LAdd(&root_file->funcdecls, (Ast *) funcdecl);
     }
 
     return root_file;
