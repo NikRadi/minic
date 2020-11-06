@@ -39,14 +39,14 @@ static int AllocRegister() {
 }
 
 static VarData GetVarData(FileInfo *info, char *ident) {
-    for (int i = 0; i < info->current_func->scope.num_vars; ++i) {
-        if (strcmp(ident, info->current_func->scope.vardatas[i].ident) == 0) {
-            return info->current_func->scope.vardatas[i];
+    for (int i = 0; i < info->current_scope->num_vars; ++i) {
+        if (strcmp(ident, info->current_scope->vardatas[i].ident) == 0) {
+            return info->current_scope->vardatas[i];
         }
     }
 
     ThrowInternalError("could not find data of variable '%s'", ident);
-    return info->current_func->scope.vardatas[0]; // To get rid of warning C4715
+    return info->current_scope->vardatas[0]; // To get rid of warning C4715
 }
 
 static int NewLabel() {
@@ -351,8 +351,7 @@ static void CgX86IfStmtElse(FileInfo *info, IfStmt *elsestmt, int end_label) {
 static void CgX86ReturnStmt(FileInfo *info, ReturnStmt *returnstmt) {
     int regid = CgX86Expr(info, returnstmt->expr, FALSE, -1);
     fprintf(info->asmfile,
-        "\tmov\t\teax, %s\n"
-        "\tret\n",
+        "\tmov\t\teax, %s\n",
         regs32[regid]
     );
 }
@@ -451,16 +450,18 @@ static void CgX86FuncDecl(FileInfo *info, FuncDecl *funcdecl) {
     );
 
     char *regs[] = {"rcx", "rdx"};
-    for (int i = 0; i < funcdecl->scope.num_vars; ++i) {
-        VarData vardata = funcdecl->scope.vardatas[i];
+    for (int i = 0; i < funcdecl->block->scope.num_vars; ++i) {
+        VarData vardata = funcdecl->block->scope.vardatas[i];
         if (vardata.storagetype == STOR_PARAM) {
             fprintf(info->asmfile, "\tmov\t\t[rsp+%d], %s\n", i * 8, regs[i]);
         }
     }
 
     info->current_func = funcdecl;
+    info->current_scope = &funcdecl->block->scope;
     CgX86Block(info, funcdecl->block);
     info->current_func = NULL;
+    info->current_scope = NULL;
     FreeRegs();
     fprintf(info->asmfile,
         "\tadd\t\trsp, %d\n",

@@ -43,9 +43,9 @@ static void TypecheckVarDecl(FileInfo *info, VarDecl *vardecl, StorageType stora
     vardata.datatype = vardecl->datatype;
     vardata.storagetype = storagetype;
     vardata.ident = vardecl->ident;
-    vardata.mem_location = info->current_func->scope.num_vars * 8;
-    info->current_func->scope.vardatas[info->current_func->scope.num_vars] = vardata;
-    info->current_func->scope.num_vars += 1;
+    vardata.mem_location = info->current_scope->num_vars * 8;
+    info->current_scope->vardatas[info->current_scope->num_vars] = vardata;
+    info->current_scope->num_vars += 1;
     info->current_func->stack_depth_bytes += 8;
 }
 
@@ -199,11 +199,13 @@ static void TypecheckFuncDecl(FileInfo *info, FuncDecl *funcdecl) {
         }
     }
 
-    funcdecl->scope.num_vars = 0;
-    funcdecl->scope.parent = NULL;
+    funcdecl->block->scope.num_vars = 0;
+    funcdecl->block->scope.parent = NULL;
     info->funcs[info->num_funcs] = funcdecl;
     info->num_funcs += 1;
     info->current_func = funcdecl;
+    info->current_scope = &funcdecl->block->scope;
+
     Node2Links *node = funcdecl->params.head;
     for (int i = 0; i < funcdecl->params.count; ++i) {
         TypecheckVarDecl(info, (VarDecl *) node->item, STOR_PARAM);
@@ -212,6 +214,7 @@ static void TypecheckFuncDecl(FileInfo *info, FuncDecl *funcdecl) {
 
     TypecheckBlock(info, funcdecl->block);
     info->current_func = NULL;
+    info->current_scope = NULL;
 }
 
 void TypecheckFile(FileInfo *info, File *file) {

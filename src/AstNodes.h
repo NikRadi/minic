@@ -50,7 +50,7 @@ struct VarData {
 
 struct Scope {
     struct Scope *parent;
-    VarData vardatas[4];
+    VarData vardatas[16];
     int num_vars;
 } typedef Scope;
 
@@ -93,6 +93,7 @@ struct VarDecl {
 struct Block {
     Ast info;
     List2Links stmts;
+    Scope scope;
 } typedef Block;
 
 struct IfStmt {
@@ -134,7 +135,6 @@ struct FuncDecl {
     DataType returntype;
     char *ident;
     Block *block;
-    Scope scope;
 } typedef FuncDecl;
 
 struct File {

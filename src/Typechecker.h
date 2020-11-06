@@ -7,6 +7,7 @@ struct FileInfo {
     FuncDecl *funcs[16];
     char *filename;
     FuncDecl *current_func;
+    Scope *current_scope;
     FILE *asmfile;
 } typedef FileInfo;
 
