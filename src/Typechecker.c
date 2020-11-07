@@ -33,12 +33,6 @@ static void TypecheckExpr(FileInfo *info, Ast *expr) {
 }
 
 static void TypecheckVarDecl(FileInfo *info, VarDecl *vardecl, StorageType storagetype) {
-    if (vardecl->arrsize != -1) {
-        if (vardecl->datatype == DATA_INT) {
-            vardecl->datatype = DATA_INT_PTR;
-        }
-    }
-
     VarData vardata;
     vardata.datatype = vardecl->datatype;
     vardata.storagetype = storagetype;
@@ -62,7 +56,6 @@ static void TypecheckVarAssign(FileInfo *info, BinaryOp *varassign) {
 
         Literal *literal = NEW_AST(Literal);
         literal->info.type = AST_LITERAL_IDENT;
-        literal->arridx = -1;
         literal->strvalue = ((Literal *) varassign->lhs)->strvalue;
         binaryop->lhs = (Ast *) literal;
 

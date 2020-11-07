@@ -59,7 +59,10 @@ static OperatorType ToAssignmentOperatorType(TokenType type) {
         case TOKEN_MINUS_EQUAL: return ASOP_SUB_EQUAL;
         case TOKEN_STAR_EQUAL:  return ASOP_MUL_EQUAL;
         case TOKEN_SLASH_EQUAL: return ASOP_DIV_EQUAL;
-        default:                return 0;
+        default: {
+            ThrowInternalError("unexpected assignment operator '%s'\n", GetTokenTypeStr(type));
+            return 0; // To get rid of warning C4715
+        }
     }
 }
 
@@ -71,7 +74,6 @@ static Ast *ParseLiteral(Lexer *lexer) {
             AstType asttypes[2] = {AST_LITERAL_INT, AST_LITERAL_CHAR};
             Literal *literal = NEW_AST(Literal);
             literal->info.type = asttypes[lexer->token.type - TOKEN_LITERAL_INT];
-            literal->arridx = -1;
             literal->intvalue = lexer->token.intvalue;
             ReadToken(lexer);
             return (Ast *) literal;
@@ -79,7 +81,6 @@ static Ast *ParseLiteral(Lexer *lexer) {
         case TOKEN_LITERAL_STR: {
             Literal *literal = NEW_AST(Literal);
             literal->info.type = AST_LITERAL_STR;
-            literal->arridx = -1;
             literal->strvalue = lexer->token.strvalue;
             ReadToken(lexer);
             return (Ast *) literal;
@@ -91,15 +92,17 @@ static Ast *ParseLiteral(Lexer *lexer) {
 
             Literal *literal = NEW_AST(Literal);
             literal->info.type = AST_LITERAL_IDENT;
-            literal->arridx = -1;
             literal->strvalue = strdup(lexer->token.strvalue);
             ReadToken(lexer); // TOKEN_IDENT
             if (lexer->token.type == TOKEN_LEFT_SQUARE_BRAC) {
-                ReadToken(lexer);
-                Expect(lexer, TOKEN_LITERAL_INT);
-                literal->arridx = lexer->token.intvalue;
-                ReadToken(lexer);
+                ReadToken(lexer); // TOKEN_LEFT_SQUARE_BRAC
+                BinaryOp *binaryop = NEW_AST(BinaryOp);
+                binaryop->info.type = AST_BINARYOP;
+                binaryop->optype = BIOP_ARR_IDX;
+                binaryop->lhs = (Ast *) literal;
+                binaryop->rhs = ParseExpr(lexer);
                 ExpectAndRead(lexer, TOKEN_RIGHT_SQUARE_BRAC);
+                return (Ast *) binaryop;
             }
 
             return (Ast *) literal;
@@ -183,17 +186,6 @@ static VarDecl *ParseVarDecl(Lexer *lexer, DataType datatype) {
         vardecl->lvl_indirection += 1;
     }
 
-    // if (lexer->token.type == TOKEN_STAR) {
-    //     if (datatype == DATA_INT) {
-    //         datatype = DATA_INT_PTR;
-    //     }
-    //     else if (datatype == DATA_CHAR) {
-    //         datatype = DATA_CHAR_PTR;
-    //     }
-
-    //     ReadToken(lexer);
-    // }
-
     vardecl->datatype = datatype;
     Expect(lexer, TOKEN_IDENT);
 
@@ -219,14 +211,15 @@ static BinaryOp *ParseVarAssign(Lexer *lexer) {
     varassign->info.type = AST_BINARYOP;
     varassign->lhs = ParseExpr(lexer);
     varassign->optype = ToAssignmentOperatorType(lexer->token.type);
-    ReadToken(lexer);
+    ReadToken(lexer); // operator
     varassign->rhs = ParseExpr(lexer);
     return varassign;
 }
 
 static FuncCall *ParseFuncCall(Lexer *lexer) {
     ASSERT(lexer->token.type == TOKEN_IDENT);
-    ReadToken(lexer); // TOKEN_IDENT
+    ReadToken(lexer);
+
     FuncCall *funccall = NEW_AST(FuncCall);
     funccall->info.type = AST_FUNCCALL;
     funccall->ident = strdup(lexer->token.strvalue);
@@ -251,7 +244,8 @@ static FuncCall *ParseFuncCall(Lexer *lexer) {
 
 static ReturnStmt *ParseReturnStmt(Lexer *lexer) {
     ASSERT(lexer->token.type == TOKEN_RETURN);
-    ReadToken(lexer); // TOKEN_RETURN
+    ReadToken(lexer);
+
     ReturnStmt *returnstmt = NEW_AST(ReturnStmt);
     returnstmt->info.type = AST_RETURNSTMT;
     returnstmt->expr = ParseExpr(lexer);
@@ -262,6 +256,7 @@ static ReturnStmt *ParseReturnStmt(Lexer *lexer) {
 static IfStmt *ParseIfStmt(Lexer *lexer) {
     ASSERT(lexer->token.type == TOKEN_IF);
     ReadToken(lexer);
+
     IfStmt *root_ifstmt = NEW_AST(IfStmt);
     root_ifstmt->info.type = AST_IFSTMT;
     root_ifstmt->condition = ParseParenthesizedExpr(lexer);
@@ -298,6 +293,7 @@ static IfStmt *ParseIfStmt(Lexer *lexer) {
 static WhileLoop *ParseWhileLoop(Lexer *lexer) {
     ASSERT(lexer->token.type == TOKEN_WHILE);
     ReadToken(lexer);
+
     WhileLoop *whileloop = NEW_AST(WhileLoop);
     whileloop->info.type = AST_WHILELOOP;
     whileloop->condition = ParseParenthesizedExpr(lexer);

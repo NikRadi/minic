@@ -24,6 +24,7 @@ enum OperatorType {
     BIOP_ADD,        BIOP_SUB,
     BIOP_MUL,        BIOP_DIV,
 
+    BIOP_ARR_IDX,
     UNOP_DEREF,      UNOP_ADDRESS,
     UNOP_NOT,
     ASOP_EQUAL,
@@ -32,10 +33,7 @@ enum OperatorType {
 } typedef OperatorType;
 
 enum DataType {
-    DATA_VOID, DATA_CHAR, DATA_INT, DATA_LONG,
-
-    DATA_INT_PTR, DATA_CHAR_PTR,
-    DATA_INT_ARR, DATA_CHAR_ARR,
+    DATA_VOID, DATA_CHAR, DATA_INT, DATA_LONG
 } typedef DataType;
 
 enum StorageType {
@@ -64,7 +62,6 @@ struct Literal {
     Ast info;
     int intvalue;
     char *strvalue;
-    int arridx;
 } typedef Literal;
 
 struct UnaryOp {

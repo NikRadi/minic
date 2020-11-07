@@ -68,35 +68,22 @@ static int CgX86LiteralInt(FileInfo *info, Literal *literal) {
 static int CgX86LiteralIdent(FileInfo *info, Literal *literal) {
     int regid = AllocRegister();
     VarData vardata = GetVarData(info, literal->strvalue);
-    if (literal->arridx == -1) {
-        char *reg;
-        if (vardata.lvl_indirection > 0) {
-            reg = regs64[regid];
-        }
-        else {
-            switch (vardata.datatype) {
-                case DATA_CHAR:     {reg = regs8[regid];} break;
-                case DATA_INT:      {reg = regs32[regid];} break;
-                default: {
-                    ThrowInternalError("variable datatype '%d' not implemented", vardata.datatype);
-                    reg = 0; // To get rid of warning C4701
-                }
-            }
-        }
-
-        fprintf(info->asmfile, "\tmov\t\t%s, [rsp+%d]\n", reg, vardata.mem_location);
+    char *reg;
+    if (vardata.lvl_indirection > 0) {
+        reg = regs64[regid];
     }
     else {
-        fprintf(info->asmfile,
-            "\tmov\t\t%s, 8\n"
-            "\timul\t%s, %s, %d\n"
-            "\tmov\t\t%s, [rsp+%d+%s]\n",
-            regs64[regid],
-            regs64[regid], regs64[regid], literal->arridx,
-            regs64[regid], vardata.mem_location, regs64[regid]
-        );
+        switch (vardata.datatype) {
+            case DATA_CHAR:     {reg = regs8[regid];} break;
+            case DATA_INT:      {reg = regs32[regid];} break;
+            default: {
+                ThrowInternalError("variable datatype '%d' not implemented", vardata.datatype);
+                reg = 0; // To get rid of warning C4701
+            }
+        }
     }
 
+    fprintf(info->asmfile, "\tmov\t\t%s, [rsp+%d]\n", reg, vardata.mem_location);
     return regid;
 }
 
@@ -166,6 +153,21 @@ static int CgX86UnaryOp(FileInfo *info, UnaryOp *unaryop) {
 }
 
 static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int label) {
+    if (binaryop->optype == BIOP_ARR_IDX) {
+        ASSERT(binaryop->lhs->type == AST_LITERAL_IDENT);
+        Literal *literal = (Literal *) binaryop->lhs;
+        VarData vardata = GetVarData(info, literal->strvalue);
+        int regid_rhs = CgX86Expr(info, binaryop->rhs, FALSE, -1);
+        fprintf(info->asmfile,
+            "\timul\t%s, %s, 8\n"
+            "\tmov\t\t%s, [rsp+%d+%s]\n",
+            regs64[regid_rhs], regs64[regid_rhs],
+            regs64[regid_rhs], vardata.mem_location, regs64[regid_rhs]
+        );
+
+        return regid_rhs;
+    }
+
     int regid_lhs = CgX86Expr(info, binaryop->lhs, FALSE, -1);
     int regid_rhs = CgX86Expr(info, binaryop->rhs, FALSE, -1);
     switch (binaryop->optype) {
@@ -277,56 +279,65 @@ static void CgX86VarAssign(FileInfo *info, BinaryOp *varassign) {
         case AST_LITERAL_IDENT: {
             Literal *literal = (Literal *) varassign->lhs;
             VarData vardata = GetVarData(info, literal->strvalue);
-            if (literal->arridx == -1) {
-                fprintf(info->asmfile,
-                    "\tmov\t\t[rsp+%d], %s\n",
-                    vardata.mem_location, regs64[regid]
-                );
-            }
-            else { // array
-                int regid2 = AllocRegister();
-                fprintf(info->asmfile,
-                    "\tmov\t\t%s, 8\n"
-                    "\timul\t%s, %s, %d\n"
-                    "\tmov\t\t[rsp+%d+%s], %s\n",
-                    regs64[regid2],
-                    regs64[regid2], regs64[regid2], literal->arridx,
-                    vardata.mem_location, regs64[regid2], regs64[regid]
-                );
+            fprintf(info->asmfile,
+                "\tmov\t\t[rsp+%d], %s\n",
+                vardata.mem_location, regs64[regid]
+            );
 
-                FreeReg(regid2);
-            }
+            FreeReg(regid);
         } break;
         case AST_UNARYOP: {
             UnaryOp *unaryop = (UnaryOp *) varassign->lhs;
-            switch (unaryop->optype) {
-                case UNOP_DEREF: {
-                    int regid2;
-                    if (unaryop->expr->type == AST_LITERAL_IDENT) {
-                        Literal *literal = (Literal *) unaryop->expr;
-                        VarData vardata = GetVarData(info, literal->strvalue);
-                        regid2 = AllocRegister();
-                        fprintf(info->asmfile,
-                            "\tmov\t\t%s, [rsp+%d]\n",
-                            regs64[regid2], vardata.mem_location
-                        );
-                    }
-                    else {
-                        regid2 = CgX86Expr(info, unaryop->expr, FALSE, -1);
-                    }
-
+            if (unaryop->optype == UNOP_DEREF) {
+                int regid2;
+                if (unaryop->expr->type == AST_LITERAL_IDENT) {
+                    Literal *literal = (Literal *) unaryop->expr;
+                    VarData vardata = GetVarData(info, literal->strvalue);
+                    regid2 = AllocRegister();
                     fprintf(info->asmfile,
-                        "\tmov\t\t[%s], %s\n",
-                        regs64[regid2], regs32[regid]
+                        "\tmov\t\t%s, [rsp+%d]\n",
+                        regs64[regid2], vardata.mem_location
                     );
-                } break;
-                default: {
-                    ThrowInternalError("assignment unary operator l-value '%d' not implemented", unaryop->optype);
                 }
+                else {
+                    regid2 = CgX86Expr(info, unaryop->expr, FALSE, -1);
+                }
+
+                fprintf(info->asmfile,
+                    "\tmov\t\t[%s], %s\n",
+                    regs64[regid2], regs32[regid]
+                );
+
+                FreeReg(regid);
+                FreeReg(regid2);
+            }
+            else {
+                ThrowInternalError("assignment unary operator l-value '%d' not implemented",
+                    unaryop->optype
+                );
             }
         } break;
+        case AST_BINARYOP: {
+            BinaryOp *binaryop = (BinaryOp *) varassign->lhs;
+            ASSERT(binaryop->optype == BIOP_ARR_IDX);
+            Literal *literal = (Literal *) binaryop->lhs;
+            VarData vardata = GetVarData(info, literal->strvalue);
+            int regid_rhs = CgX86Expr(info, binaryop->rhs, FALSE, -1);
+            fprintf(info->asmfile,
+                "\timul\t%s, %s, 8\n"
+                "\tmov\t\t[rsp+%d+%s], %s\n",
+                regs64[regid_rhs], regs64[regid_rhs],
+                vardata.mem_location, regs64[regid_rhs], regs64[regid]
+            );
+
+            FreeReg(regid);
+            FreeReg(regid_rhs);
+        } break;
         default: {
-            ThrowInternalError("assignmen l-value '%s' not implemented", GetAstTypeStr(varassign->lhs->type));
+            ThrowInternalError(
+                "assignment l-value '%s' not implemented",
+                GetAstTypeStr(varassign->lhs->type)
+            );
         }
     }
 }
