@@ -3,7 +3,8 @@
 
 
 static void CgX86Block(FileInfo *info, Block *block);
-static int CgX86Expr(FileInfo *info, Ast *expr, Bool is_jump, int label);
+static int CgX86ExprSet(FileInfo *info, Ast *expr);
+static void CgX86ExprJmp(FileInfo *info, Ast *expr, int label);
 static void CgX86FuncCall(FileInfo *info, FuncCall *funccall);
 
 
@@ -126,7 +127,7 @@ static int CgX86UnaryOp(FileInfo *info, UnaryOp *unaryop) {
             return regid;
         };
         case UNOP_DEREF: {
-            int regid = CgX86Expr(info, unaryop->expr, FALSE, -1);
+            int regid = CgX86ExprSet(info, unaryop->expr);
             fprintf(info->asmfile,
                 "\tmov\t\t%s, [%s]\n",
                 regs64[regid], regs64[regid]
@@ -135,7 +136,7 @@ static int CgX86UnaryOp(FileInfo *info, UnaryOp *unaryop) {
             return regid;
         };
         case UNOP_NOT: {
-            int regid = CgX86Expr(info, unaryop->expr, FALSE, -1);
+            int regid = CgX86ExprSet(info, unaryop->expr);
             fprintf(info->asmfile,
                 "\ttest\t%s, %s\n"
                 "\tsete\t%s\n",
@@ -152,12 +153,12 @@ static int CgX86UnaryOp(FileInfo *info, UnaryOp *unaryop) {
     }
 }
 
-static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int label) {
+static int CgX86BinaryOpSet(FileInfo *info, BinaryOp *binaryop) {
     if (binaryop->optype == BIOP_ARR_IDX) {
         ASSERT(binaryop->lhs->type == AST_LITERAL_IDENT);
         Literal *literal = (Literal *) binaryop->lhs;
         VarData vardata = GetVarData(info, literal->strvalue);
-        int regid_rhs = CgX86Expr(info, binaryop->rhs, FALSE, -1);
+        int regid_rhs = CgX86ExprSet(info, binaryop->rhs);
         fprintf(info->asmfile,
             "\timul\t%s, %s, 8\n"
             "\tmov\t\t%s, [rsp+%d+%s]\n",
@@ -168,8 +169,8 @@ static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int l
         return regid_rhs;
     }
 
-    int regid_lhs = CgX86Expr(info, binaryop->lhs, FALSE, -1);
-    int regid_rhs = CgX86Expr(info, binaryop->rhs, FALSE, -1);
+    int regid_lhs = CgX86ExprSet(info, binaryop->lhs);
+    int regid_rhs = CgX86ExprSet(info, binaryop->rhs);
     switch (binaryop->optype) {
         case BIOP_AND:
         case BIOP_OR: {
@@ -191,31 +192,18 @@ static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int l
         case BIOP_GREATER_EQUAL: {
             int compares_idx = binaryop->optype - BIOP_ISEQUAL;
             ASSERT(0 <= compares_idx  && compares_idx <= 6);
-            if (is_jump) {
-                fprintf(info->asmfile,
-                    "\tcmp\t\t%s, %s\n"
-                    "\t%s\t\tL%d\n",
-                    regs32[regid_lhs], regs32[regid_rhs],
-                    compares_jmp_inverse[compares_idx], label
-                );
+            fprintf(info->asmfile,
+                "\tcmp\t\t%s, %s\n"
+                "\t%s\t%s\n"
+                "\tand\t\t%s, 0xff\n",
+                regs32[regid_lhs], regs32[regid_rhs],
+                compares_set[compares_idx], regs8[regid_lhs],
+                regs32[regid_lhs]
+            );
 
-                // TODO: What does the caller use this value for?
-                return -1;
-            }
-            else {
-                fprintf(info->asmfile,
-                    "\tcmp\t\t%s, %s\n"
-                    "\t%s\t%s\n"
-                    "\tand\t\t%s, 0xff\n",
-                    regs32[regid_lhs], regs32[regid_rhs],
-                    compares_set[compares_idx], regs8[regid_lhs],
-                    regs32[regid_lhs]
-                );
-
-                FreeReg(regid_rhs);
-                return regid_lhs;
-            }
-        } break;
+            FreeReg(regid_rhs);
+            return regid_lhs;
+        }
         case BIOP_ADD:
         case BIOP_SUB:
         case BIOP_MUL: {
@@ -235,18 +223,42 @@ static int CgX86BinaryOp(FileInfo *info, BinaryOp *binaryop, Bool is_jump, int l
     }
 }
 
-static int CgX86Expr(FileInfo *info, Ast *expr, Bool is_jump, int label) {
+static void CgX86BinaryOpJmp(FileInfo *info, BinaryOp *binaryop, int label) {
+    int regid_lhs = CgX86ExprSet(info, binaryop->lhs);
+    int regid_rhs = CgX86ExprSet(info, binaryop->rhs);
+    switch (binaryop->optype) {
+        case BIOP_ISEQUAL:
+        case BIOP_NOTEQUAL:
+        case BIOP_LESS:
+        case BIOP_LESS_EQUAL:
+        case BIOP_GREATER:
+        case BIOP_GREATER_EQUAL: {
+            int compares_idx = binaryop->optype - BIOP_ISEQUAL;
+            ASSERT(0 <= compares_idx  && compares_idx <= 6);
+            fprintf(info->asmfile,
+                "\tcmp\t\t%s, %s\n"
+                "\t%s\t\tL%d\n",
+                regs32[regid_lhs], regs32[regid_rhs],
+                compares_jmp_inverse[compares_idx], label
+            );
+        } break;
+        default: {
+            ThrowInternalError("jmp binary operator '%ld' is not implemented\n", binaryop->optype);
+        };
+    }
+}
+
+static int CgX86ExprSet(FileInfo *info, Ast *expr) {
     switch (expr->type) {
-        case AST_LITERAL_INT:
-        case AST_LITERAL_CHAR:  return CgX86LiteralInt(info, (Literal *) expr);
-        case AST_LITERAL_STR:   ASSERT(FALSE); // Not implemented
+        case AST_LITERAL_CHAR:
+        case AST_LITERAL_INT:   return CgX86LiteralInt(info, (Literal *) expr);
         case AST_LITERAL_IDENT: return CgX86LiteralIdent(info, (Literal *) expr);
-        case AST_LITERAL_PTR:   return CgX86LiteralPtr(info, (Literal *) expr);
-        case AST_LITERAL_DEREF: return CgX86LiteralDeref(info, (Literal *) expr);
         case AST_UNARYOP:       return CgX86UnaryOp(info, (UnaryOp *) expr);
-        case AST_BINARYOP:      return CgX86BinaryOp(info, (BinaryOp *) expr, is_jump, label);
+        case AST_BINARYOP:      return CgX86BinaryOpSet(info, (BinaryOp *) expr);
         case AST_FUNCCALL: {
-            CgX86FuncCall(info, (FuncCall *) expr);
+            FuncCall *funccall = (FuncCall *) expr;
+            CgX86FuncCall(info, funccall);
+            // TODO: If funccall.has_return_value
             int regid = AllocRegister();
             fprintf(info->asmfile,
                 "\tmov\t\t%s, eax\n",
@@ -256,15 +268,35 @@ static int CgX86Expr(FileInfo *info, Ast *expr, Bool is_jump, int label) {
             return regid;
         }
         default: {
-            ThrowInternalError("invalid expression type '%s'", GetAstTypeStr(expr->type));
+            ThrowInternalError("invalid set expression type '%s'", GetAstTypeStr(expr->type));
             return -1; // To get rid of warning C4715
-        };
+        }
+    }
+}
+
+static void CgX86ExprJmp(FileInfo *info, Ast *expr, int label) {
+    switch (expr->type) {
+        case AST_LITERAL_INT: {CgX86LiteralInt(info, (Literal *) expr);} break;
+        case AST_BINARYOP:    {CgX86BinaryOpJmp(info, (BinaryOp *) expr, label);} break;
+        case AST_FUNCCALL: {
+            FuncCall *funccall = (FuncCall *) expr;
+            CgX86FuncCall(info, funccall);
+            // TODO: If funccall.has_return_value
+            fprintf(info->asmfile,
+                "\tcmp\t\teax, 0\n"
+                "\tje\t\tL%d\n",
+                label
+            );
+        } break;
+        default: {
+            ThrowInternalError("invalid jmp expression type '%s'", GetAstTypeStr(expr->type));
+        }
     }
 }
 
 static void CgX86VarDecl(FileInfo *info, VarDecl *vardecl) {
     if (vardecl->expr != NULL) {
-        int regid = CgX86Expr(info, vardecl->expr, FALSE, -1);
+        int regid = CgX86ExprSet(info, vardecl->expr);
         VarData vardata = GetVarData(info, vardecl->ident);
         fprintf(info->asmfile,
             "\tmov\t\t[rsp+%d], %s\n",
@@ -274,7 +306,7 @@ static void CgX86VarDecl(FileInfo *info, VarDecl *vardecl) {
 }
 
 static void CgX86VarAssign(FileInfo *info, BinaryOp *varassign) {
-    int regid = CgX86Expr(info, varassign->rhs, FALSE, -1);
+    int regid = CgX86ExprSet(info, varassign->rhs);
     switch (varassign->lhs->type) {
         case AST_LITERAL_IDENT: {
             Literal *literal = (Literal *) varassign->lhs;
@@ -288,41 +320,35 @@ static void CgX86VarAssign(FileInfo *info, BinaryOp *varassign) {
         } break;
         case AST_UNARYOP: {
             UnaryOp *unaryop = (UnaryOp *) varassign->lhs;
-            if (unaryop->optype == UNOP_DEREF) {
-                int regid2;
-                if (unaryop->expr->type == AST_LITERAL_IDENT) {
-                    Literal *literal = (Literal *) unaryop->expr;
-                    VarData vardata = GetVarData(info, literal->strvalue);
-                    regid2 = AllocRegister();
-                    fprintf(info->asmfile,
-                        "\tmov\t\t%s, [rsp+%d]\n",
-                        regs64[regid2], vardata.mem_location
-                    );
-                }
-                else {
-                    regid2 = CgX86Expr(info, unaryop->expr, FALSE, -1);
-                }
-
+            ASSERT(unaryop->optype == UNOP_DEREF);
+            int regid2;
+            if (unaryop->expr->type == AST_LITERAL_IDENT) {
+                Literal *literal = (Literal *) unaryop->expr;
+                VarData vardata = GetVarData(info, literal->strvalue);
+                regid2 = AllocRegister();
                 fprintf(info->asmfile,
-                    "\tmov\t\t[%s], %s\n",
-                    regs64[regid2], regs32[regid]
+                    "\tmov\t\t%s, [rsp+%d]\n",
+                    regs64[regid2], vardata.mem_location
                 );
-
-                FreeReg(regid);
-                FreeReg(regid2);
             }
             else {
-                ThrowInternalError("assignment unary operator l-value '%d' not implemented",
-                    unaryop->optype
-                );
+                regid2 = CgX86ExprSet(info, unaryop->expr);
             }
+
+            fprintf(info->asmfile,
+                "\tmov\t\t[%s], %s\n",
+                regs64[regid2], regs32[regid]
+            );
+
+            FreeReg(regid);
+            FreeReg(regid2);
         } break;
         case AST_BINARYOP: {
             BinaryOp *binaryop = (BinaryOp *) varassign->lhs;
             ASSERT(binaryop->optype == BIOP_ARR_IDX);
             Literal *literal = (Literal *) binaryop->lhs;
             VarData vardata = GetVarData(info, literal->strvalue);
-            int regid_rhs = CgX86Expr(info, binaryop->rhs, FALSE, -1);
+            int regid_rhs = CgX86ExprSet(info, binaryop->rhs);
             fprintf(info->asmfile,
                 "\timul\t%s, %s, 8\n"
                 "\tmov\t\t[rsp+%d+%s], %s\n",
@@ -346,7 +372,7 @@ static void CgX86IfStmtElse(FileInfo *info, IfStmt *elsestmt, int end_label) {
     Bool has_elsestmt = elsestmt->elsestmt != NULL;
     int false_label = (has_elsestmt) ? NewLabel() : end_label;
     if (elsestmt->condition != NULL) {
-        CgX86Expr(info, elsestmt->condition, TRUE, false_label);
+        CgX86ExprJmp(info, elsestmt->condition, false_label);
         FreeRegs();
     }
 
@@ -363,7 +389,7 @@ static void CgX86IfStmtElse(FileInfo *info, IfStmt *elsestmt, int end_label) {
 }
 
 static void CgX86ReturnStmt(FileInfo *info, ReturnStmt *returnstmt) {
-    int regid = CgX86Expr(info, returnstmt->expr, FALSE, -1);
+    int regid = CgX86ExprSet(info, returnstmt->expr);
     fprintf(info->asmfile,
         "\tmov\t\teax, %s\n",
         regs32[regid]
@@ -373,7 +399,7 @@ static void CgX86ReturnStmt(FileInfo *info, ReturnStmt *returnstmt) {
 static void CgX86IfStmt(FileInfo *info, IfStmt *ifstmt) {
     int false_label = NewLabel();
     int end_label = -1;
-    CgX86Expr(info, ifstmt->condition, TRUE, false_label);
+    CgX86ExprJmp(info, ifstmt->condition, false_label);
     FreeRegs();
     CgX86Block(info, ifstmt->block);
     if (ifstmt->elsestmt != NULL) {
@@ -392,7 +418,7 @@ static void CgX86WhileLoop(FileInfo *info, WhileLoop *whileloop) {
     int start_label = NewLabel();
     int end_label = NewLabel();
     fprintf(info->asmfile, "L%d:\n", start_label);
-    CgX86Expr(info, whileloop->condition, TRUE, end_label);
+    CgX86ExprJmp(info, whileloop->condition, end_label);
     FreeRegs();
     CgX86Block(info, whileloop->block);
     fprintf(info->asmfile,
@@ -407,7 +433,7 @@ static void CgX86FuncCall(FileInfo *info, FuncCall *funccall) {
     Node2Links *node = funccall->args.head;
     char *regs[] = {"rcx", "rdx"};
     for (int i = 0; i < funccall->args.count; ++i) {
-        int regid = CgX86Expr(info, node->item, FALSE, -1);
+        int regid = CgX86ExprSet(info, node->item);
         fprintf(info->asmfile, "\tmov\t\t%s, %s\n", regs[i], regs64[regid]);
         node = node->next;
     }
