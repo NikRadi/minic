@@ -75,6 +75,14 @@ static void PrintBinaryOp(BinaryOp *binaryop, int indent) {
     printf("<BinaryOp/>\n");
 }
 
+static void PrintUnaryOp(UnaryOp *unaryop, int indent) {
+    PrintIndent(indent);
+    printf("<UnaryOp optype=\"%s\">\n", GetOperatorTypeStr(unaryop->optype));
+    PrintAst(unaryop->expr, indent + 4);
+    PrintIndent(indent);
+    printf("<UnaryOp/>\n");
+}
+
 static void PrintFuncCall(FuncCall *vardecl, int indent) {
     PrintIndent(indent);
     printf("<FuncCall>\n");
@@ -104,6 +112,7 @@ static void PrintAst(Ast *ast, int indent) {
         case AST_FUNCDECL:      {PrintFuncDecl((FuncDecl *) ast, indent);} break;
         case AST_BLOCK:         {PrintBlock((Block *) ast, indent);} break;
         case AST_VARDECL:       {PrintVarDecl((VarDecl *) ast, indent);} break;
+        case AST_UNARYOP:       {PrintUnaryOp((UnaryOp *) ast, indent);} break;
         case AST_BINARYOP:      {PrintBinaryOp((BinaryOp *) ast, indent);} break;
         case AST_FUNCCALL:      {PrintFuncCall((FuncCall *) ast, indent);} break;
         case AST_LITERAL_IDENT: {PrintLiteralIdentStr((Literal *) ast, indent);} break;
