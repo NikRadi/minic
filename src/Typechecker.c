@@ -1,4 +1,5 @@
 #include "Typechecker.h"
+#include "DebugPrint.h"
 #include "ErrorPrint.h"
 
 

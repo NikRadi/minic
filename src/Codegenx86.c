@@ -1,4 +1,5 @@
 #include "CodegenX86.h"
+#include "DebugPrint.h"
 #include "ErrorPrint.h"
 
 

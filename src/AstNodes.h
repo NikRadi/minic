@@ -11,29 +11,14 @@ enum AstType {
 #define AST(name, str) AST_##name,
 #include "AstNodes.def"
 } typedef AstType;
-char *GetAstTypeStr(AstType type);
-
 
 enum OperatorType {
-    // Parser.c::op_precedences depends on the order of these
-    OP_INVALID,
-    BIOP_AND,        BIOP_OR,
-    BIOP_ISEQUAL,    BIOP_NOTEQUAL,
-    BIOP_LESS,       BIOP_LESS_EQUAL,
-    BIOP_GREATER,    BIOP_GREATER_EQUAL,
-    BIOP_ADD,        BIOP_SUB,
-    BIOP_MUL,        BIOP_DIV,
-
-    BIOP_ARR_IDX,
-    UNOP_DEREF,      UNOP_ADDRESS,
-    UNOP_NOT,
-    ASOP_EQUAL,
-    ASOP_ADD_EQUAL,  ASOP_SUB_EQUAL,
-    ASOP_MUL_EQUAL,  ASOP_DIV_EQUAL,
+#define OP(name) name,
+#include "AstNodes.def"
 } typedef OperatorType;
 
 enum DataType {
-    DATA_VOID, DATA_CHAR, DATA_INT, DATA_LONG
+    DATA_VOID, DATA_CHAR, DATA_INT, DATA_LONG, DATA_STRUCT
 } typedef DataType;
 
 enum StorageType {
@@ -79,11 +64,11 @@ struct BinaryOp {
 
 struct VarDecl {
     Ast info;
-    DataType datatype;
     char *ident;
-    Ast *expr;
+    DataType datatype;
     int arrsize;
     int lvl_indirection;
+    Ast *expr;
 } typedef VarDecl;
 
 struct Block {
@@ -126,10 +111,10 @@ struct FuncCall {
 
 struct FuncDecl {
     Ast info;
-    int stack_depth_bytes;
-    List2Links params;
-    DataType returntype;
     char *ident;
+    int stack_depth_bytes;
+    DataType returntype;
+    List2Links params;
     Block *block;
 } typedef FuncDecl;
 
@@ -137,7 +122,7 @@ struct Struct {
     Ast info;
     char *ident;
     List2Links vardecls;
-} typedef Struct;;
+} typedef Struct;
 
 struct File {
     Ast info;

@@ -1,3 +1,7 @@
+#ifndef AST
+    #define AST(name, str)
+#endif
+
 AST(LITERAL_INT, "integer literal")
 AST(LITERAL_CHAR, "character literal")
 AST(LITERAL_STR, "string literal")
@@ -16,4 +20,35 @@ AST(FUNCDECL, "function declaration")
 AST(STRUCT, "struct declaration")
 AST(FUNCCALL, "function call")
 AST(FILE, "file")
+
 #undef AST
+#ifndef OP
+    #define OP(name)
+#endif
+
+// Parser.c::op_precedences depends on the order of these
+OP(OP_INVALID)
+OP(BIOP_AND)
+OP(BIOP_OR)
+OP(BIOP_ISEQUAL)
+OP(BIOP_NOTEQUAL)
+OP(BIOP_LESS)
+OP(BIOP_LESS_EQUAL)
+OP(BIOP_GREATER)
+OP(BIOP_GREATER_EQUAL)
+OP(BIOP_ADD)
+OP(BIOP_SUB)
+OP(BIOP_MUL)
+OP(BIOP_DIV)
+
+OP(BIOP_ARR_IDX)
+OP(UNOP_DEREF)
+OP(UNOP_ADDRESS)
+OP(UNOP_NOT)
+OP(ASOP_EQUAL)
+OP(ASOP_ADD_EQUAL)
+OP(ASOP_SUB_EQUAL)
+OP(ASOP_MUL_EQUAL)
+OP(ASOP_DIV_EQUAL)
+
+#undef OP

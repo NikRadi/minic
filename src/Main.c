@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "CodegenX86.h"
 #include "Common.h"
+#include "DebugPrint.h"
 #include "ErrorPrint.h"
 #include "Lexer.h"
 #include "Parser.h"
@@ -41,27 +42,27 @@ int main(int argc, char **argv) {
         ThrowFatalError("no file name given");
     }
 
-    FILE *file = fopen(args.filename, "rb");
-    if (file == NULL) {
+    FILE *sourcecode = fopen(args.filename, "rb");
+    if (sourcecode == NULL) {
         ThrowFatalError("could not read from file '%s'", args.filename);
     }
 
-    fseek(file, 0, SEEK_END);
+    fseek(sourcecode, 0, SEEK_END);
     Lexer lexer;
     lexer.line = 1;
     lexer.char_idx = 0;
-    lexer.text_size = ftell(file);
+    lexer.text_size = ftell(sourcecode);
     lexer.filename = args.filename;
-    rewind(file);
+    rewind(sourcecode);
     lexer.text = malloc(lexer.text_size);
-    fread(lexer.text, 1, lexer.text_size, file);
+    fread(lexer.text, 1, lexer.text_size, sourcecode);
     ReadToken(&lexer);
     ReadToken(&lexer);
     if (args.print_tokens) {
         printf("Printing tokens...\n");
         while (TRUE) {
             ReadToken(&lexer);
-            PrintTokenStr(lexer.token);
+            PrintToken(lexer.token);
             printf("\n");
             if (lexer.token.type == TOKEN_EOF) {
                 return 0;
@@ -69,16 +70,17 @@ int main(int argc, char **argv) {
         }
     }
 
-    File *cfile = ParseFile(&lexer);
+    File *file = ParseFile(&lexer);
     if (args.print_ast) {
         printf("Printing ast...\n");
+        PrintFile(file);
     }
 
     FileInfo info;
     info.num_funcs = 0;
     info.filename = lexer.filename;
     info.current_func = NULL;
-    TypecheckFile(&info, cfile);
+    TypecheckFile(&info, file);
 
     size_t filename_len = strlen(args.filename);
     char *asmfilename = (char *) malloc(filename_len + 3); // len - c + asm + \0
@@ -92,7 +94,7 @@ int main(int argc, char **argv) {
         ThrowFatalError("could not write to file '%s'", asmfilename);
     }
 
-    CgX86File(&info, cfile);
+    CgX86File(&info, file);
     fclose(info.asmfile);
     return 0;
 }

@@ -1,4 +1,5 @@
 #include "Parser.h"
+#include "DebugPrint.h"
 #include "ErrorPrint.h"
 
 
@@ -174,7 +175,13 @@ static Ast *ParseParenthesizedExpr(Lexer *lexer) {
 }
 
 static VarDecl *ParseVarDecl(Lexer *lexer, DataType datatype) {
-    ASSERT(lexer->token.type == TOKEN_INT || lexer->token.type == TOKEN_CHAR);
+    ASSERT(lexer->token.type == TOKEN_INT ||
+           lexer->token.type == TOKEN_CHAR ||
+           lexer->token.type == TOKEN_STRUCT);
+    if (datatype == DATA_STRUCT) {
+        ReadToken(lexer);
+    }
+
     ReadToken(lexer);
     VarDecl *vardecl = NEW_AST(VarDecl);
     vardecl->info.type = AST_VARDECL;
@@ -326,6 +333,7 @@ static Block *ParseBlock(Lexer *lexer) {
     while (lexer->token.type != TOKEN_RIGHT_CURLY_BRAC) {
         Ast *stmt = NULL;
         switch(lexer->token.type) {
+            case TOKEN_STRUCT: {stmt = (Ast *) ParseVarDecl(lexer, DATA_STRUCT); ExpectAndRead(lexer, TOKEN_SEMICOLON);} break;
             case TOKEN_CHAR:   {stmt = (Ast *) ParseVarDecl(lexer, DATA_CHAR); ExpectAndRead(lexer, TOKEN_SEMICOLON);} break;
             case TOKEN_INT:    {stmt = (Ast *) ParseVarDecl(lexer, DATA_INT); ExpectAndRead(lexer, TOKEN_SEMICOLON);} break;
             case TOKEN_STAR:   {stmt = (Ast *) ParseVarAssign(lexer); ExpectAndRead(lexer, TOKEN_SEMICOLON);} break;
@@ -335,7 +343,8 @@ static Block *ParseBlock(Lexer *lexer) {
             case TOKEN_FOR:    {stmt = (Ast *) ParseForLoop(lexer);} break;
             case TOKEN_IDENT:  {
                 if ((TOKEN_EQUAL <= lexer->peek.type && lexer->peek.type <= TOKEN_SLASH_EQUAL) ||
-                        lexer->peek.type == TOKEN_LEFT_SQUARE_BRAC) {
+                        lexer->peek.type == TOKEN_LEFT_SQUARE_BRAC ||
+                        lexer->peek.type == TOKEN_DOT) {
                     stmt = (Ast *) ParseVarAssign(lexer);
                     ExpectAndRead(lexer, TOKEN_SEMICOLON);
                 }

@@ -18,7 +18,4 @@ struct Token {
 } typedef Token;
 
 
-char *GetTokenTypeStr(TokenType type);
-void PrintTokenStr(Token token);
-
 #endif // MINIC_TOKEN_H
