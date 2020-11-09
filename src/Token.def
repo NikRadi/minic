@@ -35,6 +35,7 @@ TOKEN(FOR, "for")
 TOKEN(IF, "if")
 TOKEN(ELSE, "else")
 TOKEN(RETURN, "return")
+TOKEN(STRUCT, "struct")
 
 TOKEN(LITERAL_INT, "int literal")
 TOKEN(LITERAL_CHAR, "char literal")

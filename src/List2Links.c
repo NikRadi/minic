@@ -22,6 +22,7 @@ void List2LAdd(List2Links *list, Ast *item) {
         ASSERT(list->head == list->tail && list->tail == node);
     }
     else {
+        ASSERT(node->prev != NULL && node->prev->next == NULL);
         node->prev->next = node;
     }
 

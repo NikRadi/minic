@@ -133,9 +133,15 @@ struct FuncDecl {
     Block *block;
 } typedef FuncDecl;
 
+struct Struct {
+    Ast info;
+    char *ident;
+    List2Links vardecls;
+} typedef Struct;;
+
 struct File {
     Ast info;
-    List2Links funcdecls;
+    List2Links decls;
 } typedef File;
 
 

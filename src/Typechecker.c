@@ -212,15 +212,21 @@ static void TypecheckFuncDecl(FileInfo *info, FuncDecl *funcdecl) {
 }
 
 void TypecheckFile(FileInfo *info, File *file) {
-    Node2Links *node = file->funcdecls.head;
+    Node2Links *node = file->decls.head;
     if (node == NULL) {
         return;
     }
 
-    while (TRUE) {
-        TypecheckFuncDecl(info, (FuncDecl *) node->item);
-        if (node == file->funcdecls.tail) {
-            break;
+    for (int i = 0; i < file->decls.count; ++i) {
+        switch (node->item->type) {
+            case AST_FUNCDECL: {TypecheckFuncDecl(info, (FuncDecl *) node->item);} break;
+            case AST_STRUCT:   {} break;
+            default: {
+                ThrowInternalError(
+                    "typechecking not implemented for %s\n",
+                    GetAstTypeStr(node->item->type)
+                );
+            }
         }
 
         node = node->next;

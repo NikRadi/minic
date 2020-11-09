@@ -401,23 +401,49 @@ static FuncDecl *ParseFuncDecl(Lexer *lexer, DataType returntype) {
     return funcdecl;
 }
 
+Struct *ParseStruct(Lexer *lexer) {
+    ReadToken(lexer); // TOKEN_STRUCT
+    Expect(lexer, TOKEN_IDENT);
+    Struct *structdecl = NEW_AST(Struct);
+    structdecl->info.type = AST_STRUCT;
+    structdecl->ident = strdup(lexer->token.strvalue);
+    structdecl->vardecls = List2LNew();
+    ReadToken(lexer); // TOKEN_IDENT
+    ExpectAndRead(lexer, TOKEN_LEFT_CURLY_BRAC);
+    while (lexer->token.type != TOKEN_RIGHT_CURLY_BRAC) {
+        VarDecl *vardecl = ParseVarDecl(lexer, lexer->token.type);
+        ExpectAndRead(lexer, TOKEN_SEMICOLON);
+        if (vardecl->expr != NULL) {
+            ThrowErrorAt(lexer, "cannot assign value to variable declaration in struct\n");
+        }
+
+        List2LAdd(&structdecl->vardecls, (Ast *) vardecl);
+    }
+
+    ASSERT(lexer->token.type == TOKEN_RIGHT_CURLY_BRAC);
+    ReadToken(lexer);
+    ExpectAndRead(lexer, TOKEN_SEMICOLON);
+    return structdecl;
+}
+
 File *ParseFile(Lexer *lexer) {
     File *root_file = NEW_AST(File);
     root_file->info.type = AST_FILE;
-    root_file->funcdecls = List2LNew();
+    root_file->decls = List2LNew();
     while (lexer->token.type != TOKEN_EOF) {
-        FuncDecl *funcdecl = NULL;
+        Ast *decl = NULL;
         switch (lexer->token.type) {
-            case TOKEN_INT:  {funcdecl = ParseFuncDecl(lexer, DATA_INT);} break;
-            case TOKEN_CHAR: {funcdecl = ParseFuncDecl(lexer, DATA_CHAR);} break;
-            case TOKEN_VOID: {funcdecl = ParseFuncDecl(lexer, DATA_VOID);} break;
+            case TOKEN_INT:    {decl = (Ast *) ParseFuncDecl(lexer, DATA_INT);} break;
+            case TOKEN_CHAR:   {decl = (Ast *) ParseFuncDecl(lexer, DATA_CHAR);} break;
+            case TOKEN_VOID:   {decl = (Ast *) ParseFuncDecl(lexer, DATA_VOID);} break;
+            case TOKEN_STRUCT: {decl = (Ast *) ParseStruct(lexer);} break;
             default: {
                 ThrowErrorAt(lexer, "?");
             }
         }
 
-        ASSERT(funcdecl != NULL);
-        List2LAdd(&root_file->funcdecls, (Ast *) funcdecl);
+        ASSERT(decl != NULL);
+        List2LAdd(&root_file->decls, decl);
     }
 
     return root_file;

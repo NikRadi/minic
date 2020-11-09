@@ -13,6 +13,7 @@ AST(IFSTMT, "if statement")
 AST(WHILELOOP, "while loop")
 AST(FORLOOP, "for loop")
 AST(FUNCDECL, "function declaration")
+AST(STRUCT, "struct declaration")
 AST(FUNCCALL, "function call")
 AST(FILE, "file")
 #undef AST
