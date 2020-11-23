@@ -21,15 +21,14 @@ static Args ParseArgs(int argc, char **argv) {
     args.print_tokens = FALSE;
     args.print_ast = FALSE;
     for (int i = 0; i < argc; ++i) {
-        if (strcmp(argv[i], "-f") == 0) {
-            args.filename = argv[i + 1];
-            i += 1;
-        }
-        else if (strcmp(argv[i], "-tok") == 0) {
+        if (strcmp(argv[i], "-tok") == 0) {
             args.print_tokens = TRUE;
         }
         else if (strcmp(argv[i], "-ast") == 0) {
             args.print_ast = TRUE;
+        }
+        else {
+            args.filename = argv[i];
         }
     }
 

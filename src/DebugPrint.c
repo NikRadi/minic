@@ -126,7 +126,7 @@ static void PrintAst(Ast *ast, int indent) {
 char *GetTokenTypeStr(TokenType type) {
     switch (type) {
 #define TOKEN(name, str) case TOKEN_##name: return #str;
-#include "Token.def"
+#include "TokenTypes.def"
         default: {
             ThrowInternalError("unknown TokenType '%d'", type);
             return 0; // To get rid of warning C4701
@@ -161,7 +161,7 @@ void PrintToken(Token token) {
 #define TOKEN(name, str) case TOKEN_##name: {\
         printf("<Token line=\"%d\" type=\"%s\"/>", token.line, #name);\
     } break;
-#include "Token.def"
+#include "TokenTypes.def"
         default: {
             ThrowInternalError("unknown TokenType '%d'", token.type);
         }

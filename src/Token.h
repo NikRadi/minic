@@ -5,7 +5,7 @@
 
 enum TokenType {
 #define TOKEN(name, str) TOKEN_##name,
-#include "Token.def"
+#include "TokenTypes.def"
 } typedef TokenType;
 
 struct Token {

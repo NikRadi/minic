@@ -23,7 +23,7 @@ IF "%1" == "test" (
     ECHO Testing...
     FOR %%f in (tests/Test*.c) DO (
         ECHO | SET /p="%%~nf.c ... "
-        bin\minic.exe -f tests\%%f
+        bin\minic.exe tests\%%f
         CD tests
         IF EXIST %%~nf.asm (
             nasm -f win64 -o %%~nf.obj %%~nf.asm
@@ -39,11 +39,11 @@ IF "%1" == "test" (
 IF "%1" == "testmain" (
     ECHO Testing...
     ECHO TestMain.c
-    bin\minic.exe -f TestMain.c
+    bin\minic.exe TestMain.c
     nasm -f win64 -o TestMain.obj TestMain.asm
     LINK /NOLOGO %Libs% /SUBSYSTEM:console TestMain.obj /OUT:TestMain.exe
-    TestMain.exe
-    DEL TestMain.obj
+    @REM TestMain.exe
+    @REM DEL TestMain.obj
 )
 
 IF "%1" == "nasm" (
