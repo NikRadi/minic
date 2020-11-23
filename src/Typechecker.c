@@ -50,12 +50,12 @@ static void TypecheckVarAssign(FileInfo *info, BinaryOp *varassign) {
     TypecheckExpr(info, varassign->rhs);
     if (ASOP_ADD_EQUAL <= varassign->optype && varassign->optype <= ASOP_DIV_EQUAL) {
         OperatorType optypes[4] = {BIOP_ADD, BIOP_SUB, BIOP_MUL, BIOP_DIV};
-        BinaryOp *binaryop = NEW_AST(BinaryOp);
+        BinaryOp *binaryop = NEW(BinaryOp);
         binaryop->info.type = AST_BINARYOP;
         binaryop->optype = optypes[varassign->optype - ASOP_ADD_EQUAL];
         binaryop->rhs = varassign->rhs;
 
-        Literal *literal = NEW_AST(Literal);
+        Literal *literal = NEW(Literal);
         literal->info.type = AST_LITERAL_IDENT;
         literal->strvalue = ((Literal *) varassign->lhs)->strvalue;
         binaryop->lhs = (Ast *) literal;
@@ -93,7 +93,7 @@ static void TypecheckForLoop(FileInfo *info, ForLoop *forloop) {
     TypecheckExpr(info, (Ast *) forloop->post_operation);
     TypecheckBlock(info, forloop->block);
 
-    // WhileLoop *loop = NEW_AST(WhileLoop);
+    // WhileLoop *loop = NEW(WhileLoop);
     // loop->info.type = AST_WHILELOOP;
     // loop->condition = (Ast *) forloop->condition;
     // loop->block = forloop->block;
@@ -105,7 +105,7 @@ static void TypecheckForLoop(FileInfo *info, ForLoop *forloop) {
     // }
     // else {
     //     while (TRUE) {
-    //         Block *glue_postop = NEW_AST(Block);
+    //         Block *glue_postop = NEW(Block);
     //         glue_postop->info.type = AST_BLOCK;
     //         glue_postop->stmt = (Ast *) forloop->post_operation;
     //         glue_postop->glue = NULL;
@@ -124,7 +124,7 @@ static void TypecheckForLoop(FileInfo *info, ForLoop *forloop) {
     // Block *parent_glue = parent_block->glue;
     // parent_block->stmt = (Ast *) forloop->pre_operation;
 
-    // Block *glue_loop = NEW_AST(Block);
+    // Block *glue_loop = NEW(Block);
     // glue_loop->info.type = AST_BLOCK;
     // glue_loop->stmt = (Ast *) loop;
     // parent_block->glue = glue_loop;

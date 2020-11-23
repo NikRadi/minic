@@ -73,14 +73,14 @@ static Ast *ParseLiteral(Lexer *lexer) {
         case TOKEN_LITERAL_CHAR: {
             ASSERT(TOKEN_LITERAL_INT == TOKEN_LITERAL_CHAR - 1);
             AstType asttypes[2] = {AST_LITERAL_INT, AST_LITERAL_CHAR};
-            Literal *literal = NEW_AST(Literal);
+            Literal *literal = NEW(Literal);
             literal->info.type = asttypes[lexer->token.type - TOKEN_LITERAL_INT];
             literal->intvalue = lexer->token.intvalue;
             ReadToken(lexer);
             return (Ast *) literal;
         }
         case TOKEN_LITERAL_STR: {
-            Literal *literal = NEW_AST(Literal);
+            Literal *literal = NEW(Literal);
             literal->info.type = AST_LITERAL_STR;
             literal->strvalue = lexer->token.strvalue;
             ReadToken(lexer);
@@ -91,13 +91,13 @@ static Ast *ParseLiteral(Lexer *lexer) {
                 return (Ast *) ParseFuncCall(lexer);
             }
 
-            Literal *literal = NEW_AST(Literal);
+            Literal *literal = NEW(Literal);
             literal->info.type = AST_LITERAL_IDENT;
             literal->strvalue = strdup(lexer->token.strvalue);
             ReadToken(lexer); // TOKEN_IDENT
             if (lexer->token.type == TOKEN_LEFT_SQUARE_BRAC) {
                 ReadToken(lexer); // TOKEN_LEFT_SQUARE_BRAC
-                BinaryOp *binaryop = NEW_AST(BinaryOp);
+                BinaryOp *binaryop = NEW(BinaryOp);
                 binaryop->info.type = AST_BINARYOP;
                 binaryop->optype = BIOP_ARR_IDX;
                 binaryop->lhs = (Ast *) literal;
@@ -110,7 +110,7 @@ static Ast *ParseLiteral(Lexer *lexer) {
         }
         case TOKEN_AMPERSAND: {
             ReadToken(lexer);
-            UnaryOp *unaryop = NEW_AST(UnaryOp);
+            UnaryOp *unaryop = NEW(UnaryOp);
             unaryop->info.type = AST_UNARYOP;
             unaryop->optype = UNOP_ADDRESS;
             unaryop->expr = ParseLiteral(lexer);
@@ -118,7 +118,7 @@ static Ast *ParseLiteral(Lexer *lexer) {
         }
         case TOKEN_STAR: {
             ReadToken(lexer);
-            UnaryOp *unaryop = NEW_AST(UnaryOp);
+            UnaryOp *unaryop = NEW(UnaryOp);
             unaryop->info.type = AST_UNARYOP;
             unaryop->optype = UNOP_DEREF;
             unaryop->expr = ParseLiteral(lexer);
@@ -126,7 +126,7 @@ static Ast *ParseLiteral(Lexer *lexer) {
         }
         case TOKEN_EXMARK: {
             ReadToken(lexer);
-            UnaryOp *unaryop = NEW_AST(UnaryOp);
+            UnaryOp *unaryop = NEW(UnaryOp);
             unaryop->info.type = AST_UNARYOP;
             unaryop->optype = UNOP_NOT;
             unaryop->expr = ParseLiteral(lexer);
@@ -152,7 +152,7 @@ static Ast *ParseExpr_(Lexer *lexer, int min_precedence) {
         }
 
         ReadToken(lexer); // operator
-        BinaryOp *binaryop = NEW_AST(BinaryOp);
+        BinaryOp *binaryop = NEW(BinaryOp);
         binaryop->info.type = AST_BINARYOP;
         binaryop->optype = optype;
         binaryop->rhs = ParseExpr_(lexer, op_precedence);
@@ -183,7 +183,7 @@ static VarDecl *ParseVarDecl(Lexer *lexer, DataType datatype) {
     }
 
     ReadToken(lexer);
-    VarDecl *vardecl = NEW_AST(VarDecl);
+    VarDecl *vardecl = NEW(VarDecl);
     vardecl->info.type = AST_VARDECL;
     vardecl->ident = NULL;
     vardecl->expr = NULL;
@@ -214,7 +214,7 @@ static VarDecl *ParseVarDecl(Lexer *lexer, DataType datatype) {
 }
 
 static BinaryOp *ParseVarAssign(Lexer *lexer) {
-    BinaryOp *varassign = NEW_AST(BinaryOp);
+    BinaryOp *varassign = NEW(BinaryOp);
     varassign->info.type = AST_BINARYOP;
     varassign->lhs = ParseExpr(lexer);
     varassign->optype = ToAssignmentOperatorType(lexer->token.type);
@@ -227,7 +227,7 @@ static FuncCall *ParseFuncCall(Lexer *lexer) {
     ASSERT(lexer->token.type == TOKEN_IDENT);
     ReadToken(lexer);
 
-    FuncCall *funccall = NEW_AST(FuncCall);
+    FuncCall *funccall = NEW(FuncCall);
     funccall->info.type = AST_FUNCCALL;
     funccall->ident = strdup(lexer->token.strvalue);
     funccall->args = List2LNew();
@@ -253,7 +253,7 @@ static ReturnStmt *ParseReturnStmt(Lexer *lexer) {
     ASSERT(lexer->token.type == TOKEN_RETURN);
     ReadToken(lexer);
 
-    ReturnStmt *returnstmt = NEW_AST(ReturnStmt);
+    ReturnStmt *returnstmt = NEW(ReturnStmt);
     returnstmt->info.type = AST_RETURNSTMT;
     returnstmt->expr = ParseExpr(lexer);
     ExpectAndRead(lexer, TOKEN_SEMICOLON);
@@ -264,7 +264,7 @@ static IfStmt *ParseIfStmt(Lexer *lexer) {
     ASSERT(lexer->token.type == TOKEN_IF);
     ReadToken(lexer);
 
-    IfStmt *root_ifstmt = NEW_AST(IfStmt);
+    IfStmt *root_ifstmt = NEW(IfStmt);
     root_ifstmt->info.type = AST_IFSTMT;
     root_ifstmt->condition = ParseParenthesizedExpr(lexer);
     root_ifstmt->block = ParseBlock(lexer);
@@ -272,7 +272,7 @@ static IfStmt *ParseIfStmt(Lexer *lexer) {
     IfStmt *child_ifstmt = root_ifstmt;
     Bool is_last_else = FALSE;
     while (lexer->token.type == TOKEN_ELSE && !is_last_else) {
-        IfStmt *ifstmt = NEW_AST(IfStmt);
+        IfStmt *ifstmt = NEW(IfStmt);
         ifstmt->info.type = AST_IFSTMT;
         ifstmt->condition = NULL;
         ReadToken(lexer);
@@ -301,7 +301,7 @@ static WhileLoop *ParseWhileLoop(Lexer *lexer) {
     ASSERT(lexer->token.type == TOKEN_WHILE);
     ReadToken(lexer);
 
-    WhileLoop *whileloop = NEW_AST(WhileLoop);
+    WhileLoop *whileloop = NEW(WhileLoop);
     whileloop->info.type = AST_WHILELOOP;
     whileloop->condition = ParseParenthesizedExpr(lexer);
     whileloop->block = ParseBlock(lexer);
@@ -312,7 +312,7 @@ static ForLoop *ParseForLoop(Lexer *lexer) {
     ASSERT(lexer->token.type == TOKEN_FOR);
     ReadToken(lexer);
 
-    ForLoop *forloop = NEW_AST(ForLoop);
+    ForLoop *forloop = NEW(ForLoop);
     forloop->info.type = AST_FORLOOP;
     ExpectAndRead(lexer, TOKEN_LEFT_PAREN);
     forloop->pre_operation = ParseVarAssign(lexer);
@@ -327,7 +327,7 @@ static ForLoop *ParseForLoop(Lexer *lexer) {
 
 static Block *ParseBlock(Lexer *lexer) {
     ExpectAndRead(lexer, TOKEN_LEFT_CURLY_BRAC);
-    Block *block = NEW_AST(Block);
+    Block *block = NEW(Block);
     block->info.type = AST_BLOCK;
     block->stmts = List2LNew();
     while (lexer->token.type != TOKEN_RIGHT_CURLY_BRAC) {
@@ -378,7 +378,7 @@ static Block *ParseBlock(Lexer *lexer) {
 
 static FuncDecl *ParseFuncDecl(Lexer *lexer, DataType returntype) {
     ReadToken(lexer); // function return type
-    FuncDecl *funcdecl = NEW_AST(FuncDecl);
+    FuncDecl *funcdecl = NEW(FuncDecl);
     funcdecl->info.type = AST_FUNCDECL;
     funcdecl->stack_depth_bytes = 0;
     funcdecl->params = List2LNew();
@@ -413,7 +413,7 @@ static FuncDecl *ParseFuncDecl(Lexer *lexer, DataType returntype) {
 Struct *ParseStruct(Lexer *lexer) {
     ReadToken(lexer); // TOKEN_STRUCT
     Expect(lexer, TOKEN_IDENT);
-    Struct *structdecl = NEW_AST(Struct);
+    Struct *structdecl = NEW(Struct);
     structdecl->info.type = AST_STRUCT;
     structdecl->ident = strdup(lexer->token.strvalue);
     structdecl->vardecls = List2LNew();
@@ -436,7 +436,7 @@ Struct *ParseStruct(Lexer *lexer) {
 }
 
 File *ParseFile(Lexer *lexer) {
-    File *root_file = NEW_AST(File);
+    File *root_file = NEW(File);
     root_file->info.type = AST_FILE;
     root_file->decls = List2LNew();
     while (lexer->token.type != TOKEN_EOF) {

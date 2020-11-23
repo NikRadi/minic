@@ -4,9 +4,6 @@
 #include "List2Links.h"
 
 
-#define NEW_AST(type) (type *) malloc(sizeof(type));
-
-
 enum AstType {
 #define AST(name, str) AST_##name,
 #include "AstNodes.def"

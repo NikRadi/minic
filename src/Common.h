@@ -8,6 +8,8 @@
 #pragma warning(disable : 4201) // nameless struct/union
 #pragma warning(disable : 4996) // _CRT_SECURE_NO_WARNINGS, fopen_s instead of fopen
 
+#define NEW(type) (type *) malloc(sizeof(type));
+
 #define ASSERT(x) \
     if(!(x)) { \
         fprintf(stderr, \
