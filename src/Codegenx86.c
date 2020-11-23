@@ -513,11 +513,6 @@ static void CgX86FuncDecl(FileInfo *info, FuncDecl *funcdecl) {
 }
 
 void CgX86File(FileInfo *info, File *file) {
-    Node2Links *node = file->decls.head;
-    if (node == NULL) {
-        return;
-    }
-
     fputs(
         "bits 64\n"
         "default rel\n"
@@ -551,17 +546,12 @@ void CgX86File(FileInfo *info, File *file) {
     FreeRegs();
     for (int i = 0; i < file->decls.count; ++i) {
         fputs("\n\n", info->asmfile);
-        switch (node->item->type) {
-            case AST_FUNCDECL: {CgX86FuncDecl(info, (FuncDecl *) node->item);} break;
-            case AST_STRUCT:   {} break;
+        Ast *decl = (Ast *) ListGet(&file->decls, i);
+        switch (decl->type) {
+            case AST_FUNCDECL: {CgX86FuncDecl(info, (FuncDecl *) decl);} break;
             default: {
-                ThrowInternalError(
-                    "CodegenX86 not implemented for %s\n",
-                    GetAstTypeStr(node->item->type)
-                );
+                ThrowInternalError("CgX86File - ", GetAstTypeStr(decl->type));
             }
         }
-
-        node = node->next;
     }
 }

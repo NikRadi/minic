@@ -161,10 +161,8 @@ void PrintToken(Token token) {
 
 void PrintFile(File *file) {
     printf("<File name=\"%s\">\n", file->name);
-    Node2Links *node = file->decls.head;
     for (int i = 0; i < file->decls.count; ++i) {
-        PrintAst(node->item, 4);
-        node = node->next;
+        PrintAst((Ast *) ListGet(&file->decls, i), 4);
     }
 
     printf("<File/>\n");

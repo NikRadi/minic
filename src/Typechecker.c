@@ -213,23 +213,13 @@ static void TypecheckFuncDecl(FileInfo *info, FuncDecl *funcdecl) {
 }
 
 void TypecheckFile(FileInfo *info, File *file) {
-    Node2Links *node = file->decls.head;
-    if (node == NULL) {
-        return;
-    }
-
     for (int i = 0; i < file->decls.count; ++i) {
-        switch (node->item->type) {
-            case AST_FUNCDECL: {TypecheckFuncDecl(info, (FuncDecl *) node->item);} break;
-            case AST_STRUCT:   {} break;
+        Ast *decl = (Ast *) ListGet(&file->decls, i);
+        switch (decl->type) {
+            case AST_FUNCDECL: {TypecheckFuncDecl(info, (FuncDecl *) decl);} break;
             default: {
-                ThrowInternalError(
-                    "typechecking not implemented for %s\n",
-                    GetAstTypeStr(node->item->type)
-                );
+                ThrowInternalError("TypecheckFile - ", GetAstTypeStr(decl->type));
             }
         }
-
-        node = node->next;
     }
 }

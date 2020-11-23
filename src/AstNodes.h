@@ -125,7 +125,7 @@ struct Struct {
 struct File {
     Ast info;
     char *name;
-    List2Links decls;
+    List decls;
 } typedef File;
 
 

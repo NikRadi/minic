@@ -439,7 +439,7 @@ File *ParseFile(Lexer *lexer) {
     File *file = NEW(File);
     file->info.type = AST_FILE;
     file->name = strdup(lexer->filename);
-    file->decls = List2LNew();
+    file->decls = ListNew();
     while (lexer->token.type != TOKEN_EOF) {
         Ast *decl = NULL;
         switch (lexer->token.type) {
@@ -453,7 +453,7 @@ File *ParseFile(Lexer *lexer) {
         }
 
         ASSERT(decl != NULL);
-        List2LAdd(&file->decls, decl);
+        ListAdd(&file->decls, decl);
     }
 
     return file;
