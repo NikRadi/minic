@@ -24,10 +24,8 @@ static void PrintFuncDecl(FuncDecl *funcdecl, int indent) {
         funcdecl->returntype
     );
 
-    Node2Links *node = funcdecl->params.head;
     for (int i = 0; i < funcdecl->params.count; ++i) {
-        PrintAst(node->item, indent + 4);
-        node = node->next;
+        PrintAst((Ast *) ListGet(&funcdecl->params, i), indent + 4);
     }
 
     PrintBlock(funcdecl->block, indent + 4);

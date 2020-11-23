@@ -201,10 +201,8 @@ static void TypecheckFuncDecl(FileInfo *info, FuncDecl *funcdecl) {
     info->current_func = funcdecl;
     info->current_scope = &funcdecl->block->scope;
 
-    Node2Links *node = funcdecl->params.head;
     for (int i = 0; i < funcdecl->params.count; ++i) {
-        TypecheckVarDecl(info, (VarDecl *) node->item, STOR_PARAM);
-        node = node->next;
+        TypecheckVarDecl(info, (VarDecl *) ListGet(&funcdecl->params, i), STOR_PARAM);
     }
 
     TypecheckBlock(info, funcdecl->block);

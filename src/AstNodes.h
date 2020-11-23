@@ -112,15 +112,9 @@ struct FuncDecl {
     char *ident;
     int stack_depth_bytes;
     DataType returntype;
-    List2Links params;
+    List params;
     Block *block;
 } typedef FuncDecl;
-
-struct Struct {
-    Ast info;
-    char *ident;
-    List2Links vardecls;
-} typedef Struct;
 
 struct File {
     Ast info;
