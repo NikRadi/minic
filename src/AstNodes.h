@@ -1,6 +1,7 @@
 #ifndef MINIC_ASTNODES_H
 #define MINIC_ASTNODES_H
 #include "Common.h"
+#include "List.h"
 #include "List2Links.h"
 
 
@@ -123,6 +124,7 @@ struct Struct {
 
 struct File {
     Ast info;
+    char *name;
     List2Links decls;
 } typedef File;
 

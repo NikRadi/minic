@@ -6,15 +6,18 @@ static void PrintAst(Ast *ast, int indent);
 static void PrintBlock(Block *block, int indent);
 
 
-static void PrintIndent(int indent) {
+static void PrintIndent(int indent, char *format, ...) {
+    va_list arglist;
+    va_start(arglist, format);
     for (int i = 0; i < indent; ++i) {
         printf(" ");
     }
+
+    vfprintf(stdout, format, arglist);
 }
 
 static void PrintFuncDecl(FuncDecl *funcdecl, int indent) {
-    PrintIndent(indent);
-    printf(
+    PrintIndent(indent,
         "<FuncDecl ident=\"%s\" stack_depth_bytes=\"%d\" returntype=\"%d\">\n",
         funcdecl->ident,
         funcdecl->stack_depth_bytes,
@@ -28,26 +31,20 @@ static void PrintFuncDecl(FuncDecl *funcdecl, int indent) {
     }
 
     PrintBlock(funcdecl->block, indent + 4);
-    PrintIndent(indent);
-    printf("<FuncDecl/>\n");
+    PrintIndent(indent, "<FuncDecl/>\n");
 }
 
 static void PrintBlock(Block *block, int indent) {
-    PrintIndent(indent);
-    printf("<Block>\n");
-    Node2Links *node = block->stmts.head;
+    PrintIndent(indent, "<Block>\n");
     for (int i = 0; i < block->stmts.count; ++i) {
-        PrintAst(node->item, indent + 4);
-        node = node->next;
+        // PrintAst((Ast *) ListGet(&block->stmts, i), indent + 4);
     }
 
-    PrintIndent(indent);
-    printf("<Block/>\n");
+    PrintIndent(indent, "<Block/>\n");
 }
 
 static void PrintVarDecl(VarDecl *vardecl, int indent) {
-    PrintIndent(indent);
-    printf(
+    PrintIndent(indent,
         "<VarDecl ident=\"%s\" datatype=\"%d\" arrsize=\"%d\" lvl_indirection=\"%d\"",
         vardecl->ident,
         vardecl->datatype,
@@ -58,8 +55,7 @@ static void PrintVarDecl(VarDecl *vardecl, int indent) {
     if (vardecl->expr != NULL) {
         printf(">\n");
         PrintAst(vardecl->expr, indent + 4);
-        PrintIndent(indent);
-        printf("<VarDecl/>\n");
+        PrintIndent(indent, "<VarDecl/>\n");
     }
     else {
         printf("/>\n");
@@ -67,41 +63,39 @@ static void PrintVarDecl(VarDecl *vardecl, int indent) {
 }
 
 static void PrintBinaryOp(BinaryOp *binaryop, int indent) {
-    PrintIndent(indent);
-    printf("<BinaryOp optype=\"%s\">\n", GetOperatorTypeStr(binaryop->optype));
+    PrintIndent(indent,
+        "<BinaryOp optype=\"%s\">\n",
+        GetOperatorTypeStr(binaryop->optype)
+    );
+
     PrintAst(binaryop->lhs, indent + 4);
     PrintAst(binaryop->rhs, indent + 4);
-    PrintIndent(indent);
-    printf("<BinaryOp/>\n");
+    PrintIndent(indent, "<BinaryOp/>\n");
 }
 
 static void PrintUnaryOp(UnaryOp *unaryop, int indent) {
-    PrintIndent(indent);
-    printf("<UnaryOp optype=\"%s\">\n", GetOperatorTypeStr(unaryop->optype));
+    PrintIndent(indent,
+        "<UnaryOp optype=\"%s\">\n",
+        GetOperatorTypeStr(unaryop->optype)
+    );
+
     PrintAst(unaryop->expr, indent + 4);
-    PrintIndent(indent);
-    printf("<UnaryOp/>\n");
+    PrintIndent(indent, "<UnaryOp/>\n");
 }
 
 static void PrintFuncCall(FuncCall *vardecl, int indent) {
-    PrintIndent(indent);
-    printf("<FuncCall>\n");
-
-    PrintIndent(indent);
-    printf("<FuncCall/>\n");
+    PrintIndent(indent, "<FuncCall...>\n");
 }
 
 static void PrintLiteralIdentInt(Literal *literal, int indent) {
-    PrintIndent(indent);
-    printf(
+    PrintIndent(indent,
         "<Literal intvalue=\"%d\"/>\n",
         literal->intvalue
     );
 }
 
 static void PrintLiteralIdentStr(Literal *literal, int indent) {
-    PrintIndent(indent);
-    printf(
+    PrintIndent(indent,
         "<Literal strvalue=\"%s\">\n",
         literal->strvalue
     );
@@ -128,8 +122,7 @@ char *GetTokenTypeStr(TokenType type) {
 #define TOKEN(name, str) case TOKEN_##name: return #str;
 #include "TokenTypes.def"
         default: {
-            ThrowInternalError("unknown TokenType '%d'", type);
-            return 0; // To get rid of warning C4701
+            return NULL;
         }
     }
 }
@@ -139,8 +132,7 @@ char *GetAstTypeStr(AstType type) {
 #define AST(name, str) case AST_##name: return #str;
 #include "AstNodes.def"
         default: {
-            ThrowInternalError("unknown AstType '%d'", type);
-            return 0; // To get rid of warning C4701
+            return NULL;
         }
     }
 }
@@ -150,8 +142,7 @@ char *GetOperatorTypeStr(OperatorType type) {
 #define OP(name) case name: return #name;
 #include "AstNodes.def"
         default: {
-            ThrowInternalError("unknown OperatorType '%d'", type);
-            return 0; // To get rid of warning C4701
+            return NULL;
         }
     }
 }
@@ -169,7 +160,7 @@ void PrintToken(Token token) {
 }
 
 void PrintFile(File *file) {
-    printf("<File>\n");
+    printf("<File name=\"%s\">\n", file->name);
     Node2Links *node = file->decls.head;
     for (int i = 0; i < file->decls.count; ++i) {
         PrintAst(node->item, 4);

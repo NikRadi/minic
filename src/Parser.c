@@ -436,9 +436,10 @@ Struct *ParseStruct(Lexer *lexer) {
 }
 
 File *ParseFile(Lexer *lexer) {
-    File *root_file = NEW(File);
-    root_file->info.type = AST_FILE;
-    root_file->decls = List2LNew();
+    File *file = NEW(File);
+    file->info.type = AST_FILE;
+    file->name = strdup(lexer->filename);
+    file->decls = List2LNew();
     while (lexer->token.type != TOKEN_EOF) {
         Ast *decl = NULL;
         switch (lexer->token.type) {
@@ -452,8 +453,8 @@ File *ParseFile(Lexer *lexer) {
         }
 
         ASSERT(decl != NULL);
-        List2LAdd(&root_file->decls, decl);
+        List2LAdd(&file->decls, decl);
     }
 
-    return root_file;
+    return file;
 }
