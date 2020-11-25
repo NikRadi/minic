@@ -146,10 +146,9 @@ static void TypecheckFuncCall(FileInfo *info, FuncCall *funccall) {
         }
     }
 
-    Node2Links *node = funccall->args.head;
     for (int i = 0; i < funccall->args.count; ++i) {
-        TypecheckExpr(info, node->item);
-        node = node->next;
+        Ast *expr = (Ast *) ListGet(&funccall->args, i);
+        TypecheckExpr(info, expr);
     }
 }
 

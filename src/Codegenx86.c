@@ -431,12 +431,11 @@ static void CgX86WhileLoop(FileInfo *info, WhileLoop *whileloop) {
 
 static void CgX86FuncCall(FileInfo *info, FuncCall *funccall) {
     ASSERT(funccall->args.count <= 2);
-    Node2Links *node = funccall->args.head;
     char *regs[] = {"rcx", "rdx"};
     for (int i = 0; i < funccall->args.count; ++i) {
-        int regid = CgX86ExprSet(info, node->item);
+        Ast *expr = (Ast *) ListGet(&funccall->args, i);
+        int regid = CgX86ExprSet(info, expr);
         fprintf(info->asmfile, "\tmov\t\t%s, %s\n", regs[i], regs64[regid]);
-        node = node->next;
     }
 
     fprintf(info->asmfile, "\tcall\t%s\n", funccall->ident);
@@ -457,10 +456,7 @@ static void CgX86Block(FileInfo *info, Block *block) {
             case AST_WHILELOOP:  {CgX86WhileLoop(info, (WhileLoop *) node->item);} break;
             case AST_FUNCCALL:   {CgX86FuncCall(info, (FuncCall *) node->item);} break;
             default: {
-                ThrowInternalError(
-                    "statement '%s' not implemented in CodegenX86",
-                    GetAstTypeStr(node->item->type)
-                );
+                ThrowInternalError("CgX86Block - %s\n", GetAstTypeStr(node->item->type));
             }
         }
 

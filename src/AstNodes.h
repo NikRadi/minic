@@ -104,7 +104,7 @@ struct ForLoop {
 struct FuncCall {
     Ast info;
     char *ident;
-    List2Links args;
+    List args;
 } typedef FuncCall;
 
 struct FuncDecl {

@@ -230,12 +230,12 @@ static FuncCall *ParseFuncCall(Lexer *lexer) {
     FuncCall *funccall = NEW(FuncCall);
     funccall->info.type = AST_FUNCCALL;
     funccall->ident = strdup(lexer->token.strvalue);
-    funccall->args = List2LNew();
+    funccall->args = ListNew();
     ExpectAndRead(lexer, TOKEN_LEFT_PAREN);
     if (lexer->token.type != TOKEN_RIGHT_PAREN) {
         while (TRUE) {
             Ast *arg = ParseExpr(lexer);
-            List2LAdd(&funccall->args, arg);
+            ListAdd(&funccall->args, arg);
             if (lexer->token.type == TOKEN_COMMA) {
                 ReadToken(lexer);
             }
