@@ -128,7 +128,7 @@ char *GetTokenTypeStr(TokenType type) {
 char *GetAstTypeStr(AstType type) {
     switch (type) {
 #define AST(name, str) case AST_##name: return #str;
-#include "AstNodes.def"
+#include "AstTypes.def"
         default: {
             return NULL;
         }
@@ -138,7 +138,7 @@ char *GetAstTypeStr(AstType type) {
 char *GetOperatorTypeStr(OperatorType type) {
     switch (type) {
 #define OP(name) case name: return #name;
-#include "AstNodes.def"
+#include "OperatorTypes.def"
         default: {
             return NULL;
         }

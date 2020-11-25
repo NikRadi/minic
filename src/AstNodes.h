@@ -7,12 +7,12 @@
 
 enum AstType {
 #define AST(name, str) AST_##name,
-#include "AstNodes.def"
+#include "AstTypes.def"
 } typedef AstType;
 
 enum OperatorType {
 #define OP(name) name,
-#include "AstNodes.def"
+#include "OperatorTypes.def"
 } typedef OperatorType;
 
 enum DataType {
