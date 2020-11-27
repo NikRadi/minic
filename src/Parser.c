@@ -67,6 +67,23 @@ static OperatorType ToAssignmentOperatorType(TokenType type) {
     }
 }
 
+static UnaryOp *NewUnaryOp(OperatorType optype, Ast *expr) {
+    UnaryOp *unaryop = NEW(UnaryOp);
+    unaryop->info.type = AST_UNARYOP;
+    unaryop->optype = optype;
+    unaryop->expr = expr;
+    return unaryop;
+}
+
+static BinaryOp *NewBinaryOp(OperatorType optype, Ast *lhs, Ast *rhs) {
+    BinaryOp *binaryop = NEW(BinaryOp);
+    binaryop->info.type = AST_BINARYOP;
+    binaryop->optype = optype;
+    binaryop->lhs = lhs;
+    binaryop->rhs = rhs;
+    return binaryop;
+}
+
 static Ast *ParseLiteral(Lexer *lexer) {
     switch (lexer->token.type) {
         case TOKEN_LITERAL_INT:
@@ -96,12 +113,8 @@ static Ast *ParseLiteral(Lexer *lexer) {
             literal->strvalue = strdup(lexer->token.strvalue);
             ReadToken(lexer); // TOKEN_IDENT
             if (lexer->token.type == TOKEN_LEFT_SQUARE_BRAC) {
-                ReadToken(lexer); // TOKEN_LEFT_SQUARE_BRAC
-                BinaryOp *binaryop = NEW(BinaryOp);
-                binaryop->info.type = AST_BINARYOP;
-                binaryop->optype = BIOP_ARR_IDX;
-                binaryop->lhs = (Ast *) literal;
-                binaryop->rhs = ParseExpr(lexer);
+                ReadToken(lexer);
+                BinaryOp *binaryop = NewBinaryOp(BIOP_ARR_IDX, (Ast *) literal, ParseExpr(lexer));
                 ExpectAndRead(lexer, TOKEN_RIGHT_SQUARE_BRAC);
                 return (Ast *) binaryop;
             }
@@ -110,27 +123,15 @@ static Ast *ParseLiteral(Lexer *lexer) {
         }
         case TOKEN_AMPERSAND: {
             ReadToken(lexer);
-            UnaryOp *unaryop = NEW(UnaryOp);
-            unaryop->info.type = AST_UNARYOP;
-            unaryop->optype = UNOP_ADDRESS;
-            unaryop->expr = ParseLiteral(lexer);
-            return (Ast *) unaryop;
+            return (Ast *) NewUnaryOp(UNOP_ADDRESS, ParseLiteral(lexer));
         }
         case TOKEN_STAR: {
             ReadToken(lexer);
-            UnaryOp *unaryop = NEW(UnaryOp);
-            unaryop->info.type = AST_UNARYOP;
-            unaryop->optype = UNOP_DEREF;
-            unaryop->expr = ParseLiteral(lexer);
-            return (Ast *) unaryop;
+            return (Ast *) NewUnaryOp(UNOP_DEREF, ParseLiteral(lexer));
         }
         case TOKEN_EXMARK: {
             ReadToken(lexer);
-            UnaryOp *unaryop = NEW(UnaryOp);
-            unaryop->info.type = AST_UNARYOP;
-            unaryop->optype = UNOP_NOT;
-            unaryop->expr = ParseLiteral(lexer);
-            return (Ast *) unaryop;
+            return (Ast *) NewUnaryOp(UNOP_NOT, ParseLiteral(lexer));
         }
         case TOKEN_LEFT_PAREN: {
             return ParseParenthesizedExpr(lexer);
@@ -152,12 +153,7 @@ static Ast *ParseExpr_(Lexer *lexer, int min_precedence) {
         }
 
         ReadToken(lexer); // operator
-        BinaryOp *binaryop = NEW(BinaryOp);
-        binaryop->info.type = AST_BINARYOP;
-        binaryop->optype = optype;
-        binaryop->rhs = ParseExpr_(lexer, op_precedence);
-        binaryop->lhs = lhs;
-        lhs = (Ast *) binaryop;
+        lhs = (Ast *) NewBinaryOp(optype, lhs, ParseExpr_(lexer, op_precedence));
     }
 
     return lhs;
@@ -214,13 +210,10 @@ static VarDecl *ParseVarDecl(Lexer *lexer, DataType datatype) {
 }
 
 static BinaryOp *ParseVarAssign(Lexer *lexer) {
-    BinaryOp *varassign = NEW(BinaryOp);
-    varassign->info.type = AST_BINARYOP;
-    varassign->lhs = ParseExpr(lexer);
-    varassign->optype = ToAssignmentOperatorType(lexer->token.type);
+    Ast *lhs = ParseExpr(lexer);
+    OperatorType optype = ToAssignmentOperatorType(lexer->token.type);
     ReadToken(lexer); // operator
-    varassign->rhs = ParseExpr(lexer);
-    return varassign;
+    return NewBinaryOp(optype, lhs, ParseExpr(lexer));
 }
 
 static FuncCall *ParseFuncCall(Lexer *lexer) {

@@ -456,7 +456,7 @@ static void CgX86Block(FileInfo *info, Block *block) {
             case AST_WHILELOOP:  {CgX86WhileLoop(info, (WhileLoop *) node->item);} break;
             case AST_FUNCCALL:   {CgX86FuncCall(info, (FuncCall *) node->item);} break;
             default: {
-                ThrowInternalError("CgX86Block - %s\n", GetAstTypeStr(node->item->type));
+                ThrowInternalError("CgX86Block - %s", GetAstTypeStr(node->item->type));
             }
         }
 

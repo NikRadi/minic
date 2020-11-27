@@ -81,7 +81,7 @@ static void PrintUnaryOp(UnaryOp *unaryop, int indent) {
     PrintIndent(indent, "<UnaryOp/>\n");
 }
 
-static void PrintFuncCall(FuncCall *vardecl, int indent) {
+static void PrintFuncCall(FuncCall *funccall, int indent) {
     PrintIndent(indent, "<FuncCall...>\n");
 }
 
