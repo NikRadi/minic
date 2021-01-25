@@ -458,33 +458,6 @@ static void CgX86Block(FileInfo *info, Block *block) {
 
         FreeRegs();
     }
-
-    // Node2Links *node = block->stmts.head;
-    // if (node == NULL) {
-    //     return;
-    // }
-
-    // while (TRUE) {
-    //     switch (node->item->type) {
-    //         case AST_VARDECL:    {CgX86VarDecl(info, (VarDecl *) node->item);} break;
-    //         case AST_BINARYOP:   {CgX86VarAssign(info, (BinaryOp *) node->item);} break;
-    //         case AST_RETURNSTMT: {CgX86ReturnStmt(info, (ReturnStmt *) node->item);} break;
-    //         case AST_IFSTMT:     {CgX86IfStmt(info, (IfStmt *) node->item);} break;
-    //         case AST_WHILELOOP:  {CgX86WhileLoop(info, (WhileLoop *) node->item);} break;
-    //         case AST_FUNCCALL:   {CgX86FuncCall(info, (FuncCall *) node->item);} break;
-    //         default: {
-    //             ThrowInternalError("CgX86Block - %s", GetAstTypeStr(node->item->type));
-    //         }
-    //     }
-
-    //     // This statement fails TestCharOverflow for some reason
-    //     FreeRegs();
-    //     if (node == block->stmts.tail) {
-    //         break;
-    //     }
-
-    //     node = node->next;
-    // }
 }
 
 static void CgX86FuncDecl(FileInfo *info, FuncDecl *funcdecl) {
@@ -544,15 +517,7 @@ void CgX86File(FileInfo *info, File *file) {
         "\tlea\t\trcx, [ifmt]\n"
         "\tcall\tprintf\n"
         "\tadd\t\trsp, 40\n"
-        "\tret\n"
-        "\n"
-        "PrintChar:\n"
-        "\tsub\t\trsp, 40\n"
-        "\tmov\t\trdx, rcx\n"
-        "\tlea\t\trcx, [cfmt]\n"
-        "\tcall\tprintf\n"
-        "\tadd\t\trsp, 40\n"
-        "\tret",
+        "\tret\n",
         info->asmfile
     );
 
@@ -563,7 +528,7 @@ void CgX86File(FileInfo *info, File *file) {
         switch (decl->type) {
             case AST_FUNCDECL: {CgX86FuncDecl(info, (FuncDecl *) decl);} break;
             default: {
-                ThrowInternalError("CgX86File - ", GetAstTypeStr(decl->type));
+                ThrowInternalError("CgX86File - %s\n", GetAstTypeStr(decl->type));
             }
         }
     }

@@ -35,7 +35,7 @@ static void PrintFuncDecl(FuncDecl *funcdecl, int indent) {
 static void PrintBlock(Block *block, int indent) {
     PrintIndent(indent, "<Block>\n");
     for (int i = 0; i < block->stmts.count; ++i) {
-        // PrintAst((Ast *) ListGet(&block->stmts, i), indent + 4);
+        PrintAst((Ast *) ListGet(&block->stmts, i), indent + 4);
     }
 
     PrintIndent(indent, "<Block/>\n");
@@ -95,6 +95,13 @@ static void PrintLiteralIdentStr(Literal *literal, int indent) {
     );
 }
 
+static void PrintFuncCall(FuncCall *funccall, int indent) {
+    PrintIndent(indent,
+        "<FuncCall ident=\"%s\">\n",
+        funccall->ident
+    );
+}
+
 static void PrintAst(Ast *ast, int indent) {
     switch (ast->type) {
         case AST_FUNCDECL:      {PrintFuncDecl((FuncDecl *) ast, indent);} break;
@@ -104,8 +111,9 @@ static void PrintAst(Ast *ast, int indent) {
         case AST_BINARYOP:      {PrintBinaryOp((BinaryOp *) ast, indent);} break;
         case AST_LITERAL_IDENT: {PrintLiteralIdentStr((Literal *) ast, indent);} break;
         case AST_LITERAL_INT:   {PrintLiteralIdentInt((Literal *) ast, indent);} break;
+        case AST_FUNCCALL:      {PrintFuncCall((FuncCall *) ast, indent);} break;
         default: {
-            ThrowInternalError("not implemented '%s'\n", GetAstTypeStr(ast->type));
+            ThrowInternalError("PrintAst - %s\n", GetAstTypeStr(ast->type));
         }
     }
 }

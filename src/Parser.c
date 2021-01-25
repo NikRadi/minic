@@ -322,7 +322,6 @@ static Block *ParseBlock(Lexer *lexer) {
     ExpectAndRead(lexer, TOKEN_LEFT_CURLY_BRAC);
     Block *block = NEW(Block);
     block->info.type = AST_BLOCK;
-    // block->stmts = List2LNew();
     block->stmts = ListNew();
     while (lexer->token.type != TOKEN_RIGHT_CURLY_BRAC) {
         Ast *stmt = NULL;
@@ -363,7 +362,6 @@ static Block *ParseBlock(Lexer *lexer) {
         }
 
         ASSERT(stmt != NULL);
-        // List2LAdd(&block->stmts, stmt);
         ListAdd(&block->stmts, stmt);
     }
 
@@ -381,9 +379,9 @@ static FuncDecl *ParseFuncDecl(Lexer *lexer, DataType returntype) {
     funcdecl->ident = NULL;
     funcdecl->block = NULL;
     Expect(lexer, TOKEN_IDENT);
-
     funcdecl->ident = strdup(lexer->token.strvalue);
     ReadToken(lexer);
+
     ExpectAndRead(lexer, TOKEN_LEFT_PAREN);
     if (lexer->token.type != TOKEN_RIGHT_PAREN) {
         DataType datatypes[2] = {DATA_INT, DATA_CHAR};
