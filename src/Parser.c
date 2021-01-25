@@ -322,7 +322,8 @@ static Block *ParseBlock(Lexer *lexer) {
     ExpectAndRead(lexer, TOKEN_LEFT_CURLY_BRAC);
     Block *block = NEW(Block);
     block->info.type = AST_BLOCK;
-    block->stmts = List2LNew();
+    // block->stmts = List2LNew();
+    block->stmts = ListNew();
     while (lexer->token.type != TOKEN_RIGHT_CURLY_BRAC) {
         Ast *stmt = NULL;
         switch(lexer->token.type) {
@@ -362,7 +363,8 @@ static Block *ParseBlock(Lexer *lexer) {
         }
 
         ASSERT(stmt != NULL);
-        List2LAdd(&block->stmts, stmt);
+        // List2LAdd(&block->stmts, stmt);
+        ListAdd(&block->stmts, stmt);
     }
 
     ReadToken(lexer); // TOKEN_RIGHT_CURLY_BRAC

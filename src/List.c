@@ -4,8 +4,8 @@
 
 
 static void ReAlloc(List *list) {
-    void *new_data = malloc(sizeof(void *) * list->capacity);
-    memcpy(new_data, list->data, list->count);
+    void **new_data = (void **) malloc(sizeof(void *) * list->capacity);
+    memcpy(new_data, list->data, list->count * sizeof(void *));
     free(list->data);
     list->data = new_data;
 }

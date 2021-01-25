@@ -81,10 +81,6 @@ static void PrintUnaryOp(UnaryOp *unaryop, int indent) {
     PrintIndent(indent, "<UnaryOp/>\n");
 }
 
-static void PrintFuncCall(FuncCall *funccall, int indent) {
-    PrintIndent(indent, "<FuncCall...>\n");
-}
-
 static void PrintLiteralIdentInt(Literal *literal, int indent) {
     PrintIndent(indent,
         "<Literal intvalue=\"%d\"/>\n",
@@ -106,7 +102,6 @@ static void PrintAst(Ast *ast, int indent) {
         case AST_VARDECL:       {PrintVarDecl((VarDecl *) ast, indent);} break;
         case AST_UNARYOP:       {PrintUnaryOp((UnaryOp *) ast, indent);} break;
         case AST_BINARYOP:      {PrintBinaryOp((BinaryOp *) ast, indent);} break;
-        case AST_FUNCCALL:      {PrintFuncCall((FuncCall *) ast, indent);} break;
         case AST_LITERAL_IDENT: {PrintLiteralIdentStr((Literal *) ast, indent);} break;
         case AST_LITERAL_INT:   {PrintLiteralIdentInt((Literal *) ast, indent);} break;
         default: {

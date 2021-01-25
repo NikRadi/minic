@@ -2,7 +2,6 @@
 #define MINIC_ASTNODES_H
 #include "Common.h"
 #include "List.h"
-#include "List2Links.h"
 
 
 enum AstType {
@@ -71,7 +70,7 @@ struct VarDecl {
 
 struct Block {
     Ast info;
-    List2Links stmts;
+    List stmts;
     Scope scope;
 } typedef Block;
 

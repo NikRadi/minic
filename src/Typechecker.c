@@ -153,34 +153,53 @@ static void TypecheckFuncCall(FileInfo *info, FuncCall *funccall) {
 }
 
 static void TypecheckBlock(FileInfo *info, Block *block) {
-    Node2Links *node = block->stmts.head;
-    if (node == NULL) {
-        return;
-    }
-
-    while (TRUE) {
-        switch (node->item->type) {
-            case AST_VARDECL:    {TypecheckVarDecl(info, (VarDecl *) node->item, STOR_LOCAL);} break;
-            case AST_BINARYOP:   {TypecheckVarAssign(info, (BinaryOp *) node->item);} break;
-            case AST_RETURNSTMT: {TypecheckReturnStmt(info, (ReturnStmt *) node->item);} break;
-            case AST_IFSTMT:     {TypecheckIfStmt(info, (IfStmt *) node->item);} break;
-            case AST_WHILELOOP:  {TypecheckWhileLoop(info, (WhileLoop *) node->item);} break;
-            case AST_FORLOOP:    {TypecheckForLoop(info, (ForLoop *) node->item);} break;
-            case AST_FUNCCALL:   {TypecheckFuncCall(info, (FuncCall *) node->item);} break;
+    for (int i = 0; i < block->stmts.count; ++i) {
+        Ast *ast = (Ast *) ListGet(&block->stmts, i);
+        switch (ast->type) {
+            case AST_VARDECL:    {TypecheckVarDecl(info, (VarDecl *) ast, STOR_LOCAL);} break;
+            case AST_BINARYOP:   {TypecheckVarAssign(info, (BinaryOp *) ast);} break;
+            case AST_RETURNSTMT: {TypecheckReturnStmt(info, (ReturnStmt *) ast);} break;
+            case AST_IFSTMT:     {TypecheckIfStmt(info, (IfStmt *) ast);} break;
+            case AST_WHILELOOP:  {TypecheckWhileLoop(info, (WhileLoop *) ast);} break;
+            case AST_FORLOOP:    {TypecheckForLoop(info, (ForLoop *) ast);} break;
+            case AST_FUNCCALL:   {TypecheckFuncCall(info, (FuncCall *) ast);} break;
             default: {
                 ThrowInternalError(
                     "statement '%s' not implemented in Typechecker",
-                    GetAstTypeStr(node->item->type)
+                    GetAstTypeStr(ast->type)
                 );
             }
         }
-
-        if (node == block->stmts.tail) {
-            break;
-        }
-
-        node = node->next;
     }
+
+    // Node2Links *node = block->stmts.head;
+    // if (node == NULL) {
+    //     return;
+    // }
+
+    // while (TRUE) {
+    //     switch (node->item->type) {
+    //         case AST_VARDECL:    {TypecheckVarDecl(info, (VarDecl *) node->item, STOR_LOCAL);} break;
+    //         case AST_BINARYOP:   {TypecheckVarAssign(info, (BinaryOp *) node->item);} break;
+    //         case AST_RETURNSTMT: {TypecheckReturnStmt(info, (ReturnStmt *) node->item);} break;
+    //         case AST_IFSTMT:     {TypecheckIfStmt(info, (IfStmt *) node->item);} break;
+    //         case AST_WHILELOOP:  {TypecheckWhileLoop(info, (WhileLoop *) node->item);} break;
+    //         case AST_FORLOOP:    {TypecheckForLoop(info, (ForLoop *) node->item);} break;
+    //         case AST_FUNCCALL:   {TypecheckFuncCall(info, (FuncCall *) node->item);} break;
+    //         default: {
+    //             ThrowInternalError(
+    //                 "statement '%s' not implemented in Typechecker",
+    //                 GetAstTypeStr(node->item->type)
+    //             );
+    //         }
+    //     }
+
+    //     if (node == block->stmts.tail) {
+    //         break;
+    //     }
+
+    //     node = node->next;
+    // }
 }
 
 static void TypecheckFuncDecl(FileInfo *info, FuncDecl *funcdecl) {

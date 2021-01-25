@@ -442,32 +442,49 @@ static void CgX86FuncCall(FileInfo *info, FuncCall *funccall) {
 }
 
 static void CgX86Block(FileInfo *info, Block *block) {
-    Node2Links *node = block->stmts.head;
-    if (node == NULL) {
-        return;
-    }
-
-    while (TRUE) {
-        switch (node->item->type) {
-            case AST_VARDECL:    {CgX86VarDecl(info, (VarDecl *) node->item);} break;
-            case AST_BINARYOP:   {CgX86VarAssign(info, (BinaryOp *) node->item);} break;
-            case AST_RETURNSTMT: {CgX86ReturnStmt(info, (ReturnStmt *) node->item);} break;
-            case AST_IFSTMT:     {CgX86IfStmt(info, (IfStmt *) node->item);} break;
-            case AST_WHILELOOP:  {CgX86WhileLoop(info, (WhileLoop *) node->item);} break;
-            case AST_FUNCCALL:   {CgX86FuncCall(info, (FuncCall *) node->item);} break;
+    for (int i = 0; i < block->stmts.count; ++i) {
+        Ast *ast = (Ast *) ListGet(&block->stmts, i);
+        switch (ast->type) {
+            case AST_VARDECL:    {CgX86VarDecl(info, (VarDecl *) ast);} break;
+            case AST_BINARYOP:   {CgX86VarAssign(info, (BinaryOp *) ast);} break;
+            case AST_RETURNSTMT: {CgX86ReturnStmt(info, (ReturnStmt *) ast);} break;
+            case AST_IFSTMT:     {CgX86IfStmt(info, (IfStmt *) ast);} break;
+            case AST_WHILELOOP:  {CgX86WhileLoop(info, (WhileLoop *) ast);} break;
+            case AST_FUNCCALL:   {CgX86FuncCall(info, (FuncCall *) ast);} break;
             default: {
-                ThrowInternalError("CgX86Block - %s", GetAstTypeStr(node->item->type));
+                ThrowInternalError("CgX86Block - %s", GetAstTypeStr(ast->type));
             }
         }
 
-        // This statement fails TestCharOverflow for some reason
         FreeRegs();
-        if (node == block->stmts.tail) {
-            break;
-        }
-
-        node = node->next;
     }
+
+    // Node2Links *node = block->stmts.head;
+    // if (node == NULL) {
+    //     return;
+    // }
+
+    // while (TRUE) {
+    //     switch (node->item->type) {
+    //         case AST_VARDECL:    {CgX86VarDecl(info, (VarDecl *) node->item);} break;
+    //         case AST_BINARYOP:   {CgX86VarAssign(info, (BinaryOp *) node->item);} break;
+    //         case AST_RETURNSTMT: {CgX86ReturnStmt(info, (ReturnStmt *) node->item);} break;
+    //         case AST_IFSTMT:     {CgX86IfStmt(info, (IfStmt *) node->item);} break;
+    //         case AST_WHILELOOP:  {CgX86WhileLoop(info, (WhileLoop *) node->item);} break;
+    //         case AST_FUNCCALL:   {CgX86FuncCall(info, (FuncCall *) node->item);} break;
+    //         default: {
+    //             ThrowInternalError("CgX86Block - %s", GetAstTypeStr(node->item->type));
+    //         }
+    //     }
+
+    //     // This statement fails TestCharOverflow for some reason
+    //     FreeRegs();
+    //     if (node == block->stmts.tail) {
+    //         break;
+    //     }
+
+    //     node = node->next;
+    // }
 }
 
 static void CgX86FuncDecl(FileInfo *info, FuncDecl *funcdecl) {
