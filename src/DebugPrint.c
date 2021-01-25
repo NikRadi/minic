@@ -140,7 +140,7 @@ char *GetAstTypeStr(AstType type) {
 
 char *GetOperatorTypeStr(OperatorType type) {
     switch (type) {
-#define OP(name) case name: return #name;
+#define OP(name) case OP_##name: return #name;
 #include "OperatorTypes.def"
         default: {
             return NULL;

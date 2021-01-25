@@ -48,11 +48,11 @@ static void TypecheckVarDecl(FileInfo *info, VarDecl *vardecl, StorageType stora
 static void TypecheckVarAssign(FileInfo *info, BinaryOp *varassign) {
     TypecheckExpr(info, varassign->lhs);
     TypecheckExpr(info, varassign->rhs);
-    if (ASOP_ADD_EQUAL <= varassign->optype && varassign->optype <= ASOP_DIV_EQUAL) {
-        OperatorType optypes[4] = {BIOP_ADD, BIOP_SUB, BIOP_MUL, BIOP_DIV};
+    if (OP_ASOP_ADD_EQUAL <= varassign->optype && varassign->optype <= OP_ASOP_DIV_EQUAL) {
+        OperatorType optypes[4] = {OP_BIN_ADD, OP_BIN_SUB, OP_BIN_MUL, OP_BIN_DIV};
         BinaryOp *binaryop = NEW(BinaryOp);
         binaryop->info.type = AST_BINARYOP;
-        binaryop->optype = optypes[varassign->optype - ASOP_ADD_EQUAL];
+        binaryop->optype = optypes[varassign->optype - OP_ASOP_ADD_EQUAL];
         binaryop->rhs = varassign->rhs;
 
         Literal *literal = NEW(Literal);
@@ -60,7 +60,7 @@ static void TypecheckVarAssign(FileInfo *info, BinaryOp *varassign) {
         literal->strvalue = ((Literal *) varassign->lhs)->strvalue;
         binaryop->lhs = (Ast *) literal;
 
-        varassign->optype = ASOP_EQUAL;
+        varassign->optype = OP_ASOP_EQUAL;
         varassign->rhs = (Ast *) binaryop;
     }
 }

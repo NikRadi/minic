@@ -2,24 +2,27 @@
     #define OP(name)
 #endif
 
-// Parser.c::op_precedences depends on the order of these
-OP(OP_INVALID)
-OP(BIOP_AND)
-OP(BIOP_OR)
-OP(BIOP_ISEQUAL)
-OP(BIOP_NOTEQUAL)
-OP(BIOP_LESS)
-OP(BIOP_LESS_EQUAL)
-OP(BIOP_GREATER)
-OP(BIOP_GREATER_EQUAL)
-OP(BIOP_ADD)
-OP(BIOP_SUB)
-OP(BIOP_MUL)
-OP(BIOP_DIV)
+// Parser.c::op_precedences and CodegenX64.c depends on the order of these
+// Highest precedence to lowest precedence
+OP(INVALID)
+OP(BIN_MUL)
+OP(BIN_DIV)
+OP(BIN_ADD)
+OP(BIN_SUB)
+OP(BIN_LESS)
+OP(BIN_LESS_EQUAL)
+OP(BIN_GREATER)
+OP(BIN_GREATER_EQUAL)
+OP(BIN_ISEQUAL)
+OP(BIN_NOTEQUAL)
+OP(BIN_AND)
+OP(BIN_OR)
 
+// Operators not included in Parser.c::op_precedences or CodegenX64.c
+// Highest precedence to lowest precedence
 OP(BIOP_ARR_IDX)
-OP(UNOP_DEREF)
-OP(UNOP_ADDRESS)
+OP(UN_DEREF)
+OP(UN_ADDR)
 OP(UNOP_NOT)
 OP(ASOP_EQUAL)
 OP(ASOP_ADD_EQUAL)

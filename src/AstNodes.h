@@ -10,7 +10,7 @@ enum AstType {
 } typedef AstType;
 
 enum OperatorType {
-#define OP(name) name,
+#define OP(name) OP_##name,
 #include "OperatorTypes.def"
 } typedef OperatorType;
 

@@ -14,7 +14,8 @@ static char *regs64[] = {"r8", "r9", "r10", "r11"};
 static char *regs32[] = {"r8d", "r9d", "r10d", "r11d"};
 static char *regs8[] = {"r8b", "r9b", "r10b", "r11b"};
 static char *compares_set[] = {"sete", "setne", "setl", "setle", "setg", "setge"};
-static char *compares_jmp_inverse[] = {"jne", "je", "jge", "jg", "jle", "je"};
+// static char *compares_jmp_inverse[] = {"jne", "je", "jge", "jg", "jle", "jl"};
+static char *compares_jmp_inverse[] = {"jge", "jg", "jle", "jl", "jne", "je"};
 static int num_labels = 0;
 
 
@@ -115,7 +116,7 @@ static int CgX86LiteralDeref(FileInfo *info, Literal *literal) {
 
 static int CgX86UnaryOp(FileInfo *info, UnaryOp *unaryop) {
     switch (unaryop->optype) {
-        case UNOP_ADDRESS: {
+        case OP_UN_ADDR: {
             ASSERT(unaryop->expr->type == AST_LITERAL_IDENT);
             int regid = AllocRegister();
             Literal *literal = (Literal *) unaryop->expr;
@@ -127,7 +128,7 @@ static int CgX86UnaryOp(FileInfo *info, UnaryOp *unaryop) {
 
             return regid;
         };
-        case UNOP_DEREF: {
+        case OP_UN_DEREF: {
             int regid = CgX86ExprSet(info, unaryop->expr);
             fprintf(info->asmfile,
                 "\tmov\t\t%s, [%s]\n",
@@ -136,7 +137,7 @@ static int CgX86UnaryOp(FileInfo *info, UnaryOp *unaryop) {
 
             return regid;
         };
-        case UNOP_NOT: {
+        case OP_UNOP_NOT: {
             int regid = CgX86ExprSet(info, unaryop->expr);
             fprintf(info->asmfile,
                 "\ttest\t%s, %s\n"
@@ -155,7 +156,7 @@ static int CgX86UnaryOp(FileInfo *info, UnaryOp *unaryop) {
 }
 
 static int CgX86BinaryOpSet(FileInfo *info, BinaryOp *binaryop) {
-    if (binaryop->optype == BIOP_ARR_IDX) {
+    if (binaryop->optype == OP_BIOP_ARR_IDX) {
         ASSERT(binaryop->lhs->type == AST_LITERAL_IDENT);
         Literal *literal = (Literal *) binaryop->lhs;
         VarData vardata = GetVarData(info, literal->strvalue);
@@ -173,26 +174,26 @@ static int CgX86BinaryOpSet(FileInfo *info, BinaryOp *binaryop) {
     int regid_lhs = CgX86ExprSet(info, binaryop->lhs);
     int regid_rhs = CgX86ExprSet(info, binaryop->rhs);
     switch (binaryop->optype) {
-        case BIOP_AND:
-        case BIOP_OR: {
+        case OP_BIN_AND:
+        case OP_BIN_OR: {
             char *compares[2] = {"and", "or"};
             fprintf(info->asmfile,
                 "\t%s\t\t%s, %s\n",
-                compares[binaryop->optype - BIOP_AND],
+                compares[binaryop->optype - OP_BIN_AND],
                 regs64[regid_lhs], regs64[regid_rhs]
             );
 
             FreeReg(regid_rhs);
             return regid_lhs;
         } break;
-        case BIOP_ISEQUAL:
-        case BIOP_NOTEQUAL:
-        case BIOP_LESS:
-        case BIOP_LESS_EQUAL:
-        case BIOP_GREATER:
-        case BIOP_GREATER_EQUAL: {
-            int compares_idx = binaryop->optype - BIOP_ISEQUAL;
-            ASSERT(0 <= compares_idx  && compares_idx <= 6);
+        case OP_BIN_ISEQUAL:
+        case OP_BIN_NOTEQUAL:
+        case OP_BIN_LESS:
+        case OP_BIN_LESS_EQUAL:
+        case OP_BIN_GREATER:
+        case OP_BIN_GREATER_EQUAL: {
+            int compares_idx = binaryop->optype - OP_BIN_ISEQUAL;
+            ASSERT(0 <= compares_idx  && compares_idx <= 5);
             fprintf(info->asmfile,
                 "\tcmp\t\t%s, %s\n"
                 "\t%s\t%s\n"
@@ -205,13 +206,28 @@ static int CgX86BinaryOpSet(FileInfo *info, BinaryOp *binaryop) {
             FreeReg(regid_rhs);
             return regid_lhs;
         }
-        case BIOP_ADD:
-        case BIOP_SUB:
-        case BIOP_MUL: {
-            char *optypes[3] = {"add\t", "sub\t", "imul"};
+        case OP_BIN_ADD: {
             fprintf(info->asmfile,
-                "\t%s\t%s, %s\n",
-                optypes[binaryop->optype - BIOP_ADD], regs64[regid_lhs], regs64[regid_rhs]
+                "\tadd\t\t%s, %s\n",
+                regs64[regid_lhs], regs64[regid_rhs]
+            );
+
+            FreeReg(regid_rhs);
+            return regid_lhs;
+        }
+        case OP_BIN_SUB: {
+            fprintf(info->asmfile,
+                "\tsub\t\t%s, %s\n",
+                regs64[regid_lhs], regs64[regid_rhs]
+            );
+
+            FreeReg(regid_rhs);
+            return regid_lhs;
+        }
+        case OP_BIN_MUL: {
+            fprintf(info->asmfile,
+                "\timul\t%s, %s\n",
+                regs64[regid_lhs], regs64[regid_rhs]
             );
 
             FreeReg(regid_rhs);
@@ -228,14 +244,14 @@ static void CgX86BinaryOpJmp(FileInfo *info, BinaryOp *binaryop, int label) {
     int regid_lhs = CgX86ExprSet(info, binaryop->lhs);
     int regid_rhs = CgX86ExprSet(info, binaryop->rhs);
     switch (binaryop->optype) {
-        case BIOP_ISEQUAL:
-        case BIOP_NOTEQUAL:
-        case BIOP_LESS:
-        case BIOP_LESS_EQUAL:
-        case BIOP_GREATER:
-        case BIOP_GREATER_EQUAL: {
-            int compares_idx = binaryop->optype - BIOP_ISEQUAL;
-            ASSERT(0 <= compares_idx  && compares_idx <= 6);
+        case OP_BIN_ISEQUAL:
+        case OP_BIN_NOTEQUAL:
+        case OP_BIN_LESS:
+        case OP_BIN_LESS_EQUAL:
+        case OP_BIN_GREATER:
+        case OP_BIN_GREATER_EQUAL: {
+            int compares_idx = binaryop->optype - OP_BIN_LESS;
+            ASSERT(0 <= compares_idx  && compares_idx <= 5);
             fprintf(info->asmfile,
                 "\tcmp\t\t%s, %s\n"
                 "\t%s\t\tL%d\n",
@@ -321,7 +337,7 @@ static void CgX86VarAssign(FileInfo *info, BinaryOp *varassign) {
         } break;
         case AST_UNARYOP: {
             UnaryOp *unaryop = (UnaryOp *) varassign->lhs;
-            ASSERT(unaryop->optype == UNOP_DEREF);
+            ASSERT(unaryop->optype == OP_UN_DEREF);
             int regid2;
             if (unaryop->expr->type == AST_LITERAL_IDENT) {
                 Literal *literal = (Literal *) unaryop->expr;
@@ -346,7 +362,7 @@ static void CgX86VarAssign(FileInfo *info, BinaryOp *varassign) {
         } break;
         case AST_BINARYOP: {
             BinaryOp *binaryop = (BinaryOp *) varassign->lhs;
-            ASSERT(binaryop->optype == BIOP_ARR_IDX);
+            ASSERT(binaryop->optype == OP_BIOP_ARR_IDX);
             Literal *literal = (Literal *) binaryop->lhs;
             VarData vardata = GetVarData(info, literal->strvalue);
             int regid_rhs = CgX86ExprSet(info, binaryop->rhs);

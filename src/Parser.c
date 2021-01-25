@@ -10,20 +10,22 @@ static Ast *ParseParenthesizedExpr(Lexer *lexer);
 
 
 static int op_precedences[] = {
-    -1,     // OP_INVALID
-    10, 10, // &&, ||
-    20, 20, // ==, !=
-    30, 30, //  <, <=
-    30, 30, //  >, >=
-    40, 40, //  +,  -
-    50, 50, //  *,  /   (BIOP_ADD, BIOP_DIV)
+    // do not change the order of these, OperatorTypes.def depends on it
+    -1,     // not an operator
+    80, 80, //  *,  /
+    70, 70, //  +,  -
+    60, 60, //  <, <=
+    60, 60, //  >, >=
+    50, 50, // ==, !=
+    40,     // &&
+    30,     // ||
 };
 
 
 static void Expect(Lexer *lexer, TokenType type) {
     if (lexer->token.type != type) {
         ThrowErrorAt(lexer,
-            "expected '%s' but got '%s'",
+            "expected %s but got %s",
             GetTokenTypeStr(type),
             GetTokenTypeStr(lexer->token.type)
         );
@@ -37,29 +39,29 @@ static void ExpectAndRead(Lexer *lexer, TokenType type) {
 
 static OperatorType ToOperatorType(TokenType type) {
     switch (type) {
-        case TOKEN_TWO_AMPERSAND:       return BIOP_AND;
-        case TOKEN_TWO_VERT_BAR:        return BIOP_OR;
-        case TOKEN_TWO_EQUAL:           return BIOP_ISEQUAL;
-        case TOKEN_EXMARK_EQUAL:        return BIOP_NOTEQUAL;
-        case TOKEN_LESS_THAN:           return BIOP_LESS;
-        case TOKEN_LESS_THAN_EQUAL:     return BIOP_LESS_EQUAL;
-        case TOKEN_GREATER_THAN:        return BIOP_GREATER;
-        case TOKEN_GREATER_THAN_EQUAL:  return BIOP_GREATER_EQUAL;
-        case TOKEN_PLUS:                return BIOP_ADD;
-        case TOKEN_MINUS:               return BIOP_SUB;
-        case TOKEN_STAR:                return BIOP_MUL;
-        case TOKEN_SLASH:               return BIOP_DIV;
+        case TOKEN_STAR:                return OP_BIN_MUL;
+        case TOKEN_SLASH:               return OP_BIN_DIV;
+        case TOKEN_PLUS:                return OP_BIN_ADD;
+        case TOKEN_MINUS:               return OP_BIN_SUB;
+        case TOKEN_LESS_THAN:           return OP_BIN_LESS;
+        case TOKEN_LESS_THAN_EQUAL:     return OP_BIN_LESS_EQUAL;
+        case TOKEN_GREATER_THAN:        return OP_BIN_GREATER;
+        case TOKEN_GREATER_THAN_EQUAL:  return OP_BIN_GREATER_EQUAL;
+        case TOKEN_TWO_EQUAL:           return OP_BIN_ISEQUAL;
+        case TOKEN_EXMARK_EQUAL:        return OP_BIN_NOTEQUAL;
+        case TOKEN_TWO_AMPERSAND:       return OP_BIN_AND;
+        case TOKEN_TWO_VERT_BAR:        return OP_BIN_OR;
         default:                        return 0;
     }
 }
 
 static OperatorType ToAssignmentOperatorType(TokenType type) {
     switch (type) {
-        case TOKEN_EQUAL:       return ASOP_EQUAL;
-        case TOKEN_PLUS_EQUAL:  return ASOP_ADD_EQUAL;
-        case TOKEN_MINUS_EQUAL: return ASOP_SUB_EQUAL;
-        case TOKEN_STAR_EQUAL:  return ASOP_MUL_EQUAL;
-        case TOKEN_SLASH_EQUAL: return ASOP_DIV_EQUAL;
+        case TOKEN_EQUAL:       return OP_ASOP_EQUAL;
+        case TOKEN_PLUS_EQUAL:  return OP_ASOP_ADD_EQUAL;
+        case TOKEN_MINUS_EQUAL: return OP_ASOP_SUB_EQUAL;
+        case TOKEN_STAR_EQUAL:  return OP_ASOP_MUL_EQUAL;
+        case TOKEN_SLASH_EQUAL: return OP_ASOP_DIV_EQUAL;
         default: {
             ThrowInternalError("unexpected assignment operator '%s'\n", GetTokenTypeStr(type));
             return 0; // To get rid of warning C4715
@@ -114,7 +116,7 @@ static Ast *ParseLiteral(Lexer *lexer) {
             ReadToken(lexer); // TOKEN_IDENT
             if (lexer->token.type == TOKEN_LEFT_SQUARE_BRAC) {
                 ReadToken(lexer);
-                BinaryOp *binaryop = NewBinaryOp(BIOP_ARR_IDX, (Ast *) literal, ParseExpr(lexer));
+                BinaryOp *binaryop = NewBinaryOp(OP_BIOP_ARR_IDX, (Ast *) literal, ParseExpr(lexer));
                 ExpectAndRead(lexer, TOKEN_RIGHT_SQUARE_BRAC);
                 return (Ast *) binaryop;
             }
@@ -123,15 +125,15 @@ static Ast *ParseLiteral(Lexer *lexer) {
         }
         case TOKEN_AMPERSAND: {
             ReadToken(lexer);
-            return (Ast *) NewUnaryOp(UNOP_ADDRESS, ParseLiteral(lexer));
+            return (Ast *) NewUnaryOp(OP_UN_ADDR, ParseLiteral(lexer));
         }
         case TOKEN_STAR: {
             ReadToken(lexer);
-            return (Ast *) NewUnaryOp(UNOP_DEREF, ParseLiteral(lexer));
+            return (Ast *) NewUnaryOp(OP_UN_DEREF, ParseLiteral(lexer));
         }
         case TOKEN_EXMARK: {
             ReadToken(lexer);
-            return (Ast *) NewUnaryOp(UNOP_NOT, ParseLiteral(lexer));
+            return (Ast *) NewUnaryOp(OP_UNOP_NOT, ParseLiteral(lexer));
         }
         case TOKEN_LEFT_PAREN: {
             return ParseParenthesizedExpr(lexer);
@@ -326,7 +328,6 @@ static Block *ParseBlock(Lexer *lexer) {
     while (lexer->token.type != TOKEN_RIGHT_CURLY_BRAC) {
         Ast *stmt = NULL;
         switch(lexer->token.type) {
-            case TOKEN_STRUCT: {stmt = (Ast *) ParseVarDecl(lexer, DATA_STRUCT); ExpectAndRead(lexer, TOKEN_SEMICOLON);} break;
             case TOKEN_CHAR:   {stmt = (Ast *) ParseVarDecl(lexer, DATA_CHAR); ExpectAndRead(lexer, TOKEN_SEMICOLON);} break;
             case TOKEN_INT:    {stmt = (Ast *) ParseVarDecl(lexer, DATA_INT); ExpectAndRead(lexer, TOKEN_SEMICOLON);} break;
             case TOKEN_STAR:   {stmt = (Ast *) ParseVarAssign(lexer); ExpectAndRead(lexer, TOKEN_SEMICOLON);} break;
