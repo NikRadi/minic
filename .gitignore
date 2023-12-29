@@ -1,0 +1,10 @@
+# Files
+*.asm
+*.exe
+*.obj
+setup_msvc.bat
+
+# Folders
+.vscode/
+bin/
+obj/
