@@ -7,15 +7,18 @@ struct Operand;
 
 enum AstNodeType {
     AST_BINARY_OPERATOR,
-    AST_COMPOUND_STATEMENT,
-    AST_FOR_LOOP,
     AST_FUNCTION_DEFINITION,
-    AST_IF_STATEMENT,
     AST_LITERAL_NUMBER,
-    AST_RETURN_STATEMENT,
     AST_UNARY_OPERATOR,
     AST_VARIABLE,
-    AST_WHILE_LOOP,
+
+    // Statements
+    AST_COMPOUND_STATEMENT,
+    AST_FOR_STATEMENT,
+    AST_IF_STATEMENT,
+    AST_NULL_STATEMENT,
+    AST_RETURN_STATEMENT,
+    AST_WHILE_STATEMENT,
 };
 
 enum OperatorType {
@@ -61,31 +64,11 @@ struct BinaryOp {
     struct AstNode *rhs;
 };
 
-struct CompoundStatement {
-    struct AstNode node;
-    struct List statements;
-};
-
 struct FunctionDefinition {
     struct AstNode node;
     struct List statements;
     struct List variables;
     int stack_size;
-};
-
-struct ForLoop {
-    struct AstNode node;
-    struct AstNode *init_statement;
-    struct AstNode *condition;
-    struct AstNode *update_expr;
-    struct AstNode *statement;
-};
-
-struct IfStatement {
-    struct AstNode node;
-    struct AstNode *condition;
-    struct AstNode *statement;
-    struct AstNode *else_block;
 };
 
 struct Literal {
@@ -94,11 +77,6 @@ struct Literal {
     union {
         int int_value;
     };
-};
-
-struct ReturnStatement {
-    struct AstNode node;
-    struct AstNode *expr;
 };
 
 struct UnaryOp {
@@ -115,7 +93,40 @@ struct Variable {
     int rbp_offset;
 };
 
-struct WhileLoop {
+
+//
+// ===
+// == Statements
+// ===
+//
+
+
+struct CompoundStatement {
+    struct AstNode node;
+    struct List statements;
+};
+
+struct ForStatement {
+    struct AstNode node;
+    struct AstNode *init_expr;
+    struct AstNode *cond_expr;
+    struct AstNode *loop_expr;
+    struct AstNode *statement;
+};
+
+struct IfStatement {
+    struct AstNode node;
+    struct AstNode *condition;
+    struct AstNode *statement;
+    struct AstNode *else_branch;
+};
+
+struct ReturnStatement {
+    struct AstNode node;
+    struct AstNode *expr;
+};
+
+struct WhileStatement {
     struct AstNode node;
     struct AstNode *condition;
     struct AstNode *statement;
@@ -134,6 +145,14 @@ struct BinaryOp *NewBinarySubOp(struct AstNode *lhs, struct AstNode *rhs);
 struct UnaryOp *NewUnaryAddressOfOp(struct AstNode *expr);
 
 struct UnaryOp *NewUnaryOp(enum OperatorType operator_type, struct AstNode *expr);
+
+struct CompoundStatement *NewCompoundStatement(struct List statements);
+struct ForStatement *NewForStatement(struct AstNode *init_expr, struct AstNode *cond_expr, struct AstNode *loop_expr, struct AstNode *statement);
+struct IfStatement *NewIfStatement(struct AstNode *condition, struct AstNode *statement, struct AstNode *else_branch);
+struct Literal *NewNumberLiteral(int value);
+struct AstNode *NewNullStatement();
+struct ReturnStatement *NewReturnStatement(struct AstNode *expr);
+struct WhileStatement *NewWhileStatement(struct AstNode *condition, struct AstNode *statement);
 
 void Print(struct AstNode *node);
 

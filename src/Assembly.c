@@ -43,7 +43,7 @@ void Mov(char *destination, char *source) {
     fprintf(f, "  mov %s, %s\n", destination, source);
 }
 
-void MovImmediate(char *destination, int value) {
+void MovImm(char *destination, int value) {
     fprintf(f, "  mov %s, %d\n", destination, value);
 }
 

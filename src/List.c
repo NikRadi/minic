@@ -13,22 +13,22 @@ static void Reallocate(struct List *l) {
 
 //
 // ===
-// == Functions defined in Parser.h
+// == Functions defined in List.h
 // ===
 //
 
 
-void List_Add(struct List *l, void *item) {
+void List_Add(struct List *l, void *element) {
     if (l->count == l->capacity) {
         l->capacity <<= 2;
         Reallocate(l);
     }
 
-    l->data[l->count] = item;
+    l->data[l->count] = element;
     l->count += 1;
 }
 
-void *List_Find(struct List *l, void *element, bool (*AreEquals)(void *, void *)) {
+void *List_Find(struct List *l, void *element, ListElementsEqualityFunction AreEquals) {
     for (int i = 0; i < l->count; ++i) {
         void *e = List_Get(l, i);
         if (AreEquals(element, e)) {
@@ -55,4 +55,3 @@ void List_Init(struct List *l) {
     l->count = 0;
     l->data = malloc(sizeof(void *) * l->capacity);
 }
-

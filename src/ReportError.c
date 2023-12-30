@@ -16,7 +16,7 @@ void ReportError(char *code, char *location, char *format, va_list args) {
 
 //
 // ===
-// == Functions defined in CodeGeneratorX86.h
+// == Functions defined in ReportError.h
 // ===
 //
 

@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+typedef bool (*IsAllowedInSequenceFunction)(char *);
+
 static bool IsAlphabetic(char c);
 static bool IsDigit(char c);
 static char PeekChar(struct Lexer *l);
@@ -73,7 +75,7 @@ static char PeekChar(struct Lexer *l) {
     return l->code[l->code_index];
 }
 
-static void ReadSequence(struct Lexer *l, char *buffer, bool (*IsAllowed)(char *)) {
+static void ReadSequence(struct Lexer *l, char *buffer, IsAllowedInSequenceFunction IsAllowed) {
     int length = 0;
     while (NumCharsLeft(l) > 0) {
         char *c = l->code + l->code_index;

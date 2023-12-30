@@ -11,8 +11,8 @@
 static struct CompoundStatement *ParseCompoundStatement();
 static struct AstNode *ParseStatement();
 
-static struct Lexer *l;
 static struct FunctionDefinition *current_function;
+static struct Lexer *l;
 
 static void ExpectAndEat(enum TokenType type) {
     struct Token token = Lexer_PeekToken(l);
@@ -95,12 +95,7 @@ static InfixParseFunction INFIX_PARSE_FUNCTIONS[TOKEN_COUNT] = {
 static struct AstNode *ParseLiteralNumberPrefix() {
     struct Token token = Lexer_PeekToken(l);
     Lexer_EatToken(l);
-
-    struct Literal *literal = NEW_TYPE(Literal);
-    literal->node.type = AST_LITERAL_NUMBER;
-    literal->int_value = token.int_value;
-    literal->operand.type = OPERAND_INTEGER;
-    return (struct AstNode *) literal;
+    return (struct AstNode *) NewNumberLiteral(token.int_value);
 }
 
 static struct AstNode *ParseDereferencePrefix() {
@@ -285,117 +280,109 @@ static struct AstNode *ParseExpression() {
     return ParseExpression2(0);
 }
 
-static struct IfStatement *ParseIfStatement() {
-    ExpectAndEat(TOKEN_KEYWORD_IF);
-    struct IfStatement *if_statement = NEW_TYPE(IfStatement);
-    if_statement->node.type = AST_IF_STATEMENT;
 
-    ExpectAndEat(TOKEN_LEFT_ROUND_BRACKET);
-    if_statement->condition = ParseExpression();
-    ExpectAndEat(TOKEN_RIGHT_ROUND_BRACKET);
+//
+// ===
+// == Parse statements
+// ===
+//
 
-    if_statement->statement = ParseStatement();
-    if (Lexer_PeekToken(l).type == TOKEN_KEYWORD_ELSE) {
-        Lexer_EatToken(l);
-        if_statement->else_block = ParseStatement();
-    }
-    else {
-        if_statement->else_block = NULL;
-    }
-
-    return if_statement;
-}
 
 static struct CompoundStatement *ParseCompoundStatement() {
     ExpectAndEat(TOKEN_LEFT_CURLY_BRACKET);
-    struct CompoundStatement *compound_statement = NEW_TYPE(CompoundStatement);
-    compound_statement->node.type = AST_COMPOUND_STATEMENT,
-    List_Init(&compound_statement->statements);
+    struct List statements;
+    List_Init(&statements);
     while (Lexer_PeekToken(l).type != TOKEN_RIGHT_CURLY_BRACKET) {
         struct AstNode *statement = ParseStatement();
-        List_Add(&compound_statement->statements, statement);
+        List_Add(&statements, statement);
     }
 
     Lexer_EatToken(l); // TOKEN_RIGHT_CURLY_BRACKET
-    return compound_statement;
+    return NewCompoundStatement(statements);
+}
+
+static struct AstNode *ParseExpressionStatement() {
+    struct AstNode *expression = ParseExpression();
+    ExpectAndEat(TOKEN_SEMICOLON);
+    return expression;
+}
+
+static struct ForStatement *ParseForStatement() {
+    ExpectAndEat(TOKEN_KEYWORD_FOR);
+    ExpectAndEat(TOKEN_LEFT_ROUND_BRACKET);
+    struct AstNode *init_expr = NULL;
+    if (Lexer_PeekToken(l).type != TOKEN_SEMICOLON) {
+        init_expr = ParseExpression();
+    }
+
+    ExpectAndEat(TOKEN_SEMICOLON);
+    struct AstNode *cond_expr = NULL;
+    if (Lexer_PeekToken(l).type != TOKEN_SEMICOLON) {
+        cond_expr = ParseExpression();
+    }
+
+    ExpectAndEat(TOKEN_SEMICOLON);
+    struct AstNode *loop_expr = NULL;
+    if (Lexer_PeekToken(l).type != TOKEN_RIGHT_ROUND_BRACKET) {
+        loop_expr = ParseExpression();
+    }
+
+    ExpectAndEat(TOKEN_RIGHT_ROUND_BRACKET);
+    struct AstNode *statement = ParseStatement();
+    return NewForStatement(init_expr, cond_expr, loop_expr, statement);
+}
+
+static struct AstNode *ParseNullStatement() {
+    ExpectAndEat(TOKEN_SEMICOLON);
+    return NewNullStatement();
+}
+
+static struct IfStatement *ParseIfStatement() {
+    ExpectAndEat(TOKEN_KEYWORD_IF);
+    ExpectAndEat(TOKEN_LEFT_ROUND_BRACKET);
+    struct AstNode *condition = ParseExpression();
+    ExpectAndEat(TOKEN_RIGHT_ROUND_BRACKET);
+
+    struct AstNode *statement = ParseStatement();
+    struct AstNode *else_branch = NULL;
+    if (Lexer_PeekToken(l).type == TOKEN_KEYWORD_ELSE) {
+        Lexer_EatToken(l);
+        else_branch = ParseStatement();
+    }
+
+    return NewIfStatement(condition, statement, else_branch);
 }
 
 static struct ReturnStatement *ParseReturnStatement() {
     ExpectAndEat(TOKEN_KEYWORD_RETURN);
-    struct ReturnStatement *return_statement = NEW_TYPE(ReturnStatement);
-    return_statement->node.type = AST_RETURN_STATEMENT;
-    return_statement->expr = ParseExpression();
+    struct AstNode *expr = NULL;
+    if (Lexer_PeekToken(l).type != TOKEN_SEMICOLON) {
+        expr = ParseExpression();
+    }
+
     ExpectAndEat(TOKEN_SEMICOLON);
-    return return_statement;
+    return NewReturnStatement(expr);
 }
 
-static struct ForLoop *ParseForLoop() {
-    ExpectAndEat(TOKEN_KEYWORD_FOR);
-    struct ForLoop *for_loop = NEW_TYPE(ForLoop);
-    for_loop->node.type = AST_FOR_LOOP;
-
-    ExpectAndEat(TOKEN_LEFT_ROUND_BRACKET);
-    if (Lexer_PeekToken(l).type != TOKEN_SEMICOLON) {
-        for_loop->init_statement = ParseExpression();
-    }
-    else {
-        for_loop->init_statement = NULL;
-    }
-
-    ExpectAndEat(TOKEN_SEMICOLON);
-    if (Lexer_PeekToken(l).type != TOKEN_SEMICOLON) {
-        for_loop->condition = ParseExpression();
-    }
-    else {
-        for_loop->condition = NULL;
-    }
-
-    ExpectAndEat(TOKEN_SEMICOLON);
-    if (Lexer_PeekToken(l).type != TOKEN_RIGHT_ROUND_BRACKET) {
-        for_loop->update_expr = ParseExpression();
-    }
-    else {
-        for_loop->update_expr = NULL;
-    }
-
-    ExpectAndEat(TOKEN_RIGHT_ROUND_BRACKET);
-
-    for_loop->statement = ParseStatement();
-    return for_loop;
-}
-
-static struct WhileLoop *ParseWhileLoop() {
+static struct WhileStatement *ParseWhileStatement() {
     ExpectAndEat(TOKEN_KEYWORD_WHILE);
-    struct WhileLoop *while_loop = NEW_TYPE(WhileLoop);
-    while_loop->node.type = AST_WHILE_LOOP;
-
     ExpectAndEat(TOKEN_LEFT_ROUND_BRACKET);
-    while_loop->condition = ParseExpression();
+    struct AstNode *condition = ParseExpression();
     ExpectAndEat(TOKEN_RIGHT_ROUND_BRACKET);
-    while_loop->statement = ParseStatement();
-    return while_loop;
+    struct AstNode *statement = ParseStatement();
+    return NewWhileStatement(condition, statement);
 }
 
 static struct AstNode *ParseStatement() {
     struct Token token = Lexer_PeekToken(l);
     switch (token.type) {
-        case TOKEN_KEYWORD_FOR:         return (struct AstNode *) ParseForLoop();
-        case TOKEN_KEYWORD_WHILE:       return (struct AstNode *) ParseWhileLoop();
+        case TOKEN_SEMICOLON:           return                    ParseNullStatement();
+        case TOKEN_LEFT_CURLY_BRACKET:  return (struct AstNode *) ParseCompoundStatement();
+        case TOKEN_KEYWORD_FOR:         return (struct AstNode *) ParseForStatement();
         case TOKEN_KEYWORD_IF:          return (struct AstNode *) ParseIfStatement();
         case TOKEN_KEYWORD_RETURN:      return (struct AstNode *) ParseReturnStatement();
-        case TOKEN_LEFT_CURLY_BRACKET:  return (struct AstNode *) ParseCompoundStatement();
-        case TOKEN_SEMICOLON: {
-            Lexer_EatToken(l);
-            struct CompoundStatement *compound_statement = NEW_TYPE(CompoundStatement);
-            compound_statement->node.type = AST_COMPOUND_STATEMENT;
-            List_Init(&compound_statement->statements);
-            return (struct AstNode *) compound_statement;
-        } break;
-        default: {
-            struct AstNode *expr = ParseExpression();
-            ExpectAndEat(TOKEN_SEMICOLON);
-            return expr;
-        } break;
+        case TOKEN_KEYWORD_WHILE:       return (struct AstNode *) ParseWhileStatement();
+        default:                        return                    ParseExpressionStatement();
     }
 }
 
@@ -419,7 +406,7 @@ struct FunctionDefinition *Parser_MakeAst(struct Lexer *lexer) {
     List_Init(&function->statements);
     List_Init(&function->variables);
     while (Lexer_PeekToken(l).type != TOKEN_END_OF_FILE) {
-        struct AstNode *statement = (struct AstNode *) ParseStatement();
+        struct AstNode *statement = ParseStatement();
         List_Add(&function->statements, statement);
     }
 

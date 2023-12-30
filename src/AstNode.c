@@ -5,6 +5,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define NEW_TYPE(type) ((struct type *) malloc(sizeof(struct type)))
+
+enum PrimitiveSize {
+    PRIMITIVE_SIZE_INT = 8,
+};
 
 static enum OperandType OperandTypeOf(struct AstNode *node) {
     enum OperandType node_operand_type = OPERAND_INVALID;
@@ -86,22 +91,14 @@ struct BinaryOp *NewBinaryAddOp(struct AstNode *lhs, struct AstNode *rhs) {
     }
 
     if (IsOperandType(lhs, OPERAND_POINTER) && IsOperandType(rhs, OPERAND_INTEGER)) {
-        struct Literal *literal = (struct Literal *) malloc(sizeof(struct Literal));
-        literal->node.type = AST_LITERAL_NUMBER;
-        literal->int_value = 8;
-        literal->operand.type = OPERAND_INTEGER;
-
-        rhs = (struct AstNode *) NewBinaryOp(OPERATOR_BINARY_MUL, (struct AstNode *) literal, rhs);
+        struct AstNode *literal = (struct AstNode *) NewNumberLiteral(PRIMITIVE_SIZE_INT);
+        rhs = (struct AstNode *) NewBinaryOp(OPERATOR_BINARY_MUL, literal, rhs);
         return NewBinaryOp(OPERATOR_BINARY_ADD, lhs, rhs);
     }
 
     if (IsOperandType(lhs, OPERAND_INTEGER) && IsOperandType(rhs, OPERAND_POINTER)) {
-        struct Literal *literal = (struct Literal *) malloc(sizeof(struct Literal));
-        literal->node.type = AST_LITERAL_NUMBER;
-        literal->int_value = 8;
-        literal->operand.type = OPERAND_INTEGER;
-
-        lhs = (struct AstNode *) NewBinaryOp(OPERATOR_BINARY_MUL, lhs, (struct AstNode *) literal);
+        struct AstNode *literal = (struct AstNode *) NewNumberLiteral(PRIMITIVE_SIZE_INT);
+        lhs = (struct AstNode *) NewBinaryOp(OPERATOR_BINARY_MUL, lhs, literal);
         return NewBinaryOp(OPERATOR_BINARY_ADD, lhs, rhs);
     }
 
@@ -110,7 +107,7 @@ struct BinaryOp *NewBinaryAddOp(struct AstNode *lhs, struct AstNode *rhs) {
 }
 
 struct BinaryOp *NewBinaryOp(enum OperatorType operator_type, struct AstNode *lhs, struct AstNode *rhs) {
-    struct BinaryOp *binary_op = (struct BinaryOp *) malloc(sizeof(struct BinaryOp));
+    struct BinaryOp *binary_op = NEW_TYPE(BinaryOp);
     binary_op->node.type = AST_BINARY_OPERATOR;
     binary_op->operator_type = operator_type;
     binary_op->lhs = lhs;
@@ -125,33 +122,22 @@ struct BinaryOp *NewBinarySubOp(struct AstNode *lhs, struct AstNode *rhs) {
     }
 
     if (IsOperandType(lhs, OPERAND_POINTER) && IsOperandType(rhs, OPERAND_INTEGER)) {
-        struct Literal *literal = (struct Literal *) malloc(sizeof(struct Literal));
-        literal->node.type = AST_LITERAL_NUMBER;
-        literal->int_value = 8;
-        literal->operand.type = OPERAND_INTEGER;
-
-        rhs = (struct AstNode *) NewBinaryOp(OPERATOR_BINARY_MUL, (struct AstNode *) literal, rhs);
+        struct AstNode *literal = (struct AstNode *) NewNumberLiteral(PRIMITIVE_SIZE_INT);
+        rhs = (struct AstNode *) NewBinaryOp(OPERATOR_BINARY_MUL, literal, rhs);
         return NewBinaryOp(OPERATOR_BINARY_SUB, lhs, rhs);
     }
 
     if (IsOperandType(lhs, OPERAND_INTEGER) && IsOperandType(rhs, OPERAND_POINTER)) {
-        struct Literal *literal = (struct Literal *) malloc(sizeof(struct Literal));
-        literal->node.type = AST_LITERAL_NUMBER;
-        literal->int_value = 8;
-        literal->operand.type = OPERAND_INTEGER;
-
-        lhs = (struct AstNode *) NewBinaryOp(OPERATOR_BINARY_MUL, lhs, (struct AstNode *) literal);
+        struct AstNode *literal = (struct AstNode *) NewNumberLiteral(PRIMITIVE_SIZE_INT);
+        lhs = (struct AstNode *) NewBinaryOp(OPERATOR_BINARY_MUL, lhs, literal);
         return NewBinaryOp(OPERATOR_BINARY_SUB, lhs, rhs);
     }
 
     if (IsOperandType(lhs, OPERAND_POINTER) && IsOperandType(rhs, OPERAND_POINTER)) {
         lhs = (struct AstNode *) NewBinaryOp(OPERATOR_BINARY_SUB, lhs, rhs);
-        struct Literal *literal = (struct Literal *) malloc(sizeof(struct Literal));
-        literal->node.type = AST_LITERAL_NUMBER;
-        literal->int_value = 8;
-        literal->operand.type = OPERAND_INTEGER;
 
-        struct BinaryOp *binary_op = NewBinaryOp(OPERATOR_BINARY_DIV, lhs, (struct AstNode *) literal);
+        struct AstNode *literal = (struct AstNode *) NewNumberLiteral(PRIMITIVE_SIZE_INT);
+        struct BinaryOp *binary_op = NewBinaryOp(OPERATOR_BINARY_DIV, lhs, literal);
         binary_op->operand.type = OPERAND_INTEGER;
         return binary_op;
     }
@@ -168,12 +154,67 @@ struct UnaryOp *NewUnaryAddressOfOp(struct AstNode *expr) {
 }
 
 struct UnaryOp *NewUnaryOp(enum OperatorType operator_type, struct AstNode *expr) {
-    struct UnaryOp *unary_op = (struct UnaryOp *) malloc(sizeof(struct UnaryOp));
+    struct UnaryOp *unary_op = NEW_TYPE(UnaryOp);
     unary_op->node.type = AST_UNARY_OPERATOR;
     unary_op->operator_type = operator_type;
     unary_op->operand.type = OPERAND_INTEGER;
     unary_op->expr = expr;
     return unary_op;
+}
+
+struct CompoundStatement *NewCompoundStatement(struct List statements) {
+    struct CompoundStatement *compound_statement = NEW_TYPE(CompoundStatement);
+    compound_statement->node.type = AST_COMPOUND_STATEMENT;
+    compound_statement->statements = statements;
+    return compound_statement;
+}
+
+struct ForStatement *NewForStatement(struct AstNode *init_expr, struct AstNode *cond_expr, struct AstNode *loop_expr, struct AstNode *statement) {
+    struct ForStatement *for_statement = NEW_TYPE(ForStatement);
+    for_statement->node.type = AST_FOR_STATEMENT;
+    for_statement->init_expr = init_expr;
+    for_statement->cond_expr = cond_expr;
+    for_statement->loop_expr = loop_expr;
+    for_statement->statement = statement;
+    return for_statement;
+}
+
+struct IfStatement *NewIfStatement(struct AstNode *condition, struct AstNode *statement, struct AstNode *else_branch) {
+    struct IfStatement *if_statement = NEW_TYPE(IfStatement);
+    if_statement->node.type = AST_IF_STATEMENT;
+    if_statement->condition = condition;
+    if_statement->statement = statement;
+    if_statement->else_branch = else_branch;
+    return if_statement;
+}
+
+struct Literal *NewNumberLiteral(int value) {
+    struct Literal *literal = NEW_TYPE(Literal);
+    literal->node.type = AST_LITERAL_NUMBER;
+    literal->operand.type = OPERAND_INTEGER;
+    literal->int_value = value;
+    return literal;
+}
+
+struct AstNode *NewNullStatement() {
+    struct AstNode *null_statement = NEW_TYPE(AstNode);
+    null_statement->type = AST_NULL_STATEMENT;
+    return null_statement;
+}
+
+struct ReturnStatement *NewReturnStatement(struct AstNode *expr) {
+    struct ReturnStatement *return_statement = NEW_TYPE(ReturnStatement);
+    return_statement->node.type = AST_RETURN_STATEMENT;
+    return_statement->expr = expr;
+    return return_statement;
+}
+
+struct WhileStatement *NewWhileStatement(struct AstNode *condition, struct AstNode *statement) {
+    struct WhileStatement *while_statement = NEW_TYPE(WhileStatement);
+    while_statement->node.type = AST_WHILE_STATEMENT;
+    while_statement->condition = condition;
+    while_statement->statement = statement;
+    return while_statement;
 }
 
 void Print(struct AstNode *node) {

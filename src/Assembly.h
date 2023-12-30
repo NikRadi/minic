@@ -16,7 +16,7 @@ void Lea(char *destination, int rbp_offset);
 
 void Mov(char *destination, char *source);
 
-void MovImmediate(char *destination, int value);
+void MovImm(char *destination, int value);
 
 void Mul(char *destination, char *source);
 

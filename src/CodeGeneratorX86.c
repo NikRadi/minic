@@ -6,8 +6,8 @@
 static void GenerateExpression(struct AstNode *expr);
 static void GenerateStatement(struct AstNode *statement);
 
-static FILE *f;
 static struct FunctionDefinition *current_function;
+static FILE *f;
 
 static int Align(int n, int offset) {
     return (n + offset - 1) / offset * offset;
@@ -53,7 +53,7 @@ static void GenerateExpression(struct AstNode *expr) {
     switch (expr->type) {
         case AST_LITERAL_NUMBER: {
             struct Literal *literal = (struct Literal *) expr;
-            MovImmediate("rax", literal->int_value);
+            MovImm("rax", literal->int_value);
         } break;
         case AST_BINARY_OPERATOR: {
             struct BinaryOp *binary_op = (struct BinaryOp *) expr;
@@ -110,7 +110,6 @@ static void GenerateFunctionDefinition(struct FunctionDefinition *function) {
     }
 
     function->stack_size = Align(offset, 16);
-    Print((struct AstNode *) function);
 
     Label("main");
     SetupStackFrame(function->stack_size);
@@ -123,100 +122,100 @@ static void GenerateFunctionDefinition(struct FunctionDefinition *function) {
 
     Label("return");
     RestoreStackFrame();
+    current_function = NULL;
+}
+
+
+//
+// ===
+// == Generate statements
+// ===
+//
+
+
+static void GenerateCompoundStatement(struct CompoundStatement *compound_statement) {
+    struct List *statements = &compound_statement->statements;
+    for (int i = 0; i < statements->count; ++i) {
+        struct AstNode *statement = (struct AstNode *) List_Get(statements, i);
+        GenerateStatement(statement);
+    }
+}
+
+static void GenerateForStatement(struct ForStatement *for_statement) {
+    if (for_statement->init_expr) GenerateExpression(for_statement->init_expr);
+    int label_id = MakeNewLabelId();
+    fprintf(f, "forstart%d:\n", label_id);
+    if (for_statement->cond_expr) GenerateExpression(for_statement->cond_expr);
+    fprintf(f,
+        "  cmp rax, 0\n"
+        "  je forend%d\n",
+        label_id
+    );
+
+    GenerateStatement(for_statement->statement);
+    if (for_statement->loop_expr) GenerateExpression(for_statement->loop_expr);
+    fprintf(f,
+        "  jmp forstart%d\n"
+        "  forend%d\n",
+        label_id,
+        label_id
+    );
+}
+
+static void GenerateIfStatement(struct IfStatement *if_statement) {
+    GenerateExpression(if_statement->condition);
+    int label_id = MakeNewLabelId();
+    fprintf(f,
+        "  cmp rax, 0\n"
+        "  je ifelse%d\n",
+        label_id
+    );
+
+    GenerateStatement(if_statement->statement);
+    fprintf(f,
+        "  jmp ifend%d\n"
+        "ifelse%d:\n",
+        label_id,
+        label_id
+    );
+
+    if (if_statement->else_branch) GenerateStatement(if_statement->else_branch);
+    fprintf(f, "ifend%d:\n", label_id);
+}
+
+static void GenerateReturnStatement(struct ReturnStatement *return_statement) {
+    if (return_statement->expr) GenerateExpression(return_statement->expr);
+    Jmp("return");
+}
+
+static void GenerateWhileStatement(struct WhileStatement *while_statement) {
+    int label_id = MakeNewLabelId();
+    fprintf(f, "whilestart%d:\n", label_id);
+    GenerateExpression(while_statement->condition);
+    fprintf(f,
+        "  cmp rax, 0\n"
+        "  je whileend%d\n",
+        label_id
+    );
+
+    GenerateStatement(while_statement->statement);
+    fprintf(f,
+        "  jmp whilestart%d\n"
+        "whileend%d:\n",
+        label_id,
+        label_id
+    );
 }
 
 static void GenerateStatement(struct AstNode *statement) {
     switch (statement->type) {
-        case AST_RETURN_STATEMENT: {
-            struct ReturnStatement *return_statement = (struct ReturnStatement *) statement;
-            GenerateExpression(return_statement->expr);
-            Jmp("return");
-        } break;
-        case AST_COMPOUND_STATEMENT: {
-            struct CompoundStatement *compound_statement = (struct CompoundStatement *) statement;
-            for (int i = 0; i < compound_statement->statements.count; ++i) {
-                struct AstNode *node = (struct AstNode *) List_Get(&compound_statement->statements, i);
-                GenerateStatement(node);
-            }
-        } break;
-        case AST_IF_STATEMENT: {
-            struct IfStatement *if_statement = (struct IfStatement *) statement;
-            GenerateExpression(if_statement->condition);
-            int label_id = MakeNewLabelId();
-            fprintf(f,
-                "  cmp rax, 0\n"
-                "  je ifelse%d\n",
-                label_id
-            );
-
-            GenerateStatement(if_statement->statement);
-            fprintf(f,
-                "  jmp ifend%d\n"
-                "ifelse%d:\n",
-                label_id,
-                label_id
-            );
-
-            if (if_statement->else_block) {
-                GenerateStatement(if_statement->else_block);
-            }
-
-            fprintf(f, "ifend%d:\n", label_id);
-        } break;
-        case AST_FOR_LOOP: {
-            struct ForLoop *for_loop = (struct ForLoop *) statement;
-            if (for_loop->init_statement) {
-                GenerateExpression(for_loop->init_statement);
-            }
-
-            int label_id = MakeNewLabelId();
-            fprintf(f, "forstart%d:\n", label_id);
-            if (for_loop->condition) {
-                GenerateExpression(for_loop->condition);
-            }
-
-            fprintf(f,
-                "  cmp rax, 0\n"
-                "  je forend%d\n",
-                label_id
-            );
-
-            GenerateStatement(for_loop->statement);
-            if (for_loop->update_expr) {
-                GenerateExpression(for_loop->update_expr);
-            }
-
-            fprintf(f,
-                "  jmp forstart%d\n"
-                "forend%d:\n",
-                label_id,
-                label_id
-            );
-        } break;
-        case AST_WHILE_LOOP: {
-            struct WhileLoop *while_loop = (struct WhileLoop *) statement;
-
-            int label_id = MakeNewLabelId();
-            fprintf(f, "whilestart%d:\n", label_id);
-            GenerateExpression(while_loop->condition);
-            fprintf(f,
-                "  cmp rax, 0\n"
-                "  je whileend%d\n",
-                label_id
-            );
-
-            GenerateStatement(while_loop->statement);
-            fprintf(f,
-                "  jmp whilestart%d\n"
-                "whileend%d:\n",
-                label_id,
-                label_id
-            );
-
-        } break;
-        default: {
-            GenerateExpression(statement);
-        } break;
+        case AST_COMPOUND_STATEMENT: { GenerateCompoundStatement((struct CompoundStatement *) statement ); } break;
+        case AST_FOR_STATEMENT:      { GenerateForStatement((struct ForStatement *) statement); } break;
+        case AST_IF_STATEMENT:       { GenerateIfStatement((struct IfStatement *) statement); } break;
+        case AST_NULL_STATEMENT:     { } break;
+        case AST_RETURN_STATEMENT:   { GenerateReturnStatement((struct ReturnStatement *) statement); } break;
+        case AST_WHILE_STATEMENT:    { GenerateWhileStatement((struct WhileStatement *) statement); } break;
+        default:                     { GenerateExpression(statement); } break;
     }
 }
 
@@ -229,7 +228,9 @@ static void GenerateStatement(struct AstNode *statement) {
 
 
 void CodeGeneratorX86_GenerateCode(FILE *asm_file, struct FunctionDefinition *function) {
+    current_function = NULL;
     f = asm_file;
+
     SetOutput(asm_file);
     SetupAssemblyFile("main");
 
