@@ -131,6 +131,10 @@ struct BinaryOp *NewBinaryOp(enum OperatorType operator_type, struct AstNode *lh
 
 struct BinaryOp *NewBinarySubOp(struct AstNode *lhs, struct AstNode *rhs);
 
+struct UnaryOp *NewUnaryAddressOfOp(struct AstNode *expr);
+
 struct UnaryOp *NewUnaryOp(enum OperatorType operator_type, struct AstNode *expr);
+
+void Print(struct AstNode *node);
 
 #endif // MINIC_AST_NODE_H

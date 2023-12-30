@@ -118,7 +118,7 @@ static struct AstNode *ParseAddressOfPrefix() {
     Lexer_EatToken(l);
 
     struct AstNode *expr = ParseExpression2(precedence);
-    return (struct AstNode *) NewUnaryOp(OPERATOR_UNARY_ADDRESS_OF, expr);
+    return (struct AstNode *) NewUnaryAddressOfOp(expr);
 }
 
 static struct AstNode *ParseVariablePrefix() {

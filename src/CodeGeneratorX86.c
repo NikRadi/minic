@@ -102,7 +102,7 @@ static void GenerateFunctionDefinition(struct FunctionDefinition *function) {
     current_function = function;
 
     int offset = 0;
-    struct List *function_variables = &current_function->variables;
+    struct List *function_variables = &function->variables;
     for (int i = function_variables->count - 1; i >= 0; --i) {
         struct Variable* var = (struct Variable *) List_Get(function_variables, i);
         offset += 8;
@@ -110,6 +110,7 @@ static void GenerateFunctionDefinition(struct FunctionDefinition *function) {
     }
 
     function->stack_size = Align(offset, 16);
+    Print((struct AstNode *) function);
 
     Label("main");
     SetupStackFrame(function->stack_size);

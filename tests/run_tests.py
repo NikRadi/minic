@@ -6,7 +6,6 @@ COLOR_RED = "\033[91m"
 COLOR_GREEN = "\033[92m"
 COLOR_YELLOW = "\033[93m"
 
-
 def print_colored(text, color):
     print(color, end='')
     print(text, end='')
@@ -71,15 +70,14 @@ def main():
     minic_test("{ i=0; while(i<10) { i=i+1; } return i; }", 10)
     minic_test("{ x=3; return *&x; }", 3)
     minic_test("{ x=3; y=&x; z=&y; return **z; }", 3)
-    minic_test("{ x=3; y=5; return *(&x+8); }", 5)
-    minic_test("{ x=3; y=5; return *(&y-8); }", 3)
+    minic_test("{ x=3; y=5; return *(&x+1); }", 5)
+    minic_test("{ x=3; y=5; return *(&y-1); }", 3)
+    minic_test("{ x=3; y=5; return *(&x-(-1)); }", 5)
     minic_test("{ x=3; y=&x; *y=5; return x; }", 5)
-    minic_test("{ x=3; y=5; *(&x+8)=7; return y; }", 7)
-    minic_test("{ x=3; y=5; *(&y-8)=6; return x; }", 6)
-
-
-if __name__ == "__main__":
-    main()
+    minic_test("{ x=3; y=5; *(&x+1)=7; return y; }", 7)
+    minic_test("{ x=3; y=5; *(&y-2+1)=6; return x; }", 6)
+    minic_test("{ x=3; return (&x+2)-&x+3; }", 5)
+    minic_test("{ x=3; return (&x+2)-&x+5; }", 7)
 
     minic_size_bytes = os.path.getsize("bin\minic.exe")
     minic_size_kbytes = minic_size_bytes / 1024
@@ -91,3 +89,7 @@ if __name__ == "__main__":
     minic_lines = stdout_lines[-1].split(',')[-1]
     print(f"Lines of code: {minic_lines}")
     print()
+
+
+if __name__ == "__main__":
+    main()
