@@ -1,6 +1,7 @@
 # Files
 *.asm
 *.exe
+*.pdb
 *.obj
 setup_msvc.bat
 
