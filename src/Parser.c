@@ -23,261 +23,133 @@ static void ExpectAndEat(enum TokenType type) {
     Lexer_EatToken(l);
 }
 
-static struct AstNode *ParseExpression();
-static struct AstNode *ParseExpression2(int precedence);
 
-static struct AstNode *ParseAddressOfPrefix();
-static struct AstNode *ParseDereferencePrefix();
-static struct AstNode *ParseLiteralNumberPrefix();
-static struct AstNode *ParseNegatePrefix();
-static struct AstNode *ParseParenthesisPrefix();
-static struct AstNode *ParsePlusPrefix();
-static struct AstNode *ParseVariablePrefix();
+//
+// ===
+// == Parse expressions
+// ===
+//
 
-static struct AstNode *ParseAddInfix(struct AstNode *lhs);
-static struct AstNode *ParseAssignmentInfix(struct AstNode *lhs);
-static struct AstNode *ParseDivideInfix(struct AstNode *lhs);
-static struct AstNode *ParseEqualsInfix(struct AstNode *lhs);
-static struct AstNode *ParseGreaterThanInfix(struct AstNode *lhs);
-static struct AstNode *ParseGreaterThanEqualsInfix(struct AstNode *lhs);
-static struct AstNode *ParseLessThanInfix(struct AstNode *lhs);
-static struct AstNode *ParseLessThanEqualsInfix(struct AstNode *lhs);
-static struct AstNode *ParseMultiplyInfix(struct AstNode *lhs);
-static struct AstNode *ParseNotEqualsInfix(struct AstNode *lhs);
-static struct AstNode *ParseSubtractInfix(struct AstNode *lhs);
 
-static int INFIX_OPERATOR_PRECEDENCES[TOKEN_COUNT] = {
-    [TOKEN_EQUALS]                  = 10,
-    [TOKEN_2_EQUALS]                = 20,
-    [TOKEN_EXCLAMATION_MARK_EQUALS] = 20,
-    [TOKEN_LESS_THAN]               = 30,
-    [TOKEN_LESS_THAN_EQUALS]        = 30,
-    [TOKEN_GREATER_THAN]            = 30,
-    [TOKEN_GREATER_THAN_EQUALS]     = 30,
-    [TOKEN_PLUS]                    = 40,
-    [TOKEN_MINUS]                   = 40,
-    [TOKEN_STAR]                    = 50,
-    [TOKEN_SLASH]                   = 50,
+struct OperatorParseData;
+typedef struct Expr *(*ParseOperatorFunction)(struct OperatorParseData);
+
+static struct Expr *ParseBinaryAddOp(struct OperatorParseData data);
+static struct Expr *ParseBinaryOp(struct OperatorParseData data);
+static struct Expr *ParseBinarySubOp(struct OperatorParseData data);
+static struct Expr *ParseBracket(struct OperatorParseData data);
+static struct Expr *ParseExpr(int precedence);
+static struct Expr *ParseNumber(struct OperatorParseData data);
+static struct Expr *ParseUnaryAddrOp(struct OperatorParseData data);
+static struct Expr *ParseUnaryOp(struct OperatorParseData data);
+static struct Expr *ParseVariable(struct OperatorParseData data);
+
+struct OperatorParseData {
+    int precedence;
+    bool is_right_associative;
+    enum ExprType type;
+    struct Expr *lhs;
+    ParseOperatorFunction Parse;
 };
 
-static int PREFIX_OPERATOR_PRECEDENCES[TOKEN_COUNT] = {
-    [TOKEN_MINUS] = 60,
-    [TOKEN_STAR] = 60,
-    [TOKEN_AMPERSAND] = 60,
+static struct OperatorParseData infix_operators[TOKEN_COUNT] = {
+    [TOKEN_EQUALS]                  = { .precedence = 10, .type = EXPR_ASSIGN,  .Parse = ParseBinaryOp, .is_right_associative = true },
+    [TOKEN_2_EQUALS]                = { .precedence = 20, .type = EXPR_EQU,     .Parse = ParseBinaryOp },
+    [TOKEN_EXCLAMATION_MARK_EQUALS] = { .precedence = 20, .type = EXPR_NEQ,     .Parse = ParseBinaryOp },
+    [TOKEN_LESS_THAN]               = { .precedence = 30, .type = EXPR_LT,      .Parse = ParseBinaryOp },
+    [TOKEN_LESS_THAN_EQUALS]        = { .precedence = 30, .type = EXPR_LTE,     .Parse = ParseBinaryOp },
+    [TOKEN_GREATER_THAN]            = { .precedence = 30, .type = EXPR_GT,      .Parse = ParseBinaryOp },
+    [TOKEN_GREATER_THAN_EQUALS]     = { .precedence = 30, .type = EXPR_GTE,     .Parse = ParseBinaryOp },
+    [TOKEN_PLUS]                    = { .precedence = 40, .type = EXPR_ADD,     .Parse = ParseBinaryAddOp },
+    [TOKEN_MINUS]                   = { .precedence = 40, .type = EXPR_SUB,     .Parse = ParseBinarySubOp },
+    [TOKEN_STAR]                    = { .precedence = 50, .type = EXPR_MUL,     .Parse = ParseBinaryOp },
+    [TOKEN_SLASH]                   = { .precedence = 50, .type = EXPR_DIV,     .Parse = ParseBinaryOp },
 };
 
-typedef struct AstNode *(*PrefixParseFunction)();
-static PrefixParseFunction PREFIX_PARSE_FUNCTIONS[TOKEN_COUNT] = {
-    [TOKEN_LITERAL_NUMBER]      = ParseLiteralNumberPrefix,
-    [TOKEN_LEFT_ROUND_BRACKET]  = ParseParenthesisPrefix,
-    [TOKEN_MINUS]               = ParseNegatePrefix,
-    [TOKEN_PLUS]                = ParsePlusPrefix,
-    [TOKEN_IDENTIFIER]          = ParseVariablePrefix,
-    [TOKEN_STAR]                = ParseDereferencePrefix,
-    [TOKEN_AMPERSAND]           = ParseAddressOfPrefix,
+static struct OperatorParseData prefix_operators[TOKEN_COUNT] = {
+    [TOKEN_MINUS]                   = { .precedence = 60, .type = EXPR_NEG,     .Parse = ParseUnaryOp },
+    [TOKEN_STAR]                    = { .precedence = 60, .type = EXPR_DEREF,   .Parse = ParseUnaryOp },
+    [TOKEN_AMPERSAND]               = { .precedence = 60, .type = EXPR_ADDR,    .Parse = ParseUnaryAddrOp },
+    [TOKEN_IDENTIFIER]              = { .Parse = ParseVariable },
+    [TOKEN_LEFT_ROUND_BRACKET]      = { .Parse = ParseBracket },
+    [TOKEN_LITERAL_NUMBER]          = { .Parse = ParseNumber },
 };
 
-typedef struct AstNode *(*InfixParseFunction)(struct AstNode *);
-static InfixParseFunction INFIX_PARSE_FUNCTIONS[TOKEN_COUNT] = {
-    [TOKEN_EQUALS]                  = ParseAssignmentInfix,
-    [TOKEN_2_EQUALS]                = ParseEqualsInfix,
-    [TOKEN_EXCLAMATION_MARK_EQUALS] = ParseNotEqualsInfix,
-    [TOKEN_LESS_THAN]               = ParseLessThanInfix,
-    [TOKEN_LESS_THAN_EQUALS]        = ParseLessThanEqualsInfix,
-    [TOKEN_GREATER_THAN]            = ParseGreaterThanInfix,
-    [TOKEN_GREATER_THAN_EQUALS]     = ParseGreaterThanEqualsInfix,
-    [TOKEN_PLUS]                    = ParseAddInfix,
-    [TOKEN_MINUS]                   = ParseSubtractInfix,
-    [TOKEN_STAR]                    = ParseMultiplyInfix,
-    [TOKEN_SLASH]                   = ParseDivideInfix,
-};
-
-static struct AstNode *ParseLiteralNumberPrefix() {
-    struct Token token = Lexer_PeekToken(l);
+static struct Expr *ParseBinaryAddOp(struct OperatorParseData data) {
     Lexer_EatToken(l);
-    return (struct AstNode *) NewNumberLiteral(token.int_value);
+    struct Expr *rhs = ParseExpr(data.precedence - data.is_right_associative);
+    return NewOperationAddExpr(data.lhs, rhs);
 }
 
-static struct AstNode *ParseDereferencePrefix() {
-    struct Token token = Lexer_PeekToken(l);
-    int precedence = PREFIX_OPERATOR_PRECEDENCES[token.type];
+static struct Expr *ParseBinaryOp(struct OperatorParseData data) {
     Lexer_EatToken(l);
-
-    struct AstNode *expr = ParseExpression2(precedence);
-    return (struct AstNode *) NewUnaryOp(OPERATOR_UNARY_DEREFERENCE, expr);
+    struct Expr *rhs = ParseExpr(data.precedence - data.is_right_associative);
+    return NewOperationExpr(data.type, data.lhs, rhs);
 }
 
-static struct AstNode *ParseAddressOfPrefix() {
-    struct Token token = Lexer_PeekToken(l);
-    int precedence = PREFIX_OPERATOR_PRECEDENCES[token.type];
+static struct Expr *ParseBinarySubOp(struct OperatorParseData data) {
     Lexer_EatToken(l);
-
-    struct AstNode *expr = ParseExpression2(precedence);
-    return (struct AstNode *) NewUnaryAddressOfOp(expr);
+    struct Expr *rhs = ParseExpr(data.precedence - data.is_right_associative);
+    return NewOperationSubExpr(data.lhs, rhs);
 }
 
-static struct AstNode *ParseVariablePrefix() {
-    struct Token token = Lexer_PeekToken(l);
-    Lexer_EatToken(l);
-
-    struct Variable *variable = NEW_TYPE(Variable);
-    variable->node.type = AST_VARIABLE;
-    variable->operand.type = OPERAND_INTEGER;
-    strncpy(variable->identifier, token.str_value, TOKEN_MAX_IDENTIFIER_LENGTH);
-
-    struct List *function_variables = &current_function->variables;
-    struct Variable *function_variable = (struct Variable *) List_Find(function_variables, variable, AreVariablesEquals);
-    if (function_variable == NULL) {
-        List_Add(function_variables, (void *) variable);
-    }
-
-    return (struct AstNode *) variable;
-}
-
-static struct AstNode *ParseParenthesisPrefix() {
-    Lexer_EatToken(l);
-    struct AstNode *expr = ParseExpression();
+static struct Expr *ParseBracket(struct OperatorParseData data) {
+    ExpectAndEat(TOKEN_LEFT_ROUND_BRACKET);
+    struct Expr *expr = ParseExpr(0);
     ExpectAndEat(TOKEN_RIGHT_ROUND_BRACKET);
     return expr;
 }
 
-static struct AstNode *ParseNegatePrefix() {
+static struct Expr *ParseExpr(int precedence) {
     struct Token token = Lexer_PeekToken(l);
-    int precedence = PREFIX_OPERATOR_PRECEDENCES[token.type];
-    Lexer_EatToken(l);
-
-    struct AstNode *expr = ParseExpression2(precedence);
-    return (struct AstNode *) NewUnaryOp(OPERATOR_UNARY_NEGATE, expr);
-}
-
-static struct AstNode *ParsePlusPrefix() {
-    Lexer_EatToken(l);
-    return ParseExpression();
-}
-
-static struct AstNode *ParseAssignmentInfix(struct AstNode *lhs) {
-    struct Token token = Lexer_PeekToken(l);
-    int precedence = INFIX_OPERATOR_PRECEDENCES[token.type];
-    Lexer_EatToken(l);
-
-    struct AstNode *rhs = ParseExpression2(precedence - 1); // -1 right associative
-    return (struct AstNode *) NewBinaryOp(OPERATOR_BINARY_ASSIGN, lhs, rhs);
-}
-
-static struct AstNode *ParseEqualsInfix(struct AstNode *lhs) {
-    struct Token token = Lexer_PeekToken(l);
-    int precedence = INFIX_OPERATOR_PRECEDENCES[token.type];
-    Lexer_EatToken(l);
-
-    struct AstNode *rhs = ParseExpression2(precedence);
-    return (struct AstNode *) NewBinaryOp(OPERATOR_BINARY_EQUALS, lhs, rhs);
-}
-
-static struct AstNode *ParseLessThanInfix(struct AstNode *lhs) {
-    struct Token token = Lexer_PeekToken(l);
-    int precedence = INFIX_OPERATOR_PRECEDENCES[token.type];
-    Lexer_EatToken(l);
-
-    struct AstNode *rhs = ParseExpression2(precedence);
-    return (struct AstNode *) NewBinaryOp(OPERATOR_BINARY_LESS_THAN, lhs, rhs);
-}
-
-static struct AstNode *ParseLessThanEqualsInfix(struct AstNode *lhs) {
-    struct Token token = Lexer_PeekToken(l);
-    int precedence = INFIX_OPERATOR_PRECEDENCES[token.type];
-    Lexer_EatToken(l);
-
-    struct AstNode *rhs = ParseExpression2(precedence);
-    return (struct AstNode *) NewBinaryOp(OPERATOR_BINARY_LESS_THAN_EQUALS, lhs, rhs);
-}
-
-static struct AstNode *ParseGreaterThanEqualsInfix(struct AstNode *lhs) {
-    struct Token token = Lexer_PeekToken(l);
-    int precedence = INFIX_OPERATOR_PRECEDENCES[token.type];
-    Lexer_EatToken(l);
-
-    struct AstNode *rhs = ParseExpression2(precedence);
-    return (struct AstNode *) NewBinaryOp(OPERATOR_BINARY_GREATER_THAN_EQUALS, lhs, rhs);
-}
-
-static struct AstNode *ParseGreaterThanInfix(struct AstNode *lhs) {
-    struct Token token = Lexer_PeekToken(l);
-    int precedence = INFIX_OPERATOR_PRECEDENCES[token.type];
-    Lexer_EatToken(l);
-
-    struct AstNode *rhs = ParseExpression2(precedence);
-    return (struct AstNode *) NewBinaryOp(OPERATOR_BINARY_GREATER_THAN, lhs, rhs);
-}
-
-static struct AstNode *ParseNotEqualsInfix(struct AstNode *lhs) {
-    struct Token token = Lexer_PeekToken(l);
-    int precedence = INFIX_OPERATOR_PRECEDENCES[token.type];
-    Lexer_EatToken(l);
-
-    struct AstNode *rhs = ParseExpression2(precedence);
-    return (struct AstNode *) NewBinaryOp(OPERATOR_BINARY_NOT_EQUALS, lhs, rhs);
-}
-
-static struct AstNode *ParseAddInfix(struct AstNode *lhs) {
-    struct Token token = Lexer_PeekToken(l);
-    int precedence = INFIX_OPERATOR_PRECEDENCES[token.type];
-    Lexer_EatToken(l);
-
-    struct AstNode *rhs = ParseExpression2(precedence);
-    return (struct AstNode *) NewBinaryAddOp(lhs, rhs);
-}
-
-static struct AstNode *ParseSubtractInfix(struct AstNode *lhs) {
-    struct Token token = Lexer_PeekToken(l);
-    Lexer_EatToken(l);
-    int precedence = INFIX_OPERATOR_PRECEDENCES[token.type];
-
-    struct AstNode *rhs = ParseExpression2(precedence);
-    return (struct AstNode *) NewBinarySubOp(lhs, rhs);
-}
-
-static struct AstNode *ParseMultiplyInfix(struct AstNode *lhs) {
-    struct Token token = Lexer_PeekToken(l);
-    Lexer_EatToken(l);
-    int precedence = INFIX_OPERATOR_PRECEDENCES[token.type];
-
-    struct AstNode *rhs = ParseExpression2(precedence);
-    return (struct AstNode *) NewBinaryOp(OPERATOR_BINARY_MUL, lhs, rhs);
-}
-
-static struct AstNode *ParseDivideInfix(struct AstNode *lhs) {
-    struct Token token = Lexer_PeekToken(l);
-    Lexer_EatToken(l);
-    int precedence = INFIX_OPERATOR_PRECEDENCES[token.type];
-
-    struct AstNode *rhs = ParseExpression2(precedence);
-    return (struct AstNode *) NewBinaryOp(OPERATOR_BINARY_DIV, lhs, rhs);
-}
-
-static struct AstNode *ParseExpression2(int precedence) {
-    struct Token token = Lexer_PeekToken(l);
-    PrefixParseFunction ParsePrefix = PREFIX_PARSE_FUNCTIONS[token.type];
-    if (ParsePrefix == NULL) {
-        ReportErrorAtToken(l, token, "internal error: expected expression\n");
+    struct OperatorParseData prefix_op = prefix_operators[token.type];
+    if (!prefix_op.Parse) {
+        ReportErrorAtToken(l, token, "expected expression");
     }
 
-    struct AstNode *lhs = ParsePrefix();
-
+    struct Expr *lhs = prefix_op.Parse(prefix_op);
     token = Lexer_PeekToken(l);
-    int operator_precedence = INFIX_OPERATOR_PRECEDENCES[token.type];
-    while (precedence < operator_precedence) {
-        InfixParseFunction ParseInfix = INFIX_PARSE_FUNCTIONS[token.type];
-        lhs = ParseInfix(lhs);
-
+    struct OperatorParseData infix_op = infix_operators[token.type];
+    while (precedence < infix_op.precedence) {
+        infix_op.lhs = lhs;
+        lhs = infix_op.Parse(infix_op);
         token = Lexer_PeekToken(l);
-        operator_precedence = INFIX_OPERATOR_PRECEDENCES[token.type];
+        infix_op = infix_operators[token.type];
     }
 
     return lhs;
 }
 
-static struct AstNode *ParseExpression() {
-    return ParseExpression2(0);
+static struct Expr *ParseNumber(struct OperatorParseData data) {
+    int value = Lexer_PeekToken(l).int_value;
+    Lexer_EatToken(l);
+    return NewNumberExpr(value);
+}
+
+static struct Expr *ParseUnaryAddrOp(struct OperatorParseData data) {
+    Lexer_EatToken(l);
+    struct Expr *lhs = ParseExpr(data.precedence);
+    return NewOperationAddrExpr(lhs);
+}
+
+static struct Expr *ParseUnaryOp(struct OperatorParseData data) {
+    Lexer_EatToken(l);
+    struct Expr *lhs = ParseExpr(data.precedence);
+    return NewOperationExpr(data.type, lhs, NULL);
+}
+
+static struct Expr *ParseVariable(struct OperatorParseData data) {
+    char *value = Lexer_PeekToken(l).str_value;
+    Lexer_EatToken(l);
+
+    struct Expr *var = NewVariableExpr(value);
+    struct List *function_vars = &current_function->variables;
+    struct Expr *function_var = (struct Expr *) List_Find(function_vars, var, AreVariablesEquals);
+    if (!function_var) {
+        List_Add(function_vars, (void *) var);
+    }
+
+    return var;
 }
 
 
@@ -301,30 +173,30 @@ static struct CompoundStatement *ParseCompoundStatement() {
     return NewCompoundStatement(statements);
 }
 
-static struct AstNode *ParseExpressionStatement() {
-    struct AstNode *expression = ParseExpression();
+static struct ExpressionStatement *ParseExpressionStatement() {
+    struct Expr *expr = ParseExpr(0);
     ExpectAndEat(TOKEN_SEMICOLON);
-    return expression;
+    return NewExpressionStatement(expr);
 }
 
 static struct ForStatement *ParseForStatement() {
     ExpectAndEat(TOKEN_KEYWORD_FOR);
     ExpectAndEat(TOKEN_LEFT_ROUND_BRACKET);
-    struct AstNode *init_expr = NULL;
+    struct Expr *init_expr = NULL;
     if (Lexer_PeekToken(l).type != TOKEN_SEMICOLON) {
-        init_expr = ParseExpression();
+        init_expr = ParseExpr(0);
     }
 
     ExpectAndEat(TOKEN_SEMICOLON);
-    struct AstNode *cond_expr = NULL;
+    struct Expr *cond_expr = NULL;
     if (Lexer_PeekToken(l).type != TOKEN_SEMICOLON) {
-        cond_expr = ParseExpression();
+        cond_expr = ParseExpr(0);
     }
 
     ExpectAndEat(TOKEN_SEMICOLON);
-    struct AstNode *loop_expr = NULL;
+    struct Expr *loop_expr = NULL;
     if (Lexer_PeekToken(l).type != TOKEN_RIGHT_ROUND_BRACKET) {
-        loop_expr = ParseExpression();
+        loop_expr = ParseExpr(0);
     }
 
     ExpectAndEat(TOKEN_RIGHT_ROUND_BRACKET);
@@ -340,7 +212,7 @@ static struct AstNode *ParseNullStatement() {
 static struct IfStatement *ParseIfStatement() {
     ExpectAndEat(TOKEN_KEYWORD_IF);
     ExpectAndEat(TOKEN_LEFT_ROUND_BRACKET);
-    struct AstNode *condition = ParseExpression();
+    struct Expr *condition = ParseExpr(0);
     ExpectAndEat(TOKEN_RIGHT_ROUND_BRACKET);
 
     struct AstNode *statement = ParseStatement();
@@ -355,9 +227,9 @@ static struct IfStatement *ParseIfStatement() {
 
 static struct ReturnStatement *ParseReturnStatement() {
     ExpectAndEat(TOKEN_KEYWORD_RETURN);
-    struct AstNode *expr = NULL;
+    struct Expr *expr = NULL;
     if (Lexer_PeekToken(l).type != TOKEN_SEMICOLON) {
-        expr = ParseExpression();
+        expr = ParseExpr(0);
     }
 
     ExpectAndEat(TOKEN_SEMICOLON);
@@ -367,7 +239,7 @@ static struct ReturnStatement *ParseReturnStatement() {
 static struct WhileStatement *ParseWhileStatement() {
     ExpectAndEat(TOKEN_KEYWORD_WHILE);
     ExpectAndEat(TOKEN_LEFT_ROUND_BRACKET);
-    struct AstNode *condition = ParseExpression();
+    struct Expr *condition = ParseExpr(0);
     ExpectAndEat(TOKEN_RIGHT_ROUND_BRACKET);
     struct AstNode *statement = ParseStatement();
     return NewWhileStatement(condition, statement);
@@ -382,7 +254,7 @@ static struct AstNode *ParseStatement() {
         case TOKEN_KEYWORD_IF:          return (struct AstNode *) ParseIfStatement();
         case TOKEN_KEYWORD_RETURN:      return (struct AstNode *) ParseReturnStatement();
         case TOKEN_KEYWORD_WHILE:       return (struct AstNode *) ParseWhileStatement();
-        default:                        return                    ParseExpressionStatement();
+        default:                        return (struct AstNode *) ParseExpressionStatement();
     }
 }
 
