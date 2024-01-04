@@ -3,7 +3,7 @@
 #include "ReportError.h"
 #include <stdio.h>
 
-static void GenerateExpression(struct AstNode *expr);
+static void GenerateExpr(struct Expr *expr);
 static void GenerateStatement(struct AstNode *statement);
 
 static struct FunctionDefinition *current_function;
@@ -20,81 +20,79 @@ static int MakeNewLabelId() {
     return label_id;
 }
 
-static void GenerateAddress(struct AstNode *expr) {
-    switch (expr->type) {
-        case AST_VARIABLE: {
-            void *variable = (void *) expr;
-            struct List *variables = &current_function->variables;
-            struct Variable *function_variable = (struct Variable *) List_Find(variables, variable, AreVariablesEquals);
-            if (!function_variable) {
-                ReportInternalError("variable address");
-            }
+static void GenerateAddress(struct Expr *expr) {
+    // Literals
+    if (expr->type == EXPR_VAR) {
+        struct List *function_vars = &current_function->variables;
+        struct Expr *function_var = (struct Expr *) List_Find(function_vars, expr, AreVariablesEquals);
+        if (!function_var) {
+            ReportInternalError("variable address");
+        }
 
-            Lea("rax", function_variable->rbp_offset);
-        } break;
-        case AST_UNARY_OPERATOR: {
-            struct UnaryOp *unary_op = (struct UnaryOp *) expr;
-            switch (unary_op->operator_type) {
-                case OPERATOR_UNARY_DEREFERENCE: {
-                    GenerateExpression(unary_op->expr);
-                } break;
-                default: {
-                    ReportInternalError("address unary op");
-                } break;
-            }
-        } break;
-        default: {
-            ReportInternalError("address");
-        } break;
+        Lea("rax", function_var->rbp_offset);
+        return;
+    }
+
+    // Unary operators
+    if (expr->type == EXPR_DEREF) {
+        GenerateExpr(expr->lhs);
+        return;
     }
 }
 
-static void GenerateExpression(struct AstNode *expr) {
+static void GenerateExpr(struct Expr *expr) {
+    // Literals
     switch (expr->type) {
-        case AST_LITERAL_NUMBER: {
-            struct Literal *literal = (struct Literal *) expr;
-            MovImm("rax", literal->int_value);
-        } break;
-        case AST_BINARY_OPERATOR: {
-            struct BinaryOp *binary_op = (struct BinaryOp *) expr;
-            if (binary_op->operator_type == OPERATOR_BINARY_ASSIGN) {
-                GenerateAddress(binary_op->lhs);
-                Push("rax");
-                GenerateExpression(binary_op->rhs);
-                Pop("rdi");
-                Mov("[rdi]", "rax");
-            }
-            else {
-                GenerateExpression(binary_op->rhs);
-                Push("rax");
-                GenerateExpression(binary_op->lhs);
-                Pop("rdi");
-                switch (binary_op->operator_type) {
-                    case OPERATOR_BINARY_EQUALS:              { Compare("rax", "rdi", "sete");          } break;
-                    case OPERATOR_BINARY_NOT_EQUALS:          { Compare("rax", "rdi", "setne");         } break;
-                    case OPERATOR_BINARY_LESS_THAN:           { Compare("rax", "rdi", "setl");          } break;
-                    case OPERATOR_BINARY_LESS_THAN_EQUALS:    { Compare("rax", "rdi", "setle");         } break;
-                    case OPERATOR_BINARY_GREATER_THAN:        { Compare("rax", "rdi", "setg");          } break;
-                    case OPERATOR_BINARY_GREATER_THAN_EQUALS: { Compare("rax", "rdi", "setge");         } break;
-                    case OPERATOR_BINARY_ADD:                 { Add("rax", "rdi");                      } break;
-                    case OPERATOR_BINARY_SUB:                 { Sub("rax", "rdi");                      } break;
-                    case OPERATOR_BINARY_MUL:                 { Mul("rax", "rdi");                      } break;
-                    case OPERATOR_BINARY_DIV:                 { Div("rdi");                             } break;
-                    default:                                  { ReportInternalError("binary op type");  } break;
-                }
-            }
-        } break;
-        case AST_UNARY_OPERATOR: {
-            struct UnaryOp *unary_op = (struct UnaryOp *) expr;
-            switch (unary_op->operator_type) {
-                case OPERATOR_UNARY_NEGATE:      { GenerateExpression(unary_op->expr); Neg("rax");          } break;
-                case OPERATOR_UNARY_DEREFERENCE: { GenerateExpression(unary_op->expr); Mov("rax", "[rax]"); } break;
-                case OPERATOR_UNARY_ADDRESS_OF:  { GenerateAddress(unary_op->expr);                         } break;
-                default:                         { ReportInternalError("unary op type");                    } break;
-            }
-        } break;
-        case AST_VARIABLE: { GenerateAddress(expr); Mov("rax", "[rax]"); } break;
-        default:           { ReportInternalError("expression");          } break;
+        case EXPR_NUM: {
+            MovImm("rax", expr->int_value);
+        } return;
+        case EXPR_VAR: {
+            GenerateAddress(expr);
+            Mov("rax", "[rax]");
+        } return;
+    }
+
+    // Unary operators
+    switch (expr->type) {
+        case EXPR_ADDR: {
+            GenerateAddress(expr->lhs);
+        } return;
+        case EXPR_DEREF: {
+            GenerateExpr(expr->lhs);
+            Mov("rax", "[rax]");
+        } return;
+        case EXPR_NEG: {
+            GenerateExpr(expr->lhs);
+            Neg("rax");
+        } return;
+    }
+
+    // Binary operators
+    if (expr->type == EXPR_ASSIGN) {
+        GenerateAddress(expr->lhs);
+        Push("rax");
+        GenerateExpr(expr->rhs);
+        Pop("rdi");
+        Mov("[rdi]", "rax");
+        return;
+    }
+
+    GenerateExpr(expr->rhs);
+    Push("rax");
+    GenerateExpr(expr->lhs);
+    Pop("rdi");
+    switch (expr->type) {
+        case EXPR_EQU: { Compare("rax", "rdi", "sete"); } break;
+        case EXPR_NEQ: { Compare("rax", "rdi", "setne"); } break;
+        case EXPR_LT:  { Compare("rax", "rdi", "setl"); } break;
+        case EXPR_GT:  { Compare("rax", "rdi", "setg"); } break;
+        case EXPR_LTE: { Compare("rax", "rdi", "setle"); } break;
+        case EXPR_GTE: { Compare("rax", "rdi", "setge"); } break;
+        case EXPR_ADD: { Add("rax", "rdi"); } break;
+        case EXPR_SUB: { Sub("rax", "rdi"); } break;
+        case EXPR_MUL: { Mul("rax", "rdi"); } break;
+        case EXPR_DIV: { Div("rdi"); } break;
+        default: { ReportInternalError("not implemented"); } break;
     }
 }
 
@@ -102,15 +100,14 @@ static void GenerateFunctionDefinition(struct FunctionDefinition *function) {
     current_function = function;
 
     int offset = 0;
-    struct List *function_variables = &function->variables;
-    for (int i = function_variables->count - 1; i >= 0; --i) {
-        struct Variable* var = (struct Variable *) List_Get(function_variables, i);
+    struct List *function_vars = &current_function->variables;
+    for (int i = function_vars->count - 1; i >= 0; --i) {
+        struct Expr *var = (struct Expr *) List_Get(function_vars, i);
         offset += 8;
         var->rbp_offset = offset;
     }
 
     function->stack_size = Align(offset, 16);
-
     Label("main");
     SetupStackFrame(function->stack_size);
 
@@ -141,11 +138,15 @@ static void GenerateCompoundStatement(struct CompoundStatement *compound_stateme
     }
 }
 
+static void GenerateExpressionStatement(struct ExpressionStatement *expression_statement) {
+    GenerateExpr(expression_statement->expr);
+}
+
 static void GenerateForStatement(struct ForStatement *for_statement) {
-    if (for_statement->init_expr) GenerateExpression(for_statement->init_expr);
+    if (for_statement->init_expr) GenerateExpr(for_statement->init_expr);
     int label_id = MakeNewLabelId();
     fprintf(f, "forstart%d:\n", label_id);
-    if (for_statement->cond_expr) GenerateExpression(for_statement->cond_expr);
+    if (for_statement->cond_expr) GenerateExpr(for_statement->cond_expr);
     fprintf(f,
         "  cmp rax, 0\n"
         "  je forend%d\n",
@@ -153,7 +154,7 @@ static void GenerateForStatement(struct ForStatement *for_statement) {
     );
 
     GenerateStatement(for_statement->statement);
-    if (for_statement->loop_expr) GenerateExpression(for_statement->loop_expr);
+    if (for_statement->loop_expr) GenerateExpr(for_statement->loop_expr);
     fprintf(f,
         "  jmp forstart%d\n"
         "  forend%d\n",
@@ -163,7 +164,7 @@ static void GenerateForStatement(struct ForStatement *for_statement) {
 }
 
 static void GenerateIfStatement(struct IfStatement *if_statement) {
-    GenerateExpression(if_statement->condition);
+    GenerateExpr(if_statement->condition);
     int label_id = MakeNewLabelId();
     fprintf(f,
         "  cmp rax, 0\n"
@@ -184,14 +185,14 @@ static void GenerateIfStatement(struct IfStatement *if_statement) {
 }
 
 static void GenerateReturnStatement(struct ReturnStatement *return_statement) {
-    if (return_statement->expr) GenerateExpression(return_statement->expr);
+    if (return_statement->expr) GenerateExpr(return_statement->expr);
     Jmp("return");
 }
 
 static void GenerateWhileStatement(struct WhileStatement *while_statement) {
     int label_id = MakeNewLabelId();
     fprintf(f, "whilestart%d:\n", label_id);
-    GenerateExpression(while_statement->condition);
+    GenerateExpr(while_statement->condition);
     fprintf(f,
         "  cmp rax, 0\n"
         "  je whileend%d\n",
@@ -209,13 +210,14 @@ static void GenerateWhileStatement(struct WhileStatement *while_statement) {
 
 static void GenerateStatement(struct AstNode *statement) {
     switch (statement->type) {
-        case AST_COMPOUND_STATEMENT: { GenerateCompoundStatement((struct CompoundStatement *) statement ); } break;
-        case AST_FOR_STATEMENT:      { GenerateForStatement((struct ForStatement *) statement); } break;
-        case AST_IF_STATEMENT:       { GenerateIfStatement((struct IfStatement *) statement); } break;
-        case AST_NULL_STATEMENT:     { } break;
-        case AST_RETURN_STATEMENT:   { GenerateReturnStatement((struct ReturnStatement *) statement); } break;
-        case AST_WHILE_STATEMENT:    { GenerateWhileStatement((struct WhileStatement *) statement); } break;
-        default:                     { GenerateExpression(statement); } break;
+        case AST_COMPOUND_STATEMENT:    { GenerateCompoundStatement((struct CompoundStatement *) statement ); } break;
+        case AST_EXPRESSION_STATEMENT:  { GenerateExpressionStatement((struct ExpressionStatement *) statement); } break;
+        case AST_FOR_STATEMENT:         { GenerateForStatement((struct ForStatement *) statement); } break;
+        case AST_IF_STATEMENT:          { GenerateIfStatement((struct IfStatement *) statement); } break;
+        case AST_NULL_STATEMENT:        { } break;
+        case AST_RETURN_STATEMENT:      { GenerateReturnStatement((struct ReturnStatement *) statement); } break;
+        case AST_WHILE_STATEMENT:       { GenerateWhileStatement((struct WhileStatement *) statement); } break;
+        default:                        { ReportInternalError("unknown statement"); } break;
     }
 }
 

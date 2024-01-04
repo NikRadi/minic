@@ -15,6 +15,9 @@ def print_colored(text, color):
 def minic_test(arg, expected):
     args = ["bin\minic", arg]
     minic_result = subprocess.run(args, capture_output=True, text=True)
+    if minic_result.returncode != 0:
+        print_colored(f'failed compile {arg}', COLOR_RED)
+        return
 
     args = ["tmp.exe"]
     program_result = subprocess.run(args, capture_output=True, text=True)
