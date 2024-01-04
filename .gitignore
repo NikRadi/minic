@@ -3,9 +3,11 @@
 *.exe
 *.pdb
 *.obj
+*.sln
 setup_msvc.bat
 
 # Folders
+.vs/
 .vscode/
 bin/
 obj/
