@@ -3,7 +3,7 @@
 #include "Token.h"
 #include <stdbool.h>
 
-#define LEXER_TOKEN_CACHE_SIZE 1
+#define LEXER_TOKEN_CACHE_SIZE 2
 
 struct Lexer {
     char *code;
@@ -20,5 +20,7 @@ void Lexer_EatToken(struct Lexer *l);
 bool Lexer_Init(struct Lexer *l, char *filename);
 
 struct Token Lexer_PeekToken(struct Lexer *l);
+
+struct Token Lexer_PeekToken2(struct Lexer *l, int offset);
 
 #endif // MINIC_LEXER_H

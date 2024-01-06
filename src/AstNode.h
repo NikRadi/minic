@@ -10,6 +10,7 @@ enum OperandType {
 
 struct AstNode {
     enum AstNodeType {
+        AST_DECLARATION,
         AST_FUNCTION_DEFINITION,
 
         // Statements
@@ -56,10 +57,16 @@ struct Expr {
     } type;
 };
 
+struct Declaration {
+    struct AstNode node;
+    char identifier[TOKEN_MAX_IDENTIFIER_LENGTH];
+    int rbp_offset;
+};
+
 struct FunctionDefinition {
     struct AstNode node;
     struct List statements;
-    struct List variables;
+    struct List var_declarations;
     int stack_size;
 };
 
@@ -124,5 +131,8 @@ struct IfStatement *NewIfStatement(struct Expr *condition, struct AstNode *state
 struct AstNode *NewNullStatement();
 struct ReturnStatement *NewReturnStatement(struct Expr *expr);
 struct WhileStatement *NewWhileStatement(struct Expr *condition, struct AstNode *statement);
+
+void PrintE(struct Expr *expr);
+void PrintS(struct AstNode *node);
 
 #endif // MINIC_AST_NODE_H

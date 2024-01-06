@@ -2,6 +2,8 @@
 #include "Assembly.h"
 #include "ReportError.h"
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 static void GenerateExpr(struct Expr *expr);
 static void GenerateStatement(struct AstNode *statement);
@@ -23,13 +25,21 @@ static int MakeNewLabelId() {
 static void GenerateAddress(struct Expr *expr) {
     // Literals
     if (expr->type == EXPR_VAR) {
-        struct List *function_vars = &current_function->variables;
-        struct Expr *function_var = (struct Expr *) List_Find(function_vars, expr, AreVariablesEquals);
-        if (!function_var) {
-            ReportInternalError("variable address");
+        struct List *var_declarations = &current_function->var_declarations;
+        struct Declaration *var_declaration = NULL;
+        for (int i = 0; i < var_declarations->count; ++i) {
+            struct Declaration *v = (struct Declaration *) List_Get(var_declarations, i);
+            if (strcmp(v->identifier, expr->str_value) == 0) {
+                var_declaration = v;
+                break;
+            }
         }
 
-        Lea("rax", function_var->rbp_offset);
+        if (!var_declaration) {
+            ReportInternalError("variable address of '%s'", expr->str_value);
+        }
+
+        Lea("rax", var_declaration->rbp_offset);
         return;
     }
 
@@ -100,11 +110,11 @@ static void GenerateFunctionDefinition(struct FunctionDefinition *function) {
     current_function = function;
 
     int offset = 0;
-    struct List *function_vars = &current_function->variables;
-    for (int i = function_vars->count - 1; i >= 0; --i) {
-        struct Expr *var = (struct Expr *) List_Get(function_vars, i);
+    struct List *var_declarations = &current_function->var_declarations;
+    for (int i = var_declarations->count - 1; i >= 0; --i) {
+        struct Declaration *var_declaration = (struct Declaration *) List_Get(var_declarations, i);
         offset += 8;
-        var->rbp_offset = offset;
+        var_declaration->rbp_offset = offset;
     }
 
     function->stack_size = Align(offset, 16);

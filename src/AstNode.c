@@ -17,6 +17,13 @@ static struct Expr *NewExpr(enum ExprType type) {
     return expr;
 }
 
+static struct Expr *NewPointerTo(enum ExprType base_type, enum ExprType type, struct Expr *lhs, struct Expr *rhs) {
+    struct Expr *expr = NewOperationExpr(type, lhs, rhs);
+    expr->base_operand_type = base_type;
+    expr->operand_type = OPERAND_POINTER;
+    return expr;
+}
+
 
 //
 // ===
@@ -38,24 +45,14 @@ struct Expr *NewOperationAddExpr(struct Expr *lhs, struct Expr *rhs) {
 
     if (lhs->operand_type == OPERAND_POINTER && rhs->operand_type == OPERAND_INTEGER) {
         struct Expr *num = NewNumberExpr(8);
-        rhs = NewOperationExpr(EXPR_MUL, num, rhs);
-        rhs->base_operand_type = rhs->operand_type;
-        rhs->operand_type = OPERAND_POINTER;
-        struct Expr *expr = NewOperationExpr(EXPR_ADD, lhs, rhs);
-        expr->base_operand_type = rhs->operand_type;
-        expr->operand_type = OPERAND_POINTER;
-        return expr;
+        rhs = NewPointerTo(rhs->operand_type, EXPR_MUL, num, rhs);
+        return NewPointerTo(rhs->operand_type, EXPR_ADD, lhs, rhs);
     }
 
     if (lhs->operand_type == OPERAND_INTEGER && rhs->operand_type == OPERAND_POINTER) {
         struct Expr *num = NewNumberExpr(8);
-        lhs = NewOperationExpr(EXPR_MUL, lhs, num);
-        lhs->base_operand_type = rhs->operand_type;
-        lhs->operand_type = OPERAND_POINTER;
-        struct Expr *expr = NewOperationExpr(EXPR_ADD, lhs, rhs);
-        expr->base_operand_type = rhs->operand_type;
-        expr->operand_type = OPERAND_POINTER;
-        return expr;
+        lhs = NewPointerTo(rhs->operand_type, EXPR_MUL, lhs, num);
+        return NewPointerTo(rhs->operand_type, EXPR_ADD, lhs, rhs);
     }
 
     ReportInternalError("binary add operation");
@@ -84,24 +81,14 @@ struct Expr *NewOperationSubExpr(struct Expr *lhs, struct Expr *rhs) {
 
     if (lhs->operand_type == OPERAND_POINTER && rhs->operand_type == OPERAND_INTEGER) {
         struct Expr *num = NewNumberExpr(8);
-        rhs = NewOperationExpr(EXPR_MUL, num, rhs); // TODO: Better solution for these
-        rhs->base_operand_type = rhs->operand_type;
-        rhs->operand_type = OPERAND_POINTER;
-        struct Expr *expr = NewOperationExpr(EXPR_SUB, lhs, rhs);
-        expr->base_operand_type = rhs->operand_type;
-        expr->operand_type = OPERAND_POINTER;
-        return expr;
+        rhs = NewPointerTo(rhs->operand_type, EXPR_MUL, num, rhs);
+        return NewPointerTo(rhs->operand_type, EXPR_SUB, lhs, rhs);
     }
 
     if (lhs->operand_type == OPERAND_INTEGER && rhs->operand_type == OPERAND_POINTER) {
         struct Expr *num = NewNumberExpr(8);
-        lhs = NewOperationExpr(EXPR_MUL, lhs, num);
-        lhs->base_operand_type = rhs->operand_type;
-        lhs->operand_type = OPERAND_POINTER;
-        struct Expr *expr = NewOperationExpr(EXPR_SUB, lhs, rhs);
-        expr->base_operand_type = rhs->operand_type;
-        expr->operand_type = OPERAND_POINTER;
-        return expr;
+        lhs = NewPointerTo(rhs->operand_type, EXPR_MUL, lhs, num);
+        return NewPointerTo(rhs->operand_type, EXPR_SUB, lhs, rhs);
     }
 
     if (lhs->operand_type == OPERAND_POINTER && rhs->operand_type == OPERAND_POINTER) {
@@ -181,4 +168,131 @@ struct WhileStatement *NewWhileStatement(struct Expr *condition, struct AstNode 
     while_statement->condition = condition;
     while_statement->statement = statement;
     return while_statement;
+}
+
+static int indent = 0;
+void PrintE(struct Expr *expr) {
+    switch (expr->type) {
+        case EXPR_NUM: {
+            fprintf(stdout, "%*s<Num int_value=\"%d\" %d %d />\n", indent, "", 
+                expr->int_value,
+                expr->operand_type,
+                expr->base_operand_type
+            );
+        } break;
+        case EXPR_VAR: {
+            fprintf(stdout, "%*s<Var str_value=\"%s\" %d %d />\n",
+                indent, "",
+                expr->str_value,
+                expr->operand_type,
+                expr->base_operand_type
+            );
+        } break;
+        case EXPR_DEREF: {
+            fprintf(stdout, "%*s<Deref>\n", indent, "");
+            indent += 2;
+            PrintE(expr->lhs);
+            indent -= 2;
+            fprintf(stdout, "%*s</Deref>\n", indent, "");
+        } break;
+        case EXPR_ADDR: {
+            fprintf(stdout, "%*s<Addr %d %d>\n", indent, "",
+                expr->operand_type,
+                expr->base_operand_type
+            );
+
+            indent += 2;
+            PrintE(expr->lhs);
+            indent -= 2;
+            fprintf(stdout, "%*s</Addr>\n", indent, "");
+        } break;
+        case EXPR_ADD: {
+            fprintf(stdout, "%*s<Add>\n", indent, "");
+            indent += 2;
+            PrintE(expr->lhs);
+            PrintE(expr->rhs);
+            indent -= 2;
+            fprintf(stdout, "%*s</Add>\n", indent, "");
+        } break;
+        case EXPR_SUB: {
+            fprintf(stdout, "%*s<Sub>\n", indent, "");
+            indent += 2;
+            PrintE(expr->lhs);
+            PrintE(expr->rhs);
+            indent -= 2;
+            fprintf(stdout, "%*s</Sub>\n", indent, "");
+        } break;
+        case EXPR_ASSIGN: {
+            fprintf(stdout, "%*s<Assign>\n", indent, "");
+            indent += 2;
+            PrintE(expr->lhs);
+            PrintE(expr->rhs);
+            indent -= 2;
+            fprintf(stdout, "%*s</Assign>\n", indent, "");
+        } break;
+        default: {
+            fprintf(stdout, "%*s<UNKNOWN expr %d/>\n", indent, "", expr->type);
+        } break;
+    }
+}
+
+void PrintS(struct AstNode *node) {
+    switch (node->type) {
+        case AST_DECLARATION: {
+            struct Declaration *d = (struct Declaration *) node;
+            fprintf(stdout, "%*s<Declaration identifier=\"%s\" rbp_offset=\"%d\"/>\n",
+                indent, "",
+                d->identifier,
+                d->rbp_offset
+            );
+        } break;
+        case AST_FUNCTION_DEFINITION: {
+            struct FunctionDefinition *f = (struct FunctionDefinition *) node;
+            fprintf(stdout, "%*s<FunctionDefinition stack_size=\"%d\">\n", indent, "", f->stack_size);
+            indent += 2;
+            for (int i = 0; i < f->var_declarations.count; ++i) {
+                struct AstNode *d = (struct AstNode *) List_Get(&f->var_declarations, i);
+                PrintS(d);
+            }
+
+            for (int i = 0; i < f->statements.count; ++i) {
+                struct AstNode *s = (struct AstNode *) List_Get(&f->statements, i);
+                PrintS(s);
+            }
+
+            indent -= 2;
+            fprintf(stdout, "%*s</FunctionDefinition>\n", indent, "");
+        } break;
+        case AST_COMPOUND_STATEMENT: {
+            struct CompoundStatement *c = (struct CompoundStatement *) node;
+            fprintf(stdout, "%*s<CompoundStatement>\n", indent, "");
+            indent += 2;
+            for (int i = 0; i < c->statements.count; ++i) {
+                struct AstNode *s = (struct AstNode *) List_Get(&c->statements, i);
+                PrintS(s);
+            }
+
+            indent -= 2;
+            fprintf(stdout, "%*s</CompoundStatement>\n", indent, "");
+        } break;
+        case AST_EXPRESSION_STATEMENT: {
+            struct ExpressionStatement *e = (struct ExpressionStatement *) node;
+            fprintf(stdout, "%*s<ExpressionStatement>\n", indent, "");
+            indent += 2;
+            PrintE(e->expr);
+            indent -= 2;
+            fprintf(stdout, "%*s</ExpressionStatement>\n", indent, "");
+        } break;
+        case AST_RETURN_STATEMENT: {
+            struct ReturnStatement *r = (struct ReturnStatement *) node;
+            fprintf(stdout, "%*s<ReturnStatement>\n", indent, "");
+            indent += 2;
+            PrintE(r->expr);
+            indent -= 2;
+            fprintf(stdout, "%*s</ReturnStatement>\n", indent, "");
+        } break;
+        default: {
+            fprintf(stdout, "%*s<UNKNOWN statement %d/>\n", indent, "", node->type);
+        } break;
+    }
 }

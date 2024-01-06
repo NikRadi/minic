@@ -12,6 +12,7 @@ enum TokenType {
     TOKEN_LITERAL_NUMBER,
 
     // Signs
+    TOKEN_COMMA,                    // ,
     TOKEN_SEMICOLON,                // ;
     TOKEN_LEFT_ROUND_BRACKET,       // (
     TOKEN_RIGHT_ROUND_BRACKET,      // )
@@ -39,6 +40,7 @@ enum TokenType {
     // Keywords
     TOKEN_KEYWORD_ELSE,
     TOKEN_KEYWORD_FOR,
+    TOKEN_KEYWORD_INT,
     TOKEN_KEYWORD_IF,
     TOKEN_KEYWORD_RETURN,
     TOKEN_KEYWORD_WHILE,
