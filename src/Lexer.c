@@ -14,10 +14,8 @@ static struct Token MakeToken(struct Lexer *l);
 
 static void AddToken(struct Lexer *l, struct Token token) {
     token.line = l->line;
-
-    int index = (l->token_index + 1) % LEXER_TOKEN_CACHE_SIZE;
-    l->tokens[index] = token;
-    l->token_index = index;
+    l->tokens[l->token_index] = token;
+    l->token_index = (l->token_index + 1) % LEXER_TOKEN_CACHE_SIZE;
 }
 
 static void AddTokenWithType(struct Lexer *l, enum TokenType type) {
@@ -94,6 +92,7 @@ static void ReadSequence(struct Lexer *l, char *buffer, IsAllowedInSequenceFunct
 static enum TokenType TypeOfIdentifier(char *identifier) {
     if (strcmp(identifier, "else") == 0)    return TOKEN_KEYWORD_ELSE;
     if (strcmp(identifier, "for") == 0)     return TOKEN_KEYWORD_FOR;
+    if (strcmp(identifier, "int") == 0)     return TOKEN_KEYWORD_INT;
     if (strcmp(identifier, "if") == 0)      return TOKEN_KEYWORD_IF;
     if (strcmp(identifier, "return") == 0)  return TOKEN_KEYWORD_RETURN;
     if (strcmp(identifier, "while") == 0)   return TOKEN_KEYWORD_WHILE;
@@ -118,6 +117,7 @@ void Lexer_EatToken(struct Lexer *l) {
     struct Token token = MakeToken(l);
     char c = PeekChar(l);
     switch (c) {
+        case ',': { EatChar(l); token.type = TOKEN_COMMA; } break;
         case ';': { EatChar(l); token.type = TOKEN_SEMICOLON; } break;
         case '(': { EatChar(l); token.type = TOKEN_LEFT_ROUND_BRACKET; } break;
         case ')': { EatChar(l); token.type = TOKEN_RIGHT_ROUND_BRACKET; } break;
@@ -221,9 +221,18 @@ bool Lexer_Init(struct Lexer *l, char *filename) {
     l->filename = filename;
     l->line = 1;
     l->token_index = 0;
+    for (int i = 0; i < LEXER_TOKEN_CACHE_SIZE; ++i) {
+        Lexer_EatToken(l);
+    }
+
     return true;
 }
 
 struct Token Lexer_PeekToken(struct Lexer *l) {
-    return l->tokens[0];
+    return Lexer_PeekToken2(l, 0);
+}
+
+struct Token Lexer_PeekToken2(struct Lexer *l, int offset) {
+    int index = (l->token_index + offset) % LEXER_TOKEN_CACHE_SIZE;
+    return l->tokens[index];
 }

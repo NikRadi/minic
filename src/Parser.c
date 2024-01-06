@@ -9,6 +9,7 @@
 #define NEW_TYPE(type) ((struct type *) malloc(sizeof(struct type)))
 
 static struct CompoundStatement *ParseCompoundStatement();
+static struct ExpressionStatement *ParseExpressionStatement();
 static struct AstNode *ParseStatement();
 
 static struct FunctionDefinition *current_function;
@@ -148,15 +149,7 @@ static struct Expr *ParseUnaryPlusOp(struct OperatorParseData data) {
 static struct Expr *ParseVariable(struct OperatorParseData data) {
     char *value = Lexer_PeekToken(l).str_value;
     Lexer_EatToken(l);
-
-    struct Expr *var = NewVariableExpr(value);
-    struct List *function_vars = &current_function->variables;
-    struct Expr *function_var = (struct Expr *) List_Find(function_vars, var, AreVariablesEquals);
-    if (!function_var) {
-        List_Add(function_vars, (void *) var);
-    }
-
-    return var;
+    return NewVariableExpr(value);
 }
 
 
@@ -169,14 +162,51 @@ static struct Expr *ParseVariable(struct OperatorParseData data) {
 
 static struct CompoundStatement *ParseCompoundStatement() {
     ExpectAndEat(TOKEN_LEFT_CURLY_BRACKET);
+    struct List *var_declarations = &current_function->var_declarations;
     struct List statements;
     List_Init(&statements);
     while (Lexer_PeekToken(l).type != TOKEN_RIGHT_CURLY_BRACKET) {
-        struct AstNode *statement = ParseStatement();
-        List_Add(&statements, statement);
+        struct Token token = Lexer_PeekToken(l);
+        if (token.type == TOKEN_KEYWORD_INT) {
+            // Declaration specifiers
+            Lexer_EatToken(l);
+            do {
+                // Declarator 
+                while (Lexer_PeekToken(l).type == TOKEN_STAR) {
+                    Lexer_EatToken(l);
+                }
+
+                token = Lexer_PeekToken(l);
+                struct Declaration *d = (struct Declaration *) malloc(sizeof(struct Declaration));
+                d->node.type = AST_DECLARATION;
+                strncpy(d->identifier, token.str_value, TOKEN_MAX_IDENTIFIER_LENGTH);
+                List_Add(var_declarations, d);
+
+                if (Lexer_PeekToken2(l, 1).type == TOKEN_EQUALS) {
+                    struct Expr *expr = ParseExpr(0);
+                    struct ExpressionStatement *statement = NewExpressionStatement(expr);
+                    List_Add(&statements, statement);
+                }
+                else {
+                    Lexer_EatToken(l); // Eat the identifier
+                }
+
+                if (Lexer_PeekToken(l).type == TOKEN_SEMICOLON) {
+                    break;
+                }
+                else {
+                    ExpectAndEat(TOKEN_COMMA);
+                }
+            } while (true);
+            ExpectAndEat(TOKEN_SEMICOLON);
+        }
+        else {
+            struct AstNode *statement = ParseStatement();
+            List_Add(&statements, statement);
+        }
     }
 
-    Lexer_EatToken(l); // TOKEN_RIGHT_CURLY_BRACKET
+    ExpectAndEat(TOKEN_RIGHT_CURLY_BRACKET);
     return NewCompoundStatement(statements);
 }
 
@@ -275,7 +305,6 @@ static struct AstNode *ParseStatement() {
 
 struct FunctionDefinition *Parser_MakeAst(struct Lexer *lexer) {
     l = lexer;
-    Lexer_EatToken(l);
 
     struct FunctionDefinition *function = NEW_TYPE(FunctionDefinition);
     function->node.type = AST_FUNCTION_DEFINITION,
@@ -283,7 +312,7 @@ struct FunctionDefinition *Parser_MakeAst(struct Lexer *lexer) {
     current_function = function;
 
     List_Init(&function->statements);
-    List_Init(&function->variables);
+    List_Init(&function->var_declarations);
     while (Lexer_PeekToken(l).type != TOKEN_END_OF_FILE) {
         struct AstNode *statement = ParseStatement();
         List_Add(&function->statements, statement);
