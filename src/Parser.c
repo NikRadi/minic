@@ -54,6 +54,16 @@ struct OperatorParseData {
     ParseOperatorFunction Parse;
 };
 
+static struct OperatorParseData prefix_operators[TOKEN_COUNT] = {
+    [TOKEN_PLUS]                    = { .precedence = 60,                       .Parse = ParseUnaryPlusOp },
+    [TOKEN_MINUS]                   = { .precedence = 60, .type = EXPR_NEG,     .Parse = ParseUnaryOp },
+    [TOKEN_STAR]                    = { .precedence = 60, .type = EXPR_DEREF,   .Parse = ParseUnaryOp },
+    [TOKEN_AMPERSAND]               = { .precedence = 60, .type = EXPR_ADDR,    .Parse = ParseUnaryAddrOp },
+    [TOKEN_IDENTIFIER]              = {                                         .Parse = ParseVariable },
+    [TOKEN_LEFT_ROUND_BRACKET]      = {                                         .Parse = ParseBracket },
+    [TOKEN_LITERAL_NUMBER]          = {                                         .Parse = ParseNumber },
+};
+
 static struct OperatorParseData infix_operators[TOKEN_COUNT] = {
     [TOKEN_EQUALS]                  = { .precedence = 10, .type = EXPR_ASSIGN,  .Parse = ParseBinaryOp, .is_right_associative = true },
     [TOKEN_2_EQUALS]                = { .precedence = 20, .type = EXPR_EQU,     .Parse = ParseBinaryOp },
@@ -68,18 +78,8 @@ static struct OperatorParseData infix_operators[TOKEN_COUNT] = {
     [TOKEN_SLASH]                   = { .precedence = 50, .type = EXPR_DIV,     .Parse = ParseBinaryOp },
 };
 
-static struct OperatorParseData prefix_operators[TOKEN_COUNT] = {
-    [TOKEN_PLUS]                    = { .precedence = 60, .type = EXPR_NEG,     .Parse = ParseUnaryPlusOp },
-    [TOKEN_MINUS]                   = { .precedence = 60, .type = EXPR_NEG,     .Parse = ParseUnaryOp },
-    [TOKEN_STAR]                    = { .precedence = 60, .type = EXPR_DEREF,   .Parse = ParseUnaryOp },
-    [TOKEN_AMPERSAND]               = { .precedence = 60, .type = EXPR_ADDR,    .Parse = ParseUnaryAddrOp },
-    [TOKEN_IDENTIFIER]              = { .Parse = ParseVariable },
-    [TOKEN_LEFT_ROUND_BRACKET]      = { .Parse = ParseBracket },
-    [TOKEN_LITERAL_NUMBER]          = { .Parse = ParseNumber },
-};
-
 static struct Expr *ParseBinaryAddOp(struct OperatorParseData data) {
-    Lexer_EatToken(l);
+    ExpectAndEat(TOKEN_PLUS);
     struct Expr *rhs = ParseExpr(data.precedence - data.is_right_associative);
     return NewOperationAddExpr(data.lhs, rhs);
 }
@@ -91,7 +91,7 @@ static struct Expr *ParseBinaryOp(struct OperatorParseData data) {
 }
 
 static struct Expr *ParseBinarySubOp(struct OperatorParseData data) {
-    Lexer_EatToken(l);
+    ExpectAndEat(TOKEN_MINUS);
     struct Expr *rhs = ParseExpr(data.precedence - data.is_right_associative);
     return NewOperationSubExpr(data.lhs, rhs);
 }
@@ -171,7 +171,7 @@ static struct CompoundStatement *ParseCompoundStatement() {
             // Declaration specifiers
             Lexer_EatToken(l);
             do {
-                // Declarator 
+                // Declarator
                 while (Lexer_PeekToken(l).type == TOKEN_STAR) {
                     Lexer_EatToken(l);
                 }

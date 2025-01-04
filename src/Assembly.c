@@ -9,6 +9,7 @@ void Add(char *destination, char *source) {
 void Compare(char *a, char *b, char *comparison) {
     fprintf(f,
         "  cmp %s, %s\n"
+        // Store comparison instruction (e.g. sete, setne, etc.) result in 'al' (Lower 8 bits of rax).
         "  %s al\n",
         a, b,
         comparison

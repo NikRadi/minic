@@ -8,8 +8,10 @@ enum TokenType {
     TOKEN_END_OF_FILE,
     TOKEN_IDENTIFIER,
 
+
     // Literals
     TOKEN_LITERAL_NUMBER,
+
 
     // Signs
     TOKEN_COMMA,                    // ,
@@ -45,6 +47,8 @@ enum TokenType {
     TOKEN_KEYWORD_RETURN,
     TOKEN_KEYWORD_WHILE,
 
+
+    // Utility
     TOKEN_COUNT,
 };
 
