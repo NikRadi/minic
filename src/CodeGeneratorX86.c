@@ -64,6 +64,18 @@ static void GenerateExpr(struct Expr *expr) {
 
     // Other operators
     if (expr->type == EXPR_FUNC_CALL) {
+        struct List *args = &expr->args;
+        for (int i = 0; i < args->count; ++i) {
+            struct Expr *arg = (struct Expr *) List_Get(args, i);
+            GenerateExpr(arg);
+            Push("rax");
+        }
+
+        static char *arg_regs[] = { "rdi", "rsi", "rdx", "rcx", "r8", "r9" };
+        for (int i = args->count - 1; i >= 0; --i) {
+            Pop(arg_regs[i]);
+        }
+
         Call(expr->str_value);
         return;
     }

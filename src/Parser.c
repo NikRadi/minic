@@ -18,7 +18,7 @@ static struct Lexer *l;
 static void ExpectAndEat(enum TokenType type) {
     struct Token token = Lexer_PeekToken(l);
     if (token.type != type) {
-        ReportErrorAtToken(l, token, "expected %d", type);
+        ReportErrorAtToken(l, token, "expected %d but got %d", type, token.type);
     }
 
     Lexer_EatToken(l);
@@ -130,8 +130,18 @@ static struct Expr *ParseIdentifier(struct OperatorParseData data) {
     ExpectAndEat(TOKEN_IDENTIFIER);
     if (Lexer_PeekToken(l).type == TOKEN_LEFT_ROUND_BRACKET) {
         ExpectAndEat(TOKEN_LEFT_ROUND_BRACKET);
+        struct List args;
+        List_Init(&args);
+        while (Lexer_PeekToken(l).type != TOKEN_RIGHT_ROUND_BRACKET) {
+            struct Expr *expr = ParseExpr(0);
+            List_Add(&args, expr);
+            if (Lexer_PeekToken(l).type == TOKEN_COMMA) {
+                Lexer_EatToken(l);
+            }
+        }
+
         ExpectAndEat(TOKEN_RIGHT_ROUND_BRACKET);
-        return NewFunctionCallExpr(identifier);
+        return NewFunctionCallExpr(identifier, args);
     }
 
     return NewVariableExpr(identifier);

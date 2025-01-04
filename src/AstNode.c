@@ -38,9 +38,10 @@ bool AreVariablesEquals(void *a, void *b) {
     return strcmp(e1->str_value, e2->str_value) == 0;
 }
 
-struct Expr *NewFunctionCallExpr(char *identifier) {
+struct Expr *NewFunctionCallExpr(char *identifier, struct List args) {
     struct Expr *expr = NewExpr(EXPR_FUNC_CALL);
     strncpy(expr->str_value, identifier, TOKEN_MAX_IDENTIFIER_LENGTH);
+    expr->args = args;
     expr->operand_type = OPERAND_INTEGER;
     return expr;
 }

@@ -27,6 +27,7 @@ struct AstNode {
 struct Expr {
     struct Expr *lhs;
     struct Expr *rhs;
+    struct List args;
     int int_value;
     char str_value[TOKEN_MAX_IDENTIFIER_LENGTH];
     int rbp_offset;
@@ -120,7 +121,7 @@ struct WhileStatement {
 
 bool AreVariablesEquals(void *a, void *b);
 
-struct Expr *NewFunctionCallExpr(char *identifier);
+struct Expr *NewFunctionCallExpr(char *identifier, struct List args);
 struct Expr *NewOperationAddExpr(struct Expr *lhs, struct Expr *rhs);
 struct Expr *NewOperationAddrExpr(struct Expr *lhs);
 struct Expr *NewOperationExpr(enum ExprType type, struct Expr *lhs, struct Expr *rhs);
