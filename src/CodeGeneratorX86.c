@@ -62,6 +62,12 @@ static void GenerateExpr(struct Expr *expr) {
         } return;
     }
 
+    // Other operators
+    if (expr->type == EXPR_FUNC_CALL) {
+        Call(expr->str_value);
+        return;
+    }
+
     // Unary operators
     switch (expr->type) {
         case EXPR_ADDR: {
@@ -84,11 +90,6 @@ static void GenerateExpr(struct Expr *expr) {
         GenerateExpr(expr->rhs);
         Pop("rdi");
         Mov("[rdi]", "rax");
-        return;
-    }
-
-    if (expr->type == EXPR_FUNC_CALL) {
-        Call(expr->str_value);
         return;
     }
 

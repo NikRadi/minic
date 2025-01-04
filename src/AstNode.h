@@ -37,6 +37,9 @@ struct Expr {
         EXPR_NUM,
         EXPR_VAR,
 
+        // Others
+        EXPR_FUNC_CALL,
+
         // Unary operators
         EXPR_NEG,       // -lhs
         EXPR_DEREF,     // *lhs
@@ -54,9 +57,6 @@ struct Expr {
         EXPR_MUL,       // lhs * rhs
         EXPR_DIV,       // lhs / rhs
         EXPR_ASSIGN,    // lhs = rhs
-
-        // Others
-        EXPR_FUNC_CALL,
     } type;
 };
 
