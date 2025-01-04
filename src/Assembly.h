@@ -4,6 +4,8 @@
 
 void Add(char *destination, char *source);
 
+void Call(char *label);
+
 void Compare(char *a, char *b, char *comparison);
 
 void Div(char *operand);

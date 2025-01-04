@@ -54,6 +54,9 @@ struct Expr {
         EXPR_MUL,       // lhs * rhs
         EXPR_DIV,       // lhs / rhs
         EXPR_ASSIGN,    // lhs = rhs
+
+        // Others
+        EXPR_FUNC_CALL,
     } type;
 };
 
@@ -117,12 +120,13 @@ struct WhileStatement {
 
 bool AreVariablesEquals(void *a, void *b);
 
+struct Expr *NewFunctionCallExpr(char *identifier);
 struct Expr *NewOperationAddExpr(struct Expr *lhs, struct Expr *rhs);
 struct Expr *NewOperationAddrExpr(struct Expr *lhs);
 struct Expr *NewOperationExpr(enum ExprType type, struct Expr *lhs, struct Expr *rhs);
 struct Expr *NewOperationSubExpr(struct Expr *lhs, struct Expr *rhs);
 struct Expr *NewNumberExpr(int value);
-struct Expr *NewVariableExpr(char *value);
+struct Expr *NewVariableExpr(char *identifier);
 
 struct CompoundStatement *NewCompoundStatement(struct List statements);
 struct ExpressionStatement *NewExpressionStatement(struct Expr *expr);

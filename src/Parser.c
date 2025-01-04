@@ -40,11 +40,11 @@ static struct Expr *ParseBinaryOp(struct OperatorParseData data);
 static struct Expr *ParseBinarySubOp(struct OperatorParseData data);
 static struct Expr *ParseBracket(struct OperatorParseData data);
 static struct Expr *ParseExpr(int precedence);
+static struct Expr *ParseIdentifier(struct OperatorParseData data);
 static struct Expr *ParseNumber(struct OperatorParseData data);
 static struct Expr *ParseUnaryAddrOp(struct OperatorParseData data);
 static struct Expr *ParseUnaryOp(struct OperatorParseData data);
 static struct Expr *ParseUnaryPlusOp(struct OperatorParseData data);
-static struct Expr *ParseVariable(struct OperatorParseData data);
 
 struct OperatorParseData {
     int precedence;
@@ -54,15 +54,6 @@ struct OperatorParseData {
     ParseOperatorFunction Parse;
 };
 
-static struct OperatorParseData prefix_operators[TOKEN_COUNT] = {
-    [TOKEN_PLUS]                    = { .precedence = 60,                       .Parse = ParseUnaryPlusOp },
-    [TOKEN_MINUS]                   = { .precedence = 60, .type = EXPR_NEG,     .Parse = ParseUnaryOp },
-    [TOKEN_STAR]                    = { .precedence = 60, .type = EXPR_DEREF,   .Parse = ParseUnaryOp },
-    [TOKEN_AMPERSAND]               = { .precedence = 60, .type = EXPR_ADDR,    .Parse = ParseUnaryAddrOp },
-    [TOKEN_IDENTIFIER]              = {                                         .Parse = ParseVariable },
-    [TOKEN_LEFT_ROUND_BRACKET]      = {                                         .Parse = ParseBracket },
-    [TOKEN_LITERAL_NUMBER]          = {                                         .Parse = ParseNumber },
-};
 
 static struct OperatorParseData infix_operators[TOKEN_COUNT] = {
     [TOKEN_EQUALS]                  = { .precedence = 10, .type = EXPR_ASSIGN,  .Parse = ParseBinaryOp, .is_right_associative = true },
@@ -77,6 +68,17 @@ static struct OperatorParseData infix_operators[TOKEN_COUNT] = {
     [TOKEN_STAR]                    = { .precedence = 50, .type = EXPR_MUL,     .Parse = ParseBinaryOp },
     [TOKEN_SLASH]                   = { .precedence = 50, .type = EXPR_DIV,     .Parse = ParseBinaryOp },
 };
+
+static struct OperatorParseData prefix_operators[TOKEN_COUNT] = {
+    [TOKEN_PLUS]                    = { .precedence = 60,                       .Parse = ParseUnaryPlusOp },
+    [TOKEN_MINUS]                   = { .precedence = 60, .type = EXPR_NEG,     .Parse = ParseUnaryOp },
+    [TOKEN_STAR]                    = { .precedence = 60, .type = EXPR_DEREF,   .Parse = ParseUnaryOp },
+    [TOKEN_AMPERSAND]               = { .precedence = 60, .type = EXPR_ADDR,    .Parse = ParseUnaryAddrOp },
+    [TOKEN_IDENTIFIER]              = {                                         .Parse = ParseIdentifier },
+    [TOKEN_LEFT_ROUND_BRACKET]      = {                                         .Parse = ParseBracket },
+    [TOKEN_LITERAL_NUMBER]          = {                                         .Parse = ParseNumber },
+};
+
 
 static struct Expr *ParseBinaryAddOp(struct OperatorParseData data) {
     ExpectAndEat(TOKEN_PLUS);
@@ -123,14 +125,26 @@ static struct Expr *ParseExpr(int precedence) {
     return lhs;
 }
 
+static struct Expr *ParseIdentifier(struct OperatorParseData data) {
+    char *identifier = Lexer_PeekToken(l).str_value;
+    ExpectAndEat(TOKEN_IDENTIFIER);
+    if (Lexer_PeekToken(l).type == TOKEN_LEFT_ROUND_BRACKET) {
+        ExpectAndEat(TOKEN_LEFT_ROUND_BRACKET);
+        ExpectAndEat(TOKEN_RIGHT_ROUND_BRACKET);
+        return NewFunctionCallExpr(identifier);
+    }
+
+    return NewVariableExpr(identifier);
+}
+
 static struct Expr *ParseNumber(struct OperatorParseData data) {
     int value = Lexer_PeekToken(l).int_value;
-    Lexer_EatToken(l);
+    ExpectAndEat(TOKEN_LITERAL_NUMBER);
     return NewNumberExpr(value);
 }
 
 static struct Expr *ParseUnaryAddrOp(struct OperatorParseData data) {
-    Lexer_EatToken(l);
+    ExpectAndEat(TOKEN_AMPERSAND);
     struct Expr *lhs = ParseExpr(data.precedence);
     return NewOperationAddrExpr(lhs);
 }
@@ -142,14 +156,8 @@ static struct Expr *ParseUnaryOp(struct OperatorParseData data) {
 }
 
 static struct Expr *ParseUnaryPlusOp(struct OperatorParseData data) {
-    Lexer_EatToken(l);
+    ExpectAndEat(TOKEN_PLUS);
     return ParseExpr(data.precedence);
-}
-
-static struct Expr *ParseVariable(struct OperatorParseData data) {
-    char *value = Lexer_PeekToken(l).str_value;
-    Lexer_EatToken(l);
-    return NewVariableExpr(value);
 }
 
 

@@ -6,6 +6,10 @@ void Add(char *destination, char *source) {
     fprintf(f, "  add %s, %s\n", destination, source);
 }
 
+void Call(char *label) {
+    fprintf(f, "  call %s\n", label);
+}
+
 void Compare(char *a, char *b, char *comparison) {
     fprintf(f,
         "  cmp %s, %s\n"
@@ -87,6 +91,13 @@ void SetupAssemblyFile(char *entry) {
         "segment .text\n"
         // Declare the main function as the entry point of the program.
         "  global %s\n"
+        "\n"
+        "ret7:\n"
+        "  mov rax, 7\n"
+        "  ret\n"
+        "ret14:\n"
+        "  mov rax, 14\n"
+        "  ret\n"
         "\n",
         entry
     );

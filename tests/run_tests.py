@@ -82,6 +82,8 @@ def main():
     minic_test("{ int x=3; int y=5; *(&y-2+1)=6; return x; }", 6)
     minic_test("{ int x=3; return (&x+2)-&x+3; }", 5)
     minic_test("{ int x=3; return (&x+2)-&x+5; }", 7)
+    minic_test("{ return ret7(); }", 7)
+    minic_test("{ return ret14(); }", 14)
 
     minic_size_bytes = os.path.getsize("bin\minic.exe")
     minic_size_kbytes = minic_size_bytes / 1024

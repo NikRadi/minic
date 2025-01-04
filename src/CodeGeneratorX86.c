@@ -87,6 +87,11 @@ static void GenerateExpr(struct Expr *expr) {
         return;
     }
 
+    if (expr->type == EXPR_FUNC_CALL) {
+        Call(expr->str_value);
+        return;
+    }
+
     GenerateExpr(expr->rhs);
     Push("rax");
     GenerateExpr(expr->lhs);
