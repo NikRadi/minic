@@ -6,6 +6,7 @@
 #include <string.h>
 
 static void GenerateExpr(struct Expr *expr);
+static void GenerateCompoundStatement(struct CompoundStatement *compound_statement);
 static void GenerateStatement(struct AstNode *statement);
 
 static struct FunctionDefinition *current_function;
@@ -136,19 +137,21 @@ static void GenerateFunctionDefinition(struct FunctionDefinition *function) {
     }
 
     function->stack_size = Align(offset, 16);
-    Label("main");
+    Label(function->identifier);
     SetupStackFrame(function->stack_size);
-
-    struct List *statements = &function->statements;
-    for (int i = 0; i < statements->count; ++i) {
-        struct AstNode *statement = (struct AstNode *) List_Get(statements, i);
-        GenerateStatement(statement);
-    }
-
-    Label("return");
+    GenerateCompoundStatement(function->body);
+    fprintf(f, "return.%s:\n", function->identifier);
     RestoreStackFrame();
     current_function = NULL;
 }
+
+static void GenerateTranslationUnit(struct TranslationUnit *t_unit) {
+    for (int i = 0; i < t_unit->functions.count; ++i) {
+        struct FunctionDefinition *function = (struct FunctionDefinition *) List_Get(&t_unit->functions, i);
+        GenerateFunctionDefinition(function);
+    }
+}
+
 
 
 //
@@ -214,7 +217,7 @@ static void GenerateIfStatement(struct IfStatement *if_statement) {
 
 static void GenerateReturnStatement(struct ReturnStatement *return_statement) {
     if (return_statement->expr) GenerateExpr(return_statement->expr);
-    Jmp("return");
+    fprintf(f, "  jmp return.%s\n", current_function->identifier);
 }
 
 static void GenerateWhileStatement(struct WhileStatement *while_statement) {
@@ -257,12 +260,12 @@ static void GenerateStatement(struct AstNode *statement) {
 //
 
 
-void CodeGeneratorX86_GenerateCode(FILE *asm_file, struct FunctionDefinition *function) {
+void CodeGeneratorX86_GenerateCode(FILE *asm_file, struct TranslationUnit *t_unit) {
     current_function = NULL;
     f = asm_file;
 
     SetOutput(asm_file);
     SetupAssemblyFile("main");
 
-    GenerateFunctionDefinition(function);
+    GenerateTranslationUnit(t_unit);
 }

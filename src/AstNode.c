@@ -124,10 +124,29 @@ struct Expr *NewVariableExpr(char *identifier) {
     return expr;
 }
 
-struct CompoundStatement *NewCompoundStatement(struct List statements) {
+struct FunctionDefinition *NewFunctionDefinition(char *identifier) {
+    struct FunctionDefinition *function = NEW_TYPE(FunctionDefinition);
+    function->node.type = AST_FUNCTION_DEFINITION;
+
+    function->stack_size = 0;
+    strncpy(function->identifier, identifier, TOKEN_MAX_IDENTIFIER_LENGTH);
+    function->body = NewCompoundStatement();
+    List_Init(&function->var_declarations);
+
+    return function;
+}
+
+struct TranslationUnit *NewTranslationUnit() {
+    struct TranslationUnit *translation_unit = NEW_TYPE(TranslationUnit);
+    translation_unit->node.type = AST_TRANSLATION_UNIT;
+    List_Init(&translation_unit->functions);
+    return translation_unit;
+}
+
+struct CompoundStatement *NewCompoundStatement() {
     struct CompoundStatement *compound_statement = NEW_TYPE(CompoundStatement);
     compound_statement->node.type = AST_COMPOUND_STATEMENT;
-    compound_statement->statements = statements;
+    List_Init(&compound_statement->statements);
     return compound_statement;
 }
 
@@ -263,11 +282,7 @@ void PrintS(struct AstNode *node) {
                 PrintS(d);
             }
 
-            for (int i = 0; i < f->statements.count; ++i) {
-                struct AstNode *s = (struct AstNode *) List_Get(&f->statements, i);
-                PrintS(s);
-            }
-
+            PrintS((struct AstNode *) f->body);
             indent -= 2;
             fprintf(stdout, "%*s</FunctionDefinition>\n", indent, "");
         } break;

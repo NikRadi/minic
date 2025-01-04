@@ -4,6 +4,6 @@
 #include "List.h"
 #include <stdbool.h>
 
-struct FunctionDefinition *Parser_MakeAst(struct Lexer *lexer);
+struct TranslationUnit *Parser_MakeAst(struct Lexer *lexer);
 
 #endif // MINIC_PARSER_H

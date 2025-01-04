@@ -34,7 +34,7 @@ int main(int num_args, char **args) {
         return 1;
     }
 
-    struct FunctionDefinition *function = Parser_MakeAst(&lexer);
+    struct TranslationUnit *t_unit = Parser_MakeAst(&lexer);
 
     filename = "tmp";
     char asm_filename[MAX_FILENAME_LENGTH];
@@ -42,7 +42,7 @@ int main(int num_args, char **args) {
     FILE *asm_file;
     fopen_s(&asm_file, asm_filename, "w");
 
-    CodeGeneratorX86_GenerateCode(asm_file, function);
+    CodeGeneratorX86_GenerateCode(asm_file, t_unit);
     fclose(asm_file);
 
     char obj_filename[MAX_FILENAME_LENGTH];
@@ -56,5 +56,6 @@ int main(int num_args, char **args) {
     sprintf(command, "link /nologo /subsystem:console /entry:main %s", obj_filename);
     printf("%s\n", command);
     system(command);
+    printf("Compiled successfully.");
     return 0;
 }

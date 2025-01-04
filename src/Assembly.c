@@ -92,12 +92,6 @@ void SetupAssemblyFile(char *entry) {
         // Declare the main function as the entry point of the program.
         "  global %s\n"
         "\n"
-        "ret7:\n"
-        "  mov rax, 7\n"
-        "  ret\n"
-        "ret14:\n"
-        "  mov rax, 14\n"
-        "  ret\n"
         "sub:\n"
         "  mov rax, 0\n"
         "  mov rax, rdi\n"

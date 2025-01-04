@@ -12,6 +12,7 @@ struct AstNode {
     enum AstNodeType {
         AST_DECLARATION,
         AST_FUNCTION_DEFINITION,
+        AST_TRANSLATION_UNIT,
 
         // Statements
         AST_COMPOUND_STATEMENT,
@@ -69,9 +70,15 @@ struct Declaration {
 
 struct FunctionDefinition {
     struct AstNode node;
-    struct List statements;
+    struct CompoundStatement *body;
     struct List var_declarations;
     int stack_size;
+    char identifier[TOKEN_MAX_IDENTIFIER_LENGTH];
+};
+
+struct TranslationUnit {
+    struct AstNode node;
+    struct List functions;
 };
 
 
@@ -129,7 +136,10 @@ struct Expr *NewOperationSubExpr(struct Expr *lhs, struct Expr *rhs);
 struct Expr *NewNumberExpr(int value);
 struct Expr *NewVariableExpr(char *identifier);
 
-struct CompoundStatement *NewCompoundStatement(struct List statements);
+struct FunctionDefinition *NewFunctionDefinition(char *identifier);
+struct TranslationUnit *NewTranslationUnit();
+
+struct CompoundStatement *NewCompoundStatement();
 struct ExpressionStatement *NewExpressionStatement(struct Expr *expr);
 struct ForStatement *NewForStatement(struct Expr *init_expr, struct Expr *cond_expr, struct Expr *loop_expr, struct AstNode *statement);
 struct IfStatement *NewIfStatement(struct Expr *condition, struct AstNode *statement, struct AstNode *else_branch);

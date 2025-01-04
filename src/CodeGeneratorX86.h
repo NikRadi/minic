@@ -5,6 +5,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-void CodeGeneratorX86_GenerateCode(FILE *asm_file, struct FunctionDefinition *function);
+void CodeGeneratorX86_GenerateCode(FILE *asm_file, struct TranslationUnit *t_unit);
 
 #endif // MINIC_CODE_GENRATOR_X86_H

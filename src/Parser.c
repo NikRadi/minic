@@ -179,10 +179,11 @@ static struct Expr *ParseUnaryPlusOp(struct OperatorParseData data) {
 
 
 static struct CompoundStatement *ParseCompoundStatement() {
+    struct CompoundStatement *compound_statement = NewCompoundStatement();
+    struct List *statements = &compound_statement->statements;
+
     ExpectAndEat(TOKEN_LEFT_CURLY_BRACKET);
     struct List *var_declarations = &current_function->var_declarations;
-    struct List statements;
-    List_Init(&statements);
     while (Lexer_PeekToken(l).type != TOKEN_RIGHT_CURLY_BRACKET) {
         struct Token token = Lexer_PeekToken(l);
         if (token.type == TOKEN_KEYWORD_INT) {
@@ -203,7 +204,7 @@ static struct CompoundStatement *ParseCompoundStatement() {
                 if (Lexer_PeekToken2(l, 1).type == TOKEN_EQUALS) {
                     struct Expr *expr = ParseExpr(0);
                     struct ExpressionStatement *statement = NewExpressionStatement(expr);
-                    List_Add(&statements, statement);
+                    List_Add(statements, statement);
                 }
                 else {
                     Lexer_EatToken(l); // Eat the identifier
@@ -220,12 +221,12 @@ static struct CompoundStatement *ParseCompoundStatement() {
         }
         else {
             struct AstNode *statement = ParseStatement();
-            List_Add(&statements, statement);
+            List_Add(statements, statement);
         }
     }
 
     ExpectAndEat(TOKEN_RIGHT_CURLY_BRACKET);
-    return NewCompoundStatement(statements);
+    return compound_statement;
 }
 
 static struct ExpressionStatement *ParseExpressionStatement() {
@@ -316,25 +317,47 @@ static struct AstNode *ParseStatement() {
 
 //
 // ===
+// == Parse statements
+// ===
+//
+
+
+struct FunctionDefinition *ParseFunctionDefinition() {
+    // Declaration specifiers
+    ExpectAndEat(TOKEN_KEYWORD_INT);
+
+    char *identifier = Lexer_PeekToken(l).str_value;
+    ExpectAndEat(TOKEN_IDENTIFIER);
+
+    struct FunctionDefinition *function = NewFunctionDefinition(identifier);
+    current_function = function;
+
+    ExpectAndEat(TOKEN_LEFT_ROUND_BRACKET);
+    ExpectAndEat(TOKEN_RIGHT_ROUND_BRACKET);
+    function->body = ParseCompoundStatement();
+
+    return function;
+}
+
+struct TranslationUnit *ParseTranslationUnit() {
+    struct TranslationUnit *t_unit = NewTranslationUnit();
+    while (Lexer_PeekToken(l).type != TOKEN_END_OF_FILE) {
+        struct FunctionDefinition *function = ParseFunctionDefinition();
+        List_Add(&t_unit->functions, function);
+    }
+
+    return t_unit;
+}
+
+
+//
+// ===
 // == Functions defined in Parser.h
 // ===
 //
 
 
-struct FunctionDefinition *Parser_MakeAst(struct Lexer *lexer) {
+struct TranslationUnit *Parser_MakeAst(struct Lexer *lexer) {
     l = lexer;
-
-    struct FunctionDefinition *function = NEW_TYPE(FunctionDefinition);
-    function->node.type = AST_FUNCTION_DEFINITION,
-    function->stack_size = 0;
-    current_function = function;
-
-    List_Init(&function->statements);
-    List_Init(&function->var_declarations);
-    while (Lexer_PeekToken(l).type != TOKEN_END_OF_FILE) {
-        struct AstNode *statement = ParseStatement();
-        List_Add(&function->statements, statement);
-    }
-
-    return function;
+    return ParseTranslationUnit();
 }
