@@ -20,6 +20,8 @@ enum TokenType {
     TOKEN_RIGHT_ROUND_BRACKET,      // )
     TOKEN_LEFT_CURLY_BRACKET,       // {
     TOKEN_RIGHT_CURLY_BRACKET,      // }
+    TOKEN_LEFT_SQUARE_BRACKET,      // [
+    TOKEN_RIGHT_SQUARE_BRACKET,     // [
 
     TOKEN_EQUALS,                   // =
     TOKEN_2_EQUALS,                 // ==

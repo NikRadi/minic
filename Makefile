@@ -21,3 +21,7 @@ test:
 
 test_file:
 	python tests/run_tests.py --file $(FILE)
+
+asm:
+	nasm -f win64 tmp.asm -o tmp.obj
+	link /nologo /subsystem:console /entry:main tmp.obj

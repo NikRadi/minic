@@ -123,6 +123,8 @@ void Lexer_EatToken(struct Lexer *l) {
         case ')': { EatChar(l); token.type = TOKEN_RIGHT_ROUND_BRACKET; } break;
         case '{': { EatChar(l); token.type = TOKEN_LEFT_CURLY_BRACKET; } break;
         case '}': { EatChar(l); token.type = TOKEN_RIGHT_CURLY_BRACKET; } break;
+        case '[': { EatChar(l); token.type = TOKEN_LEFT_SQUARE_BRACKET; } break;
+        case ']': { EatChar(l); token.type = TOKEN_RIGHT_SQUARE_BRACKET; } break;
         case '=': {
             EatChar(l);
             switch (PeekChar(l)) {

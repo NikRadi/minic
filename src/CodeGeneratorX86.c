@@ -60,7 +60,20 @@ static void GenerateExpr(struct Expr *expr) {
         } return;
         case EXPR_VAR: {
             GenerateAddress(expr);
-            Mov("rax", "[rax]");
+
+            struct List *var_declarations = &current_function->var_declarations;
+            struct Declaration *var_declaration = NULL;
+            for (int i = 0; i < var_declarations->count; ++i) {
+                struct Declaration *v = (struct Declaration *) List_Get(var_declarations, i);
+                if (strcmp(v->identifier, expr->str_value) == 0) {
+                    var_declaration = v;
+                    break;
+                }
+            }
+
+            if (var_declaration->node.type != AST_DECLARATION_ARRAY) {
+                Mov("rax", "[rax]");
+            }
         } return;
     }
 
@@ -98,6 +111,7 @@ static void GenerateExpr(struct Expr *expr) {
 
     // Binary operators
     if (expr->type == EXPR_ASSIGN) {
+        fprintf(f, "  ; assignment\n");
         GenerateAddress(expr->lhs);
         Push("rax");
         GenerateExpr(expr->rhs);
@@ -132,7 +146,16 @@ static void GenerateFunctionDefinition(struct FunctionDefinition *function) {
     int offset = 0;
     for (int i = var_declarations->count - 1; i >= 0; --i) {
         struct Declaration *var_declaration = (struct Declaration *) List_Get(var_declarations, i);
-        offset += 8;
+        if (var_declaration->node.type == AST_DECLARATION) {
+            offset += 8;
+        }
+        else if (var_declaration->node.type == AST_DECLARATION_ARRAY) {
+            offset += var_declaration->array_size * 8;
+        }
+        else {
+            ReportInternalError("unknown var_declaration type");
+        }
+
         var_declaration->rbp_offset = offset;
     }
 
@@ -142,13 +165,8 @@ static void GenerateFunctionDefinition(struct FunctionDefinition *function) {
 
     for (int i = 0; i < function->num_params; ++i) {
         struct Declaration *param = (struct Declaration *) List_Get(var_declarations, i);
-        fprintf(f,
-            "  mov [rbp - %d], %s ; param number %d called \"%s\"\n",
-            param->rbp_offset,
-            arg_regs[i],
-            i,
-            param->identifier
-        );
+        fprintf(f, "; parameter \"%s\"\n", param->identifier);
+        fprintf(f, "  mov [rbp - %d], %s\n", param->rbp_offset, arg_regs[i]);
     }
 
     GenerateCompoundStatement(function->body);

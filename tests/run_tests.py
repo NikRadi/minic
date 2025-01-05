@@ -92,6 +92,10 @@ def main():
     minic_test("int add(int x, int y) { return x+y; } int sub(int x, int y) { return x-y; } int main() { return sub(10, add(1, add(1, 1))); }", 7)
     minic_test("int add6(int x1, int x2, int x3, int x4, int x5, int x6) { return x1+x2+x3+x4+x5+x6; } int main() { return add6(1, 2, 3, 4, 5, 6); }", 21)
     minic_test("int main() { return fib(9); } int fib(int x) { if (x<=1) return 1; return fib(x-1) + fib(x-2); }", 55)
+    minic_test("int main() { int x[2]; int *y=&x; *y=3; return *x; }", 3)
+    minic_test("int main() { int x[3]; *x=3; *(x+1)=5; *(x+2)=8; return *x; }", 3)
+    minic_test("int main() { int x[3]; *x=3; *(x+1)=5; *(x+2)=8; return *(x+1); }", 5)
+    minic_test("int main() { int x[3]; *x=3; *(x+1)=5; *(x+2)=8; return *(x+2); }", 8)
 
     minic_size_bytes = os.path.getsize("bin\minic.exe")
     minic_size_kbytes = minic_size_bytes / 1024

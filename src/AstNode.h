@@ -11,6 +11,7 @@ enum OperandType {
 struct AstNode {
     enum AstNodeType {
         AST_DECLARATION,
+        AST_DECLARATION_ARRAY,
         AST_FUNCTION_DEFINITION,
         AST_TRANSLATION_UNIT,
 
@@ -66,6 +67,7 @@ struct Declaration {
     struct AstNode node;
     char identifier[TOKEN_MAX_IDENTIFIER_LENGTH];
     int rbp_offset;
+    int array_size;
 };
 
 struct FunctionDefinition {

@@ -43,6 +43,7 @@ int main(int num_args, char **args) {
     fopen_s(&asm_file, asm_filename, "w");
 
     CodeGeneratorX86_GenerateCode(asm_file, t_unit);
+    PrintS(t_unit);
     fclose(asm_file);
 
     char obj_filename[MAX_FILENAME_LENGTH];

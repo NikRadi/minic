@@ -1,1 +1,3 @@
-Writing my own C-compiler inspired by https://github.com/rui314/chibicc and https://github.com/DoctorWkt/acwj
+# Minic
+
+Minic is a small C-compiler project inspired by [chibicc](https://github.com/rui314/chibicc) and [acwj](https://github.com/DoctorWkt/acwj).

@@ -128,6 +128,8 @@ static struct Expr *ParseExpr(int precedence) {
 static struct Expr *ParseIdentifier(struct OperatorParseData data) {
     char *identifier = Lexer_PeekToken(l).str_value;
     ExpectAndEat(TOKEN_IDENTIFIER);
+
+    // Function call
     if (Lexer_PeekToken(l).type == TOKEN_LEFT_ROUND_BRACKET) {
         ExpectAndEat(TOKEN_LEFT_ROUND_BRACKET);
         struct List args;
@@ -144,7 +146,22 @@ static struct Expr *ParseIdentifier(struct OperatorParseData data) {
         return NewFunctionCallExpr(identifier, args);
     }
 
-    return NewVariableExpr(identifier);
+    struct List *var_declarations = &current_function->var_declarations;
+    struct Declaration *var_declaration = NULL;
+    for (int i = 0; i < var_declarations->count; ++i) {
+        struct Declaration *v = (struct Declaration *) List_Get(var_declarations, i);
+        if (strcmp(v->identifier, identifier) == 0) {
+            var_declaration = v;
+            break;
+        }
+    }
+
+    struct Expr *variable = NewVariableExpr(identifier);
+    if (var_declaration->node.type == AST_DECLARATION_ARRAY) {
+        variable->operand_type = OPERAND_POINTER;
+    }
+
+    return variable;
 }
 
 static struct Expr *ParseNumber(struct OperatorParseData data) {
@@ -212,6 +229,17 @@ static struct CompoundStatement *ParseCompoundStatement() {
                 }
 
                 if (Lexer_PeekToken(l).type == TOKEN_SEMICOLON) {
+                    break;
+                }
+                else if (Lexer_PeekToken(l).type == TOKEN_LEFT_SQUARE_BRACKET) {
+                    ExpectAndEat(TOKEN_LEFT_SQUARE_BRACKET);
+
+                    struct Token token = Lexer_PeekToken(l);
+                    ExpectAndEat(TOKEN_LITERAL_NUMBER);
+
+                    d->node.type = AST_DECLARATION_ARRAY;
+                    d->array_size = token.int_value;
+                    ExpectAndEat(TOKEN_RIGHT_SQUARE_BRACKET);
                     break;
                 }
                 else {

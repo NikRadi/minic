@@ -47,6 +47,8 @@ struct Expr *NewFunctionCallExpr(char *identifier, struct List args) {
 }
 
 struct Expr *NewOperationAddExpr(struct Expr *lhs, struct Expr *rhs) {
+    printf("Add operations\n");
+    printf("%d %d\n", lhs->operand_type, rhs->operand_type);
     if (lhs->operand_type == OPERAND_INTEGER && rhs->operand_type == OPERAND_INTEGER) {
         return NewOperationExpr(EXPR_ADD, lhs, rhs);
     }
@@ -202,7 +204,7 @@ static int indent = 0;
 void PrintE(struct Expr *expr) {
     switch (expr->type) {
         case EXPR_NUM: {
-            fprintf(stdout, "%*s<Num int_value=\"%d\" %d %d />\n", indent, "", 
+            fprintf(stdout, "%*s<Num int_value=\"%d\" %d %d />\n", indent, "",
                 expr->int_value,
                 expr->operand_type,
                 expr->base_operand_type
@@ -274,6 +276,15 @@ void PrintS(struct AstNode *node) {
                 d->rbp_offset
             );
         } break;
+        case AST_DECLARATION_ARRAY: {
+            struct Declaration *d = (struct Declaration *) node;
+            fprintf(stdout, "%*s<DeclarationArray identifier=\"%s\" rbp_offset=\"%d\" array_size=\"%d\"/>\n",
+                indent, "",
+                d->identifier,
+                d->rbp_offset,
+                d->array_size
+            );
+        } break;
         case AST_FUNCTION_DEFINITION: {
             struct FunctionDefinition *f = (struct FunctionDefinition *) node;
             fprintf(stdout, "%*s<FunctionDefinition stack_size=\"%d\">\n", indent, "", f->stack_size);
@@ -314,6 +325,18 @@ void PrintS(struct AstNode *node) {
             PrintE(r->expr);
             indent -= 2;
             fprintf(stdout, "%*s</ReturnStatement>\n", indent, "");
+        } break;
+        case AST_TRANSLATION_UNIT: {
+            struct TranslationUnit *t = (struct TranslationUnit *) node;
+            fprintf(stdout, "%*s<TranslationUnit>\n", indent, "");
+            indent += 2;
+            for (int i = 0; i < t->functions.count; ++i) {
+                struct AstNode *f = (struct AstNode *) List_Get(&t->functions, i);
+                PrintS(f);
+            }
+
+            indent -= 2;
+            fprintf(stdout, "%*s</TranslationUnit>\n", indent, "");
         } break;
         default: {
             fprintf(stdout, "%*s<UNKNOWN statement %d/>\n", indent, "", node->type);
