@@ -128,6 +128,7 @@ struct FunctionDefinition *NewFunctionDefinition(char *identifier) {
     struct FunctionDefinition *function = NEW_TYPE(FunctionDefinition);
     function->node.type = AST_FUNCTION_DEFINITION;
 
+    function->num_params = 0;
     function->stack_size = 0;
     strncpy(function->identifier, identifier, TOKEN_MAX_IDENTIFIER_LENGTH);
     function->body = NewCompoundStatement();

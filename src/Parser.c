@@ -181,14 +181,15 @@ static struct Expr *ParseUnaryPlusOp(struct OperatorParseData data) {
 static struct CompoundStatement *ParseCompoundStatement() {
     struct CompoundStatement *compound_statement = NewCompoundStatement();
     struct List *statements = &compound_statement->statements;
+    struct List *var_declarations = &current_function->var_declarations;
 
     ExpectAndEat(TOKEN_LEFT_CURLY_BRACKET);
-    struct List *var_declarations = &current_function->var_declarations;
     while (Lexer_PeekToken(l).type != TOKEN_RIGHT_CURLY_BRACKET) {
         struct Token token = Lexer_PeekToken(l);
         if (token.type == TOKEN_KEYWORD_INT) {
             // Declaration specifiers
-            Lexer_EatToken(l);
+            ExpectAndEat(TOKEN_KEYWORD_INT);
+
             do {
                 // Declarator
                 while (Lexer_PeekToken(l).type == TOKEN_STAR) {
@@ -327,12 +328,30 @@ struct FunctionDefinition *ParseFunctionDefinition() {
     ExpectAndEat(TOKEN_KEYWORD_INT);
 
     char *identifier = Lexer_PeekToken(l).str_value;
-    ExpectAndEat(TOKEN_IDENTIFIER);
 
     struct FunctionDefinition *function = NewFunctionDefinition(identifier);
     current_function = function;
 
+    ExpectAndEat(TOKEN_IDENTIFIER);
     ExpectAndEat(TOKEN_LEFT_ROUND_BRACKET);
+    while (Lexer_PeekToken(l).type != TOKEN_RIGHT_ROUND_BRACKET) {
+        // Declaration specifiers
+        ExpectAndEat(TOKEN_KEYWORD_INT);
+
+        struct Declaration *d = (struct Declaration *) malloc(sizeof(struct Declaration));
+        d->node.type = AST_DECLARATION;
+
+        struct Token token = Lexer_PeekToken(l);
+        strncpy(d->identifier, token.str_value, TOKEN_MAX_IDENTIFIER_LENGTH);
+        List_Add(&function->var_declarations, d);
+
+        ExpectAndEat(TOKEN_IDENTIFIER);
+        function->num_params += 1;
+        if (Lexer_PeekToken(l).type == TOKEN_COMMA) {
+            Lexer_EatToken(l);
+        }
+    }
+
     ExpectAndEat(TOKEN_RIGHT_ROUND_BRACKET);
     function->body = ParseCompoundStatement();
 

@@ -11,6 +11,7 @@ static void GenerateStatement(struct AstNode *statement);
 
 static struct FunctionDefinition *current_function;
 static FILE *f;
+static char *arg_regs[] = { "rdi", "rsi", "rdx", "rcx", "r8", "r9" };
 
 static int Align(int n, int offset) {
     return (n + offset - 1) / offset * offset;
@@ -72,7 +73,6 @@ static void GenerateExpr(struct Expr *expr) {
             Push("rax");
         }
 
-        static char *arg_regs[] = { "rdi", "rsi", "rdx", "rcx", "r8", "r9" };
         for (int i = args->count - 1; i >= 0; --i) {
             Pop(arg_regs[i]);
         }
@@ -128,8 +128,8 @@ static void GenerateExpr(struct Expr *expr) {
 static void GenerateFunctionDefinition(struct FunctionDefinition *function) {
     current_function = function;
 
-    int offset = 0;
     struct List *var_declarations = &current_function->var_declarations;
+    int offset = 0;
     for (int i = var_declarations->count - 1; i >= 0; --i) {
         struct Declaration *var_declaration = (struct Declaration *) List_Get(var_declarations, i);
         offset += 8;
@@ -139,6 +139,18 @@ static void GenerateFunctionDefinition(struct FunctionDefinition *function) {
     function->stack_size = Align(offset, 16);
     Label(function->identifier);
     SetupStackFrame(function->stack_size);
+
+    for (int i = 0; i < function->num_params; ++i) {
+        struct Declaration *param = (struct Declaration *) List_Get(var_declarations, i);
+        fprintf(f,
+            "  mov [rbp - %d], %s ; param number %d called \"%s\"\n",
+            param->rbp_offset,
+            arg_regs[i],
+            i,
+            param->identifier
+        );
+    }
+
     GenerateCompoundStatement(function->body);
     fprintf(f, "return.%s:\n", function->identifier);
     RestoreStackFrame();

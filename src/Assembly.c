@@ -91,26 +91,6 @@ void SetupAssemblyFile(char *entry) {
         "segment .text\n"
         // Declare the main function as the entry point of the program.
         "  global %s\n"
-        "\n"
-        "sub:\n"
-        "  mov rax, 0\n"
-        "  mov rax, rdi\n"
-        "  sub rax, rsi\n"
-        "  ret\n"
-        "add:\n"
-        "  mov rax, 0\n"
-        "  add rax, rdi\n"
-        "  add rax, rsi\n"
-        "  ret\n"
-        "add6:\n"
-        "  mov rax, 0\n"
-        "  add rax, rdi\n"
-        "  add rax, rsi\n"
-        "  add rax, rdx\n"
-        "  add rax, rcx\n"
-        "  add rax, r8\n"
-        "  add rax, r9\n"
-        "  ret\n"
         "\n",
         entry
     );

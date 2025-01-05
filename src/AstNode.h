@@ -72,6 +72,7 @@ struct FunctionDefinition {
     struct AstNode node;
     struct CompoundStatement *body;
     struct List var_declarations;
+    int num_params;
     int stack_size;
     char identifier[TOKEN_MAX_IDENTIFIER_LENGTH];
 };
