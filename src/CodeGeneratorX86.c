@@ -6,8 +6,8 @@
 #include <string.h>
 
 static void GenerateExpr(struct Expr *expr);
-static void GenerateCompoundStatement(struct CompoundStatement *compound_statement);
-static void GenerateStatement(struct AstNode *statement);
+static void GenerateCompoundStmt(struct CompoundStmt *compound_stmt);
+static void GenerateStmt(struct AstNode *stmt);
 
 static struct FunctionDefinition *current_function;
 static FILE *f;
@@ -169,7 +169,7 @@ static void GenerateFunctionDefinition(struct FunctionDefinition *function) {
         fprintf(f, "  mov [rbp - %d], %s\n", param->rbp_offset, arg_regs[i]);
     }
 
-    GenerateCompoundStatement(function->body);
+    GenerateCompoundStmt(function->body);
     fprintf(f, "return.%s:\n", function->identifier);
     RestoreStackFrame();
     current_function = NULL;
@@ -191,31 +191,31 @@ static void GenerateTranslationUnit(struct TranslationUnit *t_unit) {
 //
 
 
-static void GenerateCompoundStatement(struct CompoundStatement *compound_statement) {
-    struct List *statements = &compound_statement->statements;
-    for (int i = 0; i < statements->count; ++i) {
-        struct AstNode *statement = (struct AstNode *) List_Get(statements, i);
-        GenerateStatement(statement);
+static void GenerateCompoundStmt(struct CompoundStmt *compound_stmt) {
+    struct List *stmts = &compound_stmt->stmts;
+    for (int i = 0; i < stmts->count; ++i) {
+        struct AstNode *stmt = (struct AstNode *) List_Get(stmts, i);
+        GenerateStmt(stmt);
     }
 }
 
-static void GenerateExpressionStatement(struct ExpressionStatement *expression_statement) {
-    GenerateExpr(expression_statement->expr);
+static void GenerateExpressionStmt(struct ExpressionStmt *expression_stmt) {
+    GenerateExpr(expression_stmt->expr);
 }
 
-static void GenerateForStatement(struct ForStatement *for_statement) {
-    if (for_statement->init_expr) GenerateExpr(for_statement->init_expr);
+static void GenerateForStmt(struct ForStmt *for_stmt) {
+    if (for_stmt->init_expr) GenerateExpr(for_stmt->init_expr);
     int label_id = MakeNewLabelId();
     fprintf(f, "forstart%d:\n", label_id);
-    if (for_statement->cond_expr) GenerateExpr(for_statement->cond_expr);
+    if (for_stmt->cond_expr) GenerateExpr(for_stmt->cond_expr);
     fprintf(f,
         "  cmp rax, 0\n"
         "  je forend%d\n",
         label_id
     );
 
-    GenerateStatement(for_statement->statement);
-    if (for_statement->loop_expr) GenerateExpr(for_statement->loop_expr);
+    GenerateStmt(for_stmt->stmt);
+    if (for_stmt->loop_expr) GenerateExpr(for_stmt->loop_expr);
     fprintf(f,
         "  jmp forstart%d\n"
         "  forend%d\n",
@@ -224,8 +224,8 @@ static void GenerateForStatement(struct ForStatement *for_statement) {
     );
 }
 
-static void GenerateIfStatement(struct IfStatement *if_statement) {
-    GenerateExpr(if_statement->condition);
+static void GenerateIfStmt(struct IfStmt *if_stmt) {
+    GenerateExpr(if_stmt->condition);
     int label_id = MakeNewLabelId();
     fprintf(f,
         "  cmp rax, 0\n"
@@ -233,7 +233,7 @@ static void GenerateIfStatement(struct IfStatement *if_statement) {
         label_id
     );
 
-    GenerateStatement(if_statement->statement);
+    GenerateStmt(if_stmt->stmt);
     fprintf(f,
         "  jmp ifend%d\n"
         "ifelse%d:\n",
@@ -241,26 +241,26 @@ static void GenerateIfStatement(struct IfStatement *if_statement) {
         label_id
     );
 
-    if (if_statement->else_branch) GenerateStatement(if_statement->else_branch);
+    if (if_stmt->else_branch) GenerateStmt(if_stmt->else_branch);
     fprintf(f, "ifend%d:\n", label_id);
 }
 
-static void GenerateReturnStatement(struct ReturnStatement *return_statement) {
-    if (return_statement->expr) GenerateExpr(return_statement->expr);
+static void GenerateReturnStmt(struct ReturnStmt *return_stmt) {
+    if (return_stmt->expr) GenerateExpr(return_stmt->expr);
     fprintf(f, "  jmp return.%s\n", current_function->identifier);
 }
 
-static void GenerateWhileStatement(struct WhileStatement *while_statement) {
+static void GenerateWhileStmt(struct WhileStmt *while_stmt) {
     int label_id = MakeNewLabelId();
     fprintf(f, "whilestart%d:\n", label_id);
-    GenerateExpr(while_statement->condition);
+    GenerateExpr(while_stmt->condition);
     fprintf(f,
         "  cmp rax, 0\n"
         "  je whileend%d\n",
         label_id
     );
 
-    GenerateStatement(while_statement->statement);
+    GenerateStmt(while_stmt->stmt);
     fprintf(f,
         "  jmp whilestart%d\n"
         "whileend%d:\n",
@@ -269,16 +269,16 @@ static void GenerateWhileStatement(struct WhileStatement *while_statement) {
     );
 }
 
-static void GenerateStatement(struct AstNode *statement) {
-    switch (statement->type) {
-        case AST_COMPOUND_STATEMENT:    { GenerateCompoundStatement((struct CompoundStatement *) statement ); } break;
-        case AST_EXPRESSION_STATEMENT:  { GenerateExpressionStatement((struct ExpressionStatement *) statement); } break;
-        case AST_FOR_STATEMENT:         { GenerateForStatement((struct ForStatement *) statement); } break;
-        case AST_IF_STATEMENT:          { GenerateIfStatement((struct IfStatement *) statement); } break;
-        case AST_NULL_STATEMENT:        { } break;
-        case AST_RETURN_STATEMENT:      { GenerateReturnStatement((struct ReturnStatement *) statement); } break;
-        case AST_WHILE_STATEMENT:       { GenerateWhileStatement((struct WhileStatement *) statement); } break;
-        default:                        { ReportInternalError("unknown statement"); } break;
+static void GenerateStmt(struct AstNode *stmt) {
+    switch (stmt->type) {
+        case AST_COMPOUND_STMT:    { GenerateCompoundStmt((struct CompoundStmt *) stmt ); } break;
+        case AST_EXPRESSION_STMT:  { GenerateExpressionStmt((struct ExpressionStmt *) stmt); } break;
+        case AST_FOR_STMT:         { GenerateForStmt((struct ForStmt *) stmt); } break;
+        case AST_IF_STMT:          { GenerateIfStmt((struct IfStmt *) stmt); } break;
+        case AST_NULL_STMT:        { } break;
+        case AST_RETURN_STMT:      { GenerateReturnStmt((struct ReturnStmt *) stmt); } break;
+        case AST_WHILE_STMT:       { GenerateWhileStmt((struct WhileStmt *) stmt); } break;
+        default:                        { ReportInternalError("unknown stmt"); } break;
     }
 }
 

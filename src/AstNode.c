@@ -133,7 +133,7 @@ struct FunctionDefinition *NewFunctionDefinition(char *identifier) {
     function->num_params = 0;
     function->stack_size = 0;
     strncpy(function->identifier, identifier, TOKEN_MAX_IDENTIFIER_LENGTH);
-    function->body = NewCompoundStatement();
+    function->body = NewCompoundStmt();
     List_Init(&function->var_declarations);
 
     return function;
@@ -146,58 +146,58 @@ struct TranslationUnit *NewTranslationUnit() {
     return translation_unit;
 }
 
-struct CompoundStatement *NewCompoundStatement() {
-    struct CompoundStatement *compound_statement = NEW_TYPE(CompoundStatement);
-    compound_statement->node.type = AST_COMPOUND_STATEMENT;
-    List_Init(&compound_statement->statements);
-    return compound_statement;
+struct CompoundStmt *NewCompoundStmt() {
+    struct CompoundStmt *compound_stmt = NEW_TYPE(CompoundStmt);
+    compound_stmt->node.type = AST_COMPOUND_STMT;
+    List_Init(&compound_stmt->stmts);
+    return compound_stmt;
 }
 
-struct ExpressionStatement *NewExpressionStatement(struct Expr *expr) {
-    struct ExpressionStatement *expression_statement = NEW_TYPE(ExpressionStatement);
-    expression_statement->node.type = AST_EXPRESSION_STATEMENT;
-    expression_statement->expr = expr;
-    return expression_statement;
+struct ExpressionStmt *NewExpressionStmt(struct Expr *expr) {
+    struct ExpressionStmt *expression_stmt = NEW_TYPE(ExpressionStmt);
+    expression_stmt->node.type = AST_EXPRESSION_STMT;
+    expression_stmt->expr = expr;
+    return expression_stmt;
 }
 
-struct ForStatement *NewForStatement(struct Expr *init_expr, struct Expr *cond_expr, struct Expr *loop_expr, struct AstNode *statement) {
-    struct ForStatement *for_statement = NEW_TYPE(ForStatement);
-    for_statement->node.type = AST_FOR_STATEMENT;
-    for_statement->init_expr = init_expr;
-    for_statement->cond_expr = cond_expr;
-    for_statement->loop_expr = loop_expr;
-    for_statement->statement = statement;
-    return for_statement;
+struct ForStmt *NewForStmt(struct Expr *init_expr, struct Expr *cond_expr, struct Expr *loop_expr, struct AstNode *stmt) {
+    struct ForStmt *for_stmt = NEW_TYPE(ForStmt);
+    for_stmt->node.type = AST_FOR_STMT;
+    for_stmt->init_expr = init_expr;
+    for_stmt->cond_expr = cond_expr;
+    for_stmt->loop_expr = loop_expr;
+    for_stmt->stmt = stmt;
+    return for_stmt;
 }
 
-struct IfStatement *NewIfStatement(struct Expr *condition, struct AstNode *statement, struct AstNode *else_branch) {
-    struct IfStatement *if_statement = NEW_TYPE(IfStatement);
-    if_statement->node.type = AST_IF_STATEMENT;
-    if_statement->condition = condition;
-    if_statement->statement = statement;
-    if_statement->else_branch = else_branch;
-    return if_statement;
+struct IfStmt *NewIfStmt(struct Expr *condition, struct AstNode *stmt, struct AstNode *else_branch) {
+    struct IfStmt *if_stmt = NEW_TYPE(IfStmt);
+    if_stmt->node.type = AST_IF_STMT;
+    if_stmt->condition = condition;
+    if_stmt->stmt = stmt;
+    if_stmt->else_branch = else_branch;
+    return if_stmt;
 }
 
-struct AstNode *NewNullStatement() {
-    struct AstNode *null_statement = NEW_TYPE(AstNode);
-    null_statement->type = AST_NULL_STATEMENT;
-    return null_statement;
+struct AstNode *NewNullStmt() {
+    struct AstNode *null_stmt = NEW_TYPE(AstNode);
+    null_stmt->type = AST_NULL_STMT;
+    return null_stmt;
 }
 
-struct ReturnStatement *NewReturnStatement(struct Expr *expr) {
-    struct ReturnStatement *return_statement = NEW_TYPE(ReturnStatement);
-    return_statement->node.type = AST_RETURN_STATEMENT;
-    return_statement->expr = expr;
-    return return_statement;
+struct ReturnStmt *NewReturnStmt(struct Expr *expr) {
+    struct ReturnStmt *return_stmt = NEW_TYPE(ReturnStmt);
+    return_stmt->node.type = AST_RETURN_STMT;
+    return_stmt->expr = expr;
+    return return_stmt;
 }
 
-struct WhileStatement *NewWhileStatement(struct Expr *condition, struct AstNode *statement) {
-    struct WhileStatement *while_statement = NEW_TYPE(WhileStatement);
-    while_statement->node.type = AST_WHILE_STATEMENT;
-    while_statement->condition = condition;
-    while_statement->statement = statement;
-    return while_statement;
+struct WhileStmt *NewWhileStmt(struct Expr *condition, struct AstNode *stmt) {
+    struct WhileStmt *while_stmt = NEW_TYPE(WhileStmt);
+    while_stmt->node.type = AST_WHILE_STMT;
+    while_stmt->condition = condition;
+    while_stmt->stmt = stmt;
+    return while_stmt;
 }
 
 static int indent = 0;
@@ -298,33 +298,33 @@ void PrintS(struct AstNode *node) {
             indent -= 2;
             fprintf(stdout, "%*s</FunctionDefinition>\n", indent, "");
         } break;
-        case AST_COMPOUND_STATEMENT: {
-            struct CompoundStatement *c = (struct CompoundStatement *) node;
-            fprintf(stdout, "%*s<CompoundStatement>\n", indent, "");
+        case AST_COMPOUND_STMT: {
+            struct CompoundStmt *c = (struct CompoundStmt *) node;
+            fprintf(stdout, "%*s<CompoundStmt>\n", indent, "");
             indent += 2;
-            for (int i = 0; i < c->statements.count; ++i) {
-                struct AstNode *s = (struct AstNode *) List_Get(&c->statements, i);
+            for (int i = 0; i < c->stmts.count; ++i) {
+                struct AstNode *s = (struct AstNode *) List_Get(&c->stmts, i);
                 PrintS(s);
             }
 
             indent -= 2;
-            fprintf(stdout, "%*s</CompoundStatement>\n", indent, "");
+            fprintf(stdout, "%*s</CompoundStmt>\n", indent, "");
         } break;
-        case AST_EXPRESSION_STATEMENT: {
-            struct ExpressionStatement *e = (struct ExpressionStatement *) node;
-            fprintf(stdout, "%*s<ExpressionStatement>\n", indent, "");
+        case AST_EXPRESSION_STMT: {
+            struct ExpressionStmt *e = (struct ExpressionStmt *) node;
+            fprintf(stdout, "%*s<ExpressionStmt>\n", indent, "");
             indent += 2;
             PrintE(e->expr);
             indent -= 2;
-            fprintf(stdout, "%*s</ExpressionStatement>\n", indent, "");
+            fprintf(stdout, "%*s</ExpressionStmt>\n", indent, "");
         } break;
-        case AST_RETURN_STATEMENT: {
-            struct ReturnStatement *r = (struct ReturnStatement *) node;
-            fprintf(stdout, "%*s<ReturnStatement>\n", indent, "");
+        case AST_RETURN_STMT: {
+            struct ReturnStmt *r = (struct ReturnStmt *) node;
+            fprintf(stdout, "%*s<ReturnStmt>\n", indent, "");
             indent += 2;
             PrintE(r->expr);
             indent -= 2;
-            fprintf(stdout, "%*s</ReturnStatement>\n", indent, "");
+            fprintf(stdout, "%*s</ReturnStmt>\n", indent, "");
         } break;
         case AST_TRANSLATION_UNIT: {
             struct TranslationUnit *t = (struct TranslationUnit *) node;

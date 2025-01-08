@@ -16,13 +16,13 @@ struct AstNode {
         AST_TRANSLATION_UNIT,
 
         // Statements
-        AST_COMPOUND_STATEMENT,
-        AST_EXPRESSION_STATEMENT,
-        AST_FOR_STATEMENT,
-        AST_IF_STATEMENT,
-        AST_NULL_STATEMENT,
-        AST_RETURN_STATEMENT,
-        AST_WHILE_STATEMENT,
+        AST_COMPOUND_STMT,
+        AST_EXPRESSION_STMT,
+        AST_FOR_STMT,
+        AST_IF_STMT,
+        AST_NULL_STMT,
+        AST_RETURN_STMT,
+        AST_WHILE_STMT,
     } type;
 };
 
@@ -72,7 +72,7 @@ struct Declaration {
 
 struct FunctionDefinition {
     struct AstNode node;
-    struct CompoundStatement *body;
+    struct CompoundStmt *body;
     struct List var_declarations;
     int num_params;
     int stack_size;
@@ -92,40 +92,40 @@ struct TranslationUnit {
 //
 
 
-struct CompoundStatement {
+struct CompoundStmt {
     struct AstNode node;
-    struct List statements;
+    struct List stmts;
 };
 
-struct ExpressionStatement {
+struct ExpressionStmt {
     struct AstNode node;
     struct Expr *expr;
 };
 
-struct ForStatement {
+struct ForStmt {
     struct AstNode node;
     struct Expr *init_expr;
     struct Expr *cond_expr;
     struct Expr *loop_expr;
-    struct AstNode *statement;
+    struct AstNode *stmt;
 };
 
-struct IfStatement {
+struct IfStmt {
     struct AstNode node;
     struct Expr *condition;
-    struct AstNode *statement;
+    struct AstNode *stmt;
     struct AstNode *else_branch;
 };
 
-struct ReturnStatement {
+struct ReturnStmt {
     struct AstNode node;
     struct Expr *expr;
 };
 
-struct WhileStatement {
+struct WhileStmt {
     struct AstNode node;
     struct Expr *condition;
-    struct AstNode *statement;
+    struct AstNode *stmt;
 };
 
 
@@ -142,13 +142,13 @@ struct Expr *NewVariableExpr(char *identifier);
 struct FunctionDefinition *NewFunctionDefinition(char *identifier);
 struct TranslationUnit *NewTranslationUnit();
 
-struct CompoundStatement *NewCompoundStatement();
-struct ExpressionStatement *NewExpressionStatement(struct Expr *expr);
-struct ForStatement *NewForStatement(struct Expr *init_expr, struct Expr *cond_expr, struct Expr *loop_expr, struct AstNode *statement);
-struct IfStatement *NewIfStatement(struct Expr *condition, struct AstNode *statement, struct AstNode *else_branch);
-struct AstNode *NewNullStatement();
-struct ReturnStatement *NewReturnStatement(struct Expr *expr);
-struct WhileStatement *NewWhileStatement(struct Expr *condition, struct AstNode *statement);
+struct CompoundStmt *NewCompoundStmt();
+struct ExpressionStmt *NewExpressionStmt(struct Expr *expr);
+struct ForStmt *NewForStmt(struct Expr *init_expr, struct Expr *cond_expr, struct Expr *loop_expr, struct AstNode *stmt);
+struct IfStmt *NewIfStmt(struct Expr *condition, struct AstNode *stmt, struct AstNode *else_branch);
+struct AstNode *NewNullStmt();
+struct ReturnStmt *NewReturnStmt(struct Expr *expr);
+struct WhileStmt *NewWhileStmt(struct Expr *condition, struct AstNode *stmt);
 
 void PrintE(struct Expr *expr);
 void PrintS(struct AstNode *node);
