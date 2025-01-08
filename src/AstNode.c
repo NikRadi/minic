@@ -134,7 +134,7 @@ struct FunctionDefinition *NewFunctionDefinition(char *identifier) {
     function->stack_size = 0;
     strncpy(function->identifier, identifier, TOKEN_MAX_IDENTIFIER_LENGTH);
     function->body = NewCompoundStmt();
-    List_Init(&function->var_declarations);
+    List_Init(&function->var_decls);
 
     return function;
 }
@@ -268,17 +268,17 @@ void PrintE(struct Expr *expr) {
 
 void PrintS(struct AstNode *node) {
     switch (node->type) {
-        case AST_DECLARATION: {
-            struct Declaration *d = (struct Declaration *) node;
-            fprintf(stdout, "%*s<Declaration identifier=\"%s\" rbp_offset=\"%d\"/>\n",
+        case AST_DECL: {
+            struct Decl *d = (struct Decl *) node;
+            fprintf(stdout, "%*s<Decl identifier=\"%s\" rbp_offset=\"%d\"/>\n",
                 indent, "",
                 d->identifier,
                 d->rbp_offset
             );
         } break;
-        case AST_DECLARATION_ARRAY: {
-            struct Declaration *d = (struct Declaration *) node;
-            fprintf(stdout, "%*s<DeclarationArray identifier=\"%s\" rbp_offset=\"%d\" array_size=\"%d\"/>\n",
+        case AST_DECL_ARRAY: {
+            struct Decl *d = (struct Decl *) node;
+            fprintf(stdout, "%*s<DeclArray identifier=\"%s\" rbp_offset=\"%d\" array_size=\"%d\"/>\n",
                 indent, "",
                 d->identifier,
                 d->rbp_offset,
@@ -289,8 +289,8 @@ void PrintS(struct AstNode *node) {
             struct FunctionDefinition *f = (struct FunctionDefinition *) node;
             fprintf(stdout, "%*s<FunctionDefinition stack_size=\"%d\">\n", indent, "", f->stack_size);
             indent += 2;
-            for (int i = 0; i < f->var_declarations.count; ++i) {
-                struct AstNode *d = (struct AstNode *) List_Get(&f->var_declarations, i);
+            for (int i = 0; i < f->var_decls.count; ++i) {
+                struct AstNode *d = (struct AstNode *) List_Get(&f->var_decls, i);
                 PrintS(d);
             }
 

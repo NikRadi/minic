@@ -27,21 +27,21 @@ static int MakeNewLabelId() {
 static void GenerateAddress(struct Expr *expr) {
     // Literals
     if (expr->type == EXPR_VAR) {
-        struct List *var_declarations = &current_function->var_declarations;
-        struct Declaration *var_declaration = NULL;
-        for (int i = 0; i < var_declarations->count; ++i) {
-            struct Declaration *v = (struct Declaration *) List_Get(var_declarations, i);
+        struct List *var_decls = &current_function->var_decls;
+        struct Decl *var_decl = NULL;
+        for (int i = 0; i < var_decls->count; ++i) {
+            struct Decl *v = (struct Decl *) List_Get(var_decls, i);
             if (strcmp(v->identifier, expr->str_value) == 0) {
-                var_declaration = v;
+                var_decl = v;
                 break;
             }
         }
 
-        if (!var_declaration) {
+        if (!var_decl) {
             ReportInternalError("variable address of '%s'", expr->str_value);
         }
 
-        Lea("rax", var_declaration->rbp_offset);
+        Lea("rax", var_decl->rbp_offset);
         return;
     }
 
@@ -61,17 +61,17 @@ static void GenerateExpr(struct Expr *expr) {
         case EXPR_VAR: {
             GenerateAddress(expr);
 
-            struct List *var_declarations = &current_function->var_declarations;
-            struct Declaration *var_declaration = NULL;
-            for (int i = 0; i < var_declarations->count; ++i) {
-                struct Declaration *v = (struct Declaration *) List_Get(var_declarations, i);
+            struct List *var_decls = &current_function->var_decls;
+            struct Decl *var_decl = NULL;
+            for (int i = 0; i < var_decls->count; ++i) {
+                struct Decl *v = (struct Decl *) List_Get(var_decls, i);
                 if (strcmp(v->identifier, expr->str_value) == 0) {
-                    var_declaration = v;
+                    var_decl = v;
                     break;
                 }
             }
 
-            if (var_declaration->node.type != AST_DECLARATION_ARRAY) {
+            if (var_decl->node.type != AST_DECL_ARRAY) {
                 Mov("rax", "[rax]");
             }
         } return;
@@ -142,21 +142,21 @@ static void GenerateExpr(struct Expr *expr) {
 static void GenerateFunctionDefinition(struct FunctionDefinition *function) {
     current_function = function;
 
-    struct List *var_declarations = &current_function->var_declarations;
+    struct List *var_decls = &current_function->var_decls;
     int offset = 0;
-    for (int i = var_declarations->count - 1; i >= 0; --i) {
-        struct Declaration *var_declaration = (struct Declaration *) List_Get(var_declarations, i);
-        if (var_declaration->node.type == AST_DECLARATION) {
+    for (int i = var_decls->count - 1; i >= 0; --i) {
+        struct Decl *var_decl = (struct Decl *) List_Get(var_decls, i);
+        if (var_decl->node.type == AST_DECL) {
             offset += 8;
         }
-        else if (var_declaration->node.type == AST_DECLARATION_ARRAY) {
-            offset += var_declaration->array_size * 8;
+        else if (var_decl->node.type == AST_DECL_ARRAY) {
+            offset += var_decl->array_size * 8;
         }
         else {
-            ReportInternalError("unknown var_declaration type");
+            ReportInternalError("unknown var_decl type");
         }
 
-        var_declaration->rbp_offset = offset;
+        var_decl->rbp_offset = offset;
     }
 
     function->stack_size = Align(offset, 16);
@@ -164,7 +164,7 @@ static void GenerateFunctionDefinition(struct FunctionDefinition *function) {
     SetupStackFrame(function->stack_size);
 
     for (int i = 0; i < function->num_params; ++i) {
-        struct Declaration *param = (struct Declaration *) List_Get(var_declarations, i);
+        struct Decl *param = (struct Decl *) List_Get(var_decls, i);
         fprintf(f, "; parameter \"%s\"\n", param->identifier);
         fprintf(f, "  mov [rbp - %d], %s\n", param->rbp_offset, arg_regs[i]);
     }

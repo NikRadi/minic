@@ -146,18 +146,18 @@ static struct Expr *ParseIdentifier(struct OperatorParseData data) {
         return NewFunctionCallExpr(identifier, args);
     }
 
-    struct List *var_declarations = &current_function->var_declarations;
-    struct Declaration *var_declaration = NULL;
-    for (int i = 0; i < var_declarations->count; ++i) {
-        struct Declaration *v = (struct Declaration *) List_Get(var_declarations, i);
+    struct List *var_decls = &current_function->var_decls;
+    struct Decl *var_decl = NULL;
+    for (int i = 0; i < var_decls->count; ++i) {
+        struct Decl *v = (struct Decl *) List_Get(var_decls, i);
         if (strcmp(v->identifier, identifier) == 0) {
-            var_declaration = v;
+            var_decl = v;
             break;
         }
     }
 
     struct Expr *variable = NewVariableExpr(identifier);
-    if (var_declaration->node.type == AST_DECLARATION_ARRAY) {
+    if (var_decl->node.type == AST_DECL_ARRAY) {
         variable->operand_type = OPERAND_POINTER;
     }
 
@@ -198,13 +198,13 @@ static struct Expr *ParseUnaryPlusOp(struct OperatorParseData data) {
 static struct CompoundStmt *ParseCompoundStmt() {
     struct CompoundStmt *compound_stmt = NewCompoundStmt();
     struct List *stmts = &compound_stmt->stmts;
-    struct List *var_declarations = &current_function->var_declarations;
+    struct List *var_decls = &current_function->var_decls;
 
     ExpectAndEat(TOKEN_LEFT_CURLY_BRACKET);
     while (Lexer_PeekToken(l).type != TOKEN_RIGHT_CURLY_BRACKET) {
         struct Token token = Lexer_PeekToken(l);
         if (token.type == TOKEN_KEYWORD_INT) {
-            // Declaration specifiers
+            // Decl specifiers
             ExpectAndEat(TOKEN_KEYWORD_INT);
 
             do {
@@ -214,10 +214,10 @@ static struct CompoundStmt *ParseCompoundStmt() {
                 }
 
                 token = Lexer_PeekToken(l);
-                struct Declaration *d = (struct Declaration *) malloc(sizeof(struct Declaration));
-                d->node.type = AST_DECLARATION;
+                struct Decl *d = (struct Decl *) malloc(sizeof(struct Decl));
+                d->node.type = AST_DECL;
                 strncpy(d->identifier, token.str_value, TOKEN_MAX_IDENTIFIER_LENGTH);
-                List_Add(var_declarations, d);
+                List_Add(var_decls, d);
 
                 if (Lexer_PeekToken2(l, 1).type == TOKEN_EQUALS) {
                     struct Expr *expr = ParseExpr(0);
@@ -237,7 +237,7 @@ static struct CompoundStmt *ParseCompoundStmt() {
                     struct Token token = Lexer_PeekToken(l);
                     ExpectAndEat(TOKEN_LITERAL_NUMBER);
 
-                    d->node.type = AST_DECLARATION_ARRAY;
+                    d->node.type = AST_DECL_ARRAY;
                     d->array_size = token.int_value;
                     ExpectAndEat(TOKEN_RIGHT_SQUARE_BRACKET);
                     break;
@@ -352,7 +352,7 @@ static struct AstNode *ParseStmt() {
 
 
 struct FunctionDefinition *ParseFunctionDefinition() {
-    // Declaration specifiers
+    // Decl specifiers
     ExpectAndEat(TOKEN_KEYWORD_INT);
 
     char *identifier = Lexer_PeekToken(l).str_value;
@@ -366,12 +366,12 @@ struct FunctionDefinition *ParseFunctionDefinition() {
         // Declaration specifiers
         ExpectAndEat(TOKEN_KEYWORD_INT);
 
-        struct Declaration *d = (struct Declaration *) malloc(sizeof(struct Declaration));
-        d->node.type = AST_DECLARATION;
+        struct Decl *d = (struct Decl *) malloc(sizeof(struct Decl));
+        d->node.type = AST_DECL;
 
         struct Token token = Lexer_PeekToken(l);
         strncpy(d->identifier, token.str_value, TOKEN_MAX_IDENTIFIER_LENGTH);
-        List_Add(&function->var_declarations, d);
+        List_Add(&function->var_decls, d);
 
         ExpectAndEat(TOKEN_IDENTIFIER);
         function->num_params += 1;
