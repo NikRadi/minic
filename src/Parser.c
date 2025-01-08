@@ -12,7 +12,7 @@ static struct CompoundStmt *ParseCompoundStmt();
 static struct ExpressionStmt *ParseExpressionStmt();
 static struct AstNode *ParseStmt();
 
-static struct FunctionDefinition *current_function;
+static struct FunctionDef *current_function;
 static struct Lexer *l;
 
 static void ExpectAndEat(enum TokenType type) {
@@ -351,13 +351,13 @@ static struct AstNode *ParseStmt() {
 //
 
 
-struct FunctionDefinition *ParseFunctionDefinition() {
+struct FunctionDef *ParseFunctionDef() {
     // Decl specifiers
     ExpectAndEat(TOKEN_KEYWORD_INT);
 
     char *identifier = Lexer_PeekToken(l).str_value;
 
-    struct FunctionDefinition *function = NewFunctionDefinition(identifier);
+    struct FunctionDef *function = NewFunctionDef(identifier);
     current_function = function;
 
     ExpectAndEat(TOKEN_IDENTIFIER);
@@ -389,7 +389,7 @@ struct FunctionDefinition *ParseFunctionDefinition() {
 struct TranslationUnit *ParseTranslationUnit() {
     struct TranslationUnit *t_unit = NewTranslationUnit();
     while (Lexer_PeekToken(l).type != TOKEN_END_OF_FILE) {
-        struct FunctionDefinition *function = ParseFunctionDefinition();
+        struct FunctionDef *function = ParseFunctionDef();
         List_Add(&t_unit->functions, function);
     }
 

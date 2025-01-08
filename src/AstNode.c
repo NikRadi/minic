@@ -126,9 +126,9 @@ struct Expr *NewVariableExpr(char *identifier) {
     return expr;
 }
 
-struct FunctionDefinition *NewFunctionDefinition(char *identifier) {
-    struct FunctionDefinition *function = NEW_TYPE(FunctionDefinition);
-    function->node.type = AST_FUNCTION_DEFINITION;
+struct FunctionDef *NewFunctionDef(char *identifier) {
+    struct FunctionDef *function = NEW_TYPE(FunctionDef);
+    function->node.type = AST_FUNCTION_DEF;
 
     function->num_params = 0;
     function->stack_size = 0;
@@ -285,9 +285,9 @@ void PrintS(struct AstNode *node) {
                 d->array_size
             );
         } break;
-        case AST_FUNCTION_DEFINITION: {
-            struct FunctionDefinition *f = (struct FunctionDefinition *) node;
-            fprintf(stdout, "%*s<FunctionDefinition stack_size=\"%d\">\n", indent, "", f->stack_size);
+        case AST_FUNCTION_DEF: {
+            struct FunctionDef *f = (struct FunctionDef *) node;
+            fprintf(stdout, "%*s<FunctionDef stack_size=\"%d\">\n", indent, "", f->stack_size);
             indent += 2;
             for (int i = 0; i < f->var_decls.count; ++i) {
                 struct AstNode *d = (struct AstNode *) List_Get(&f->var_decls, i);
@@ -296,7 +296,7 @@ void PrintS(struct AstNode *node) {
 
             PrintS((struct AstNode *) f->body);
             indent -= 2;
-            fprintf(stdout, "%*s</FunctionDefinition>\n", indent, "");
+            fprintf(stdout, "%*s</FunctionDef>\n", indent, "");
         } break;
         case AST_COMPOUND_STMT: {
             struct CompoundStmt *c = (struct CompoundStmt *) node;

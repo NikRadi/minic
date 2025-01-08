@@ -9,7 +9,7 @@ static void GenerateExpr(struct Expr *expr);
 static void GenerateCompoundStmt(struct CompoundStmt *compound_stmt);
 static void GenerateStmt(struct AstNode *stmt);
 
-static struct FunctionDefinition *current_function;
+static struct FunctionDef *current_function;
 static FILE *f;
 static char *arg_regs[] = { "rdi", "rsi", "rdx", "rcx", "r8", "r9" };
 
@@ -139,7 +139,7 @@ static void GenerateExpr(struct Expr *expr) {
     }
 }
 
-static void GenerateFunctionDefinition(struct FunctionDefinition *function) {
+static void GenerateFunctionDef(struct FunctionDef *function) {
     current_function = function;
 
     struct List *var_decls = &current_function->var_decls;
@@ -177,8 +177,8 @@ static void GenerateFunctionDefinition(struct FunctionDefinition *function) {
 
 static void GenerateTranslationUnit(struct TranslationUnit *t_unit) {
     for (int i = 0; i < t_unit->functions.count; ++i) {
-        struct FunctionDefinition *function = (struct FunctionDefinition *) List_Get(&t_unit->functions, i);
-        GenerateFunctionDefinition(function);
+        struct FunctionDef *function = (struct FunctionDef *) List_Get(&t_unit->functions, i);
+        GenerateFunctionDef(function);
     }
 }
 

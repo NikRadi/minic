@@ -12,7 +12,7 @@ struct AstNode {
     enum AstNodeType {
         AST_DECL,
         AST_DECL_ARRAY,
-        AST_FUNCTION_DEFINITION,
+        AST_FUNCTION_DEF,
         AST_TRANSLATION_UNIT,
 
         // Statements
@@ -70,7 +70,7 @@ struct Decl {
     int array_size;
 };
 
-struct FunctionDefinition {
+struct FunctionDef {
     struct AstNode node;
     struct CompoundStmt *body;
     struct List var_decls;
@@ -139,7 +139,7 @@ struct Expr *NewOperationSubExpr(struct Expr *lhs, struct Expr *rhs);
 struct Expr *NewNumberExpr(int value);
 struct Expr *NewVariableExpr(char *identifier);
 
-struct FunctionDefinition *NewFunctionDefinition(char *identifier);
+struct FunctionDef *NewFunctionDef(char *identifier);
 struct TranslationUnit *NewTranslationUnit();
 
 struct CompoundStmt *NewCompoundStmt();
