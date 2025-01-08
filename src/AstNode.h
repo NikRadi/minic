@@ -10,8 +10,8 @@ enum OperandType {
 
 struct AstNode {
     enum AstNodeType {
-        AST_DECLARATION,
-        AST_DECLARATION_ARRAY,
+        AST_DECL,
+        AST_DECL_ARRAY,
         AST_FUNCTION_DEFINITION,
         AST_TRANSLATION_UNIT,
 
@@ -63,7 +63,7 @@ struct Expr {
     } type;
 };
 
-struct Declaration {
+struct Decl {
     struct AstNode node;
     char identifier[TOKEN_MAX_IDENTIFIER_LENGTH];
     int rbp_offset;
@@ -73,7 +73,7 @@ struct Declaration {
 struct FunctionDefinition {
     struct AstNode node;
     struct CompoundStmt *body;
-    struct List var_declarations;
+    struct List var_decls;
     int num_params;
     int stack_size;
     char identifier[TOKEN_MAX_IDENTIFIER_LENGTH];
