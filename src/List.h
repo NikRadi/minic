@@ -12,8 +12,6 @@ struct List {
 
 void List_Add(struct List *l, void *element);
 
-void *List_Find(struct List *l, void *element, ListElementsEqualityFunction AreEquals);
-
 void List_Free(struct List *l);
 
 void *List_Get(struct List *l, int index);

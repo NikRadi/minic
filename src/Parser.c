@@ -12,7 +12,6 @@ static struct CompoundStmt *ParseCompoundStmt();
 static struct ExpressionStmt *ParseExpressionStmt();
 static struct AstNode *ParseStmt();
 
-static struct FunctionDef *current_function;
 static struct Lexer *l;
 
 static void ExpectAndEat(enum TokenType type) {
@@ -35,16 +34,12 @@ static void ExpectAndEat(enum TokenType type) {
 struct OperatorParseData;
 typedef struct Expr *(*ParseOperatorFunction)(struct OperatorParseData);
 
-static struct Expr *ParseBinaryAddOp(struct OperatorParseData data);
 static struct Expr *ParseBinaryOp(struct OperatorParseData data);
-static struct Expr *ParseBinarySubOp(struct OperatorParseData data);
 static struct Expr *ParseBracket(struct OperatorParseData data);
 static struct Expr *ParseExpr(int precedence);
 static struct Expr *ParseIdentifier(struct OperatorParseData data);
 static struct Expr *ParseNumber(struct OperatorParseData data);
-static struct Expr *ParseUnaryAddrOp(struct OperatorParseData data);
 static struct Expr *ParseUnaryOp(struct OperatorParseData data);
-static struct Expr *ParseUnaryPlusOp(struct OperatorParseData data);
 
 struct OperatorParseData {
     int precedence;
@@ -63,39 +58,27 @@ static struct OperatorParseData infix_operators[TOKEN_COUNT] = {
     [TOKEN_LESS_THAN_EQUALS]        = { .precedence = 30, .type = EXPR_LTE,     .Parse = ParseBinaryOp },
     [TOKEN_GREATER_THAN]            = { .precedence = 30, .type = EXPR_GT,      .Parse = ParseBinaryOp },
     [TOKEN_GREATER_THAN_EQUALS]     = { .precedence = 30, .type = EXPR_GTE,     .Parse = ParseBinaryOp },
-    [TOKEN_PLUS]                    = { .precedence = 40, .type = EXPR_ADD,     .Parse = ParseBinaryAddOp },
-    [TOKEN_MINUS]                   = { .precedence = 40, .type = EXPR_SUB,     .Parse = ParseBinarySubOp },
+    [TOKEN_PLUS]                    = { .precedence = 40, .type = EXPR_ADD,     .Parse = ParseBinaryOp },
+    [TOKEN_MINUS]                   = { .precedence = 40, .type = EXPR_SUB,     .Parse = ParseBinaryOp },
     [TOKEN_STAR]                    = { .precedence = 50, .type = EXPR_MUL,     .Parse = ParseBinaryOp },
     [TOKEN_SLASH]                   = { .precedence = 50, .type = EXPR_DIV,     .Parse = ParseBinaryOp },
 };
 
 static struct OperatorParseData prefix_operators[TOKEN_COUNT] = {
-    [TOKEN_PLUS]                    = { .precedence = 60,                       .Parse = ParseUnaryPlusOp },
+    [TOKEN_PLUS]                    = { .precedence = 60, .type = EXPR_PLUS,    .Parse = ParseUnaryOp },
     [TOKEN_MINUS]                   = { .precedence = 60, .type = EXPR_NEG,     .Parse = ParseUnaryOp },
     [TOKEN_STAR]                    = { .precedence = 60, .type = EXPR_DEREF,   .Parse = ParseUnaryOp },
-    [TOKEN_AMPERSAND]               = { .precedence = 60, .type = EXPR_ADDR,    .Parse = ParseUnaryAddrOp },
+    [TOKEN_AMPERSAND]               = { .precedence = 60, .type = EXPR_ADDR,    .Parse = ParseUnaryOp },
     [TOKEN_IDENTIFIER]              = {                                         .Parse = ParseIdentifier },
     [TOKEN_LEFT_ROUND_BRACKET]      = {                                         .Parse = ParseBracket },
     [TOKEN_LITERAL_NUMBER]          = {                                         .Parse = ParseNumber },
 };
 
 
-static struct Expr *ParseBinaryAddOp(struct OperatorParseData data) {
-    ExpectAndEat(TOKEN_PLUS);
-    struct Expr *rhs = ParseExpr(data.precedence - data.is_right_associative);
-    return NewOperationAddExpr(data.lhs, rhs);
-}
-
 static struct Expr *ParseBinaryOp(struct OperatorParseData data) {
     Lexer_EatToken(l);
     struct Expr *rhs = ParseExpr(data.precedence - data.is_right_associative);
     return NewOperationExpr(data.type, data.lhs, rhs);
-}
-
-static struct Expr *ParseBinarySubOp(struct OperatorParseData data) {
-    ExpectAndEat(TOKEN_MINUS);
-    struct Expr *rhs = ParseExpr(data.precedence - data.is_right_associative);
-    return NewOperationSubExpr(data.lhs, rhs);
 }
 
 static struct Expr *ParseBracket(struct OperatorParseData data) {
@@ -146,22 +129,7 @@ static struct Expr *ParseIdentifier(struct OperatorParseData data) {
         return NewFunctionCallExpr(identifier, args);
     }
 
-    struct List *var_decls = &current_function->var_decls;
-    struct Decl *var_decl = NULL;
-    for (int i = 0; i < var_decls->count; ++i) {
-        struct Decl *v = (struct Decl *) List_Get(var_decls, i);
-        if (strcmp(v->identifier, identifier) == 0) {
-            var_decl = v;
-            break;
-        }
-    }
-
-    struct Expr *variable = NewVariableExpr(identifier);
-    if (var_decl->node.type == AST_DECL_ARRAY) {
-        variable->operand_type = OPERAND_POINTER;
-    }
-
-    return variable;
+    return NewVariableExpr(identifier);
 }
 
 static struct Expr *ParseNumber(struct OperatorParseData data) {
@@ -170,21 +138,73 @@ static struct Expr *ParseNumber(struct OperatorParseData data) {
     return NewNumberExpr(value);
 }
 
-static struct Expr *ParseUnaryAddrOp(struct OperatorParseData data) {
-    ExpectAndEat(TOKEN_AMPERSAND);
-    struct Expr *lhs = ParseExpr(data.precedence);
-    return NewOperationAddrExpr(lhs);
-}
-
 static struct Expr *ParseUnaryOp(struct OperatorParseData data) {
     Lexer_EatToken(l);
     struct Expr *lhs = ParseExpr(data.precedence);
     return NewOperationExpr(data.type, lhs, NULL);
 }
 
-static struct Expr *ParseUnaryPlusOp(struct OperatorParseData data) {
-    ExpectAndEat(TOKEN_PLUS);
-    return ParseExpr(data.precedence);
+
+//
+// ===
+// == Parse statements
+// ===
+//
+
+
+static struct AstNode *ParseDecl() {
+    struct Token token = Lexer_PeekToken(l);
+    struct VarDeclaration *var_declaration = NULL;
+
+    if (token.type == TOKEN_KEYWORD_INT) {
+        // Type
+        Lexer_EatToken(l);
+        var_declaration = NewVarDeclaration();
+        var_declaration->type = DECLTYPE_INT;
+
+        do {
+            struct Declarator *declarator = NewDeclarator();
+            List_Add(&var_declaration->declarators, declarator);
+
+            // Pointer declarator
+            while (Lexer_PeekToken(l).type == TOKEN_STAR) {
+                declarator->pointer_inderection += 1;
+                Lexer_EatToken(l);
+            }
+
+            // Identifier
+            token = Lexer_PeekToken(l);
+            strncpy(declarator->identifier, token.str_value, TOKEN_MAX_IDENTIFIER_LENGTH);
+            if (Lexer_PeekToken2(l, 1).type != TOKEN_EQUALS) {
+                ExpectAndEat(TOKEN_IDENTIFIER);
+            }
+            else {
+                declarator->value = ParseExpr(0);
+            }
+
+            if (Lexer_PeekToken(l).type == TOKEN_LEFT_SQUARE_BRACKET) {
+                // Array declarator
+                ExpectAndEat(TOKEN_LEFT_SQUARE_BRACKET);
+                struct Token token = Lexer_PeekToken(l);
+                ExpectAndEat(TOKEN_LITERAL_NUMBER);
+                ExpectAndEat(TOKEN_RIGHT_SQUARE_BRACKET);
+
+                declarator->array_sizes[declarator->array_dimensions] = token.int_value;
+                declarator->array_dimensions += 1;
+                break;
+            }
+            else if (Lexer_PeekToken(l).type == TOKEN_SEMICOLON) {
+                // End of declaration
+                break;
+            }
+            else {
+                ExpectAndEat(TOKEN_COMMA);
+            }
+        } while (true);
+    }
+
+    ExpectAndEat(TOKEN_SEMICOLON);
+    return (struct AstNode *) var_declaration;
 }
 
 
@@ -197,60 +217,16 @@ static struct Expr *ParseUnaryPlusOp(struct OperatorParseData data) {
 
 static struct CompoundStmt *ParseCompoundStmt() {
     struct CompoundStmt *compound_stmt = NewCompoundStmt();
-    struct List *stmts = &compound_stmt->stmts;
-    struct List *var_decls = &current_function->var_decls;
-
     ExpectAndEat(TOKEN_LEFT_CURLY_BRACKET);
     while (Lexer_PeekToken(l).type != TOKEN_RIGHT_CURLY_BRACKET) {
         struct Token token = Lexer_PeekToken(l);
         if (token.type == TOKEN_KEYWORD_INT) {
-            // Decl specifiers
-            ExpectAndEat(TOKEN_KEYWORD_INT);
-
-            do {
-                // Declarator
-                while (Lexer_PeekToken(l).type == TOKEN_STAR) {
-                    Lexer_EatToken(l);
-                }
-
-                token = Lexer_PeekToken(l);
-                struct Decl *d = (struct Decl *) malloc(sizeof(struct Decl));
-                d->node.type = AST_DECL;
-                strncpy(d->identifier, token.str_value, TOKEN_MAX_IDENTIFIER_LENGTH);
-                List_Add(var_decls, d);
-
-                if (Lexer_PeekToken2(l, 1).type == TOKEN_EQUALS) {
-                    struct Expr *expr = ParseExpr(0);
-                    struct ExpressionStmt *stmt = NewExpressionStmt(expr);
-                    List_Add(stmts, stmt);
-                }
-                else {
-                    Lexer_EatToken(l); // Eat the identifier
-                }
-
-                if (Lexer_PeekToken(l).type == TOKEN_SEMICOLON) {
-                    break;
-                }
-                else if (Lexer_PeekToken(l).type == TOKEN_LEFT_SQUARE_BRACKET) {
-                    ExpectAndEat(TOKEN_LEFT_SQUARE_BRACKET);
-
-                    struct Token token = Lexer_PeekToken(l);
-                    ExpectAndEat(TOKEN_LITERAL_NUMBER);
-
-                    d->node.type = AST_DECL_ARRAY;
-                    d->array_size = token.int_value;
-                    ExpectAndEat(TOKEN_RIGHT_SQUARE_BRACKET);
-                    break;
-                }
-                else {
-                    ExpectAndEat(TOKEN_COMMA);
-                }
-            } while (true);
-            ExpectAndEat(TOKEN_SEMICOLON);
+            struct AstNode *decl = ParseDecl();
+            List_Add(&compound_stmt->body, decl);
         }
         else {
             struct AstNode *stmt = ParseStmt();
-            List_Add(stmts, stmt);
+            List_Add(&compound_stmt->body, stmt);
         }
     }
 
@@ -352,28 +328,29 @@ static struct AstNode *ParseStmt() {
 
 
 struct FunctionDef *ParseFunctionDef() {
-    // Decl specifiers
+    // Declaration specifiers
     ExpectAndEat(TOKEN_KEYWORD_INT);
 
     char *identifier = Lexer_PeekToken(l).str_value;
-
     struct FunctionDef *function = NewFunctionDef(identifier);
-    current_function = function;
 
     ExpectAndEat(TOKEN_IDENTIFIER);
     ExpectAndEat(TOKEN_LEFT_ROUND_BRACKET);
     while (Lexer_PeekToken(l).type != TOKEN_RIGHT_ROUND_BRACKET) {
-        // Decl specifiers
+        // Type
         ExpectAndEat(TOKEN_KEYWORD_INT);
+        struct VarDeclaration *var_declaration = NewVarDeclaration();
+        var_declaration->type = DECLTYPE_INT;
+        List_Add(&function->var_decls, var_declaration);
 
-        struct Decl *d = (struct Decl *) malloc(sizeof(struct Decl));
-        d->node.type = AST_DECL;
+        struct Declarator *declarator = NewDeclarator();
+        List_Add(&var_declaration->declarators, declarator);
 
+        // Identifier
         struct Token token = Lexer_PeekToken(l);
-        strncpy(d->identifier, token.str_value, TOKEN_MAX_IDENTIFIER_LENGTH);
-        List_Add(&function->var_decls, d);
-
+        strncpy(declarator->identifier, token.str_value, TOKEN_MAX_IDENTIFIER_LENGTH);
         ExpectAndEat(TOKEN_IDENTIFIER);
+
         function->num_params += 1;
         if (Lexer_PeekToken(l).type == TOKEN_COMMA) {
             Lexer_EatToken(l);

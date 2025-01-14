@@ -7,9 +7,10 @@
 
 static void GenerateExpr(struct Expr *expr);
 static void GenerateCompoundStmt(struct CompoundStmt *compound_stmt);
+static void GenerateDecl(struct AstNode *decl);
 static void GenerateStmt(struct AstNode *stmt);
 
-static struct FunctionDef *current_function;
+static struct FunctionDef *current_func;
 static FILE *f;
 static char *arg_regs[] = { "rdi", "rsi", "rdx", "rcx", "r8", "r9" };
 
@@ -24,24 +25,35 @@ static int MakeNewLabelId() {
     return label_id;
 }
 
+static struct Declarator *FindDeclarator(struct List *var_declarations, char *identifier) {
+    for (int i = 0; i < var_declarations->count; ++i) {
+        struct VarDeclaration *var_declaration = (struct VarDeclaration *) List_Get(var_declarations, i);
+        struct List *declarators = &var_declaration->declarators;
+        for (int j = 0; j < declarators->count; ++j) {
+            struct Declarator *declarator = (struct Declarator *) List_Get(declarators, j);
+            if (strcmp(declarator->identifier, identifier) == 0) {
+                return declarator;
+            }
+        }
+    }
+
+    return NULL;
+}
+
+static bool IsArray(struct Declarator *declarator) {
+    return declarator->array_dimensions > 0;
+}
+
 static void GenerateAddress(struct Expr *expr) {
     // Literals
     if (expr->type == EXPR_VAR) {
-        struct List *var_decls = &current_function->var_decls;
-        struct Decl *var_decl = NULL;
-        for (int i = 0; i < var_decls->count; ++i) {
-            struct Decl *v = (struct Decl *) List_Get(var_decls, i);
-            if (strcmp(v->identifier, expr->str_value) == 0) {
-                var_decl = v;
-                break;
-            }
+        struct List *var_decls = &current_func->var_decls;
+        struct Declarator *declarator = FindDeclarator(var_decls, expr->str_value);
+        if (!declarator) {
+            ReportInternalError("variable address of '%s'", declarator->identifier);
         }
 
-        if (!var_decl) {
-            ReportInternalError("variable address of '%s'", expr->str_value);
-        }
-
-        Lea("rax", var_decl->rbp_offset);
+        Lea("rax", declarator->rbp_offset);
         return;
     }
 
@@ -61,17 +73,9 @@ static void GenerateExpr(struct Expr *expr) {
         case EXPR_VAR: {
             GenerateAddress(expr);
 
-            struct List *var_decls = &current_function->var_decls;
-            struct Decl *var_decl = NULL;
-            for (int i = 0; i < var_decls->count; ++i) {
-                struct Decl *v = (struct Decl *) List_Get(var_decls, i);
-                if (strcmp(v->identifier, expr->str_value) == 0) {
-                    var_decl = v;
-                    break;
-                }
-            }
-
-            if (var_decl->node.type != AST_DECL_ARRAY) {
+            struct List *var_decls = &current_func->var_decls;
+            struct Declarator *declarator = FindDeclarator(var_decls, expr->str_value);
+            if (!IsArray(declarator)) {
                 Mov("rax", "[rax]");
             }
         } return;
@@ -96,16 +100,19 @@ static void GenerateExpr(struct Expr *expr) {
 
     // Unary operators
     switch (expr->type) {
-        case EXPR_ADDR: {
-            GenerateAddress(expr->lhs);
+        case EXPR_PLUS: {
+            GenerateExpr(expr->lhs);
+        } return;
+        case EXPR_NEG: {
+            GenerateExpr(expr->lhs);
+            Neg("rax");
         } return;
         case EXPR_DEREF: {
             GenerateExpr(expr->lhs);
             Mov("rax", "[rax]");
         } return;
-        case EXPR_NEG: {
-            GenerateExpr(expr->lhs);
-            Neg("rax");
+        case EXPR_ADDR: {
+            GenerateAddress(expr->lhs);
         } return;
     }
 
@@ -135,28 +142,45 @@ static void GenerateExpr(struct Expr *expr) {
         case EXPR_SUB: { Sub("rax", "rdi"); } break;
         case EXPR_MUL: { Mul("rax", "rdi"); } break;
         case EXPR_DIV: { Div("rdi"); } break;
-        default: { ReportInternalError("not implemented"); } break;
+        default: { ReportInternalError("CodeGeneratorX86::GenerateExpr - not implemented"); } break;
     }
 }
 
 static void GenerateFunctionDef(struct FunctionDef *function) {
-    current_function = function;
+    current_func = function;
 
-    struct List *var_decls = &current_function->var_decls;
-    int offset = 0;
+    struct List *var_decls = &current_func->var_decls;
+    int offset = 8;
     for (int i = var_decls->count - 1; i >= 0; --i) {
-        struct Decl *var_decl = (struct Decl *) List_Get(var_decls, i);
-        if (var_decl->node.type == AST_DECL) {
-            offset += 8;
+        struct VarDeclaration *var_declaration = (struct VarDeclaration *) List_Get(var_decls, i);
+        switch (var_declaration->type) {
+            case DECLTYPE_INT: {
+                struct List *declarators = &var_declaration->declarators;
+                for (int j = 0; j < declarators->count; ++j) {
+                    struct Declarator *declarator = (struct Declarator *) List_Get(declarators, j);
+                    if (declarator->array_dimensions > 0) {
+                        // Consider these two scenarios:
+                        //  1) int x[3];
+                        //  2) int x0, x1, x2;
+                        //
+                        // While x[0] might seem like it should have the same address as x0,
+                        // it's actually x[2] that shares the address with x0.
+                        // The rbp_offset is calculated after considering the full array size.
+                        // TODO: only handles 1st dimension of array.
+                        offset += 8 * declarator->array_sizes[0];
+                        declarator->rbp_offset = offset;
+                    }
+                    else {
+                        declarator->rbp_offset = offset;
+                        offset += 8;
+                    }
+                }
+            } break;
+            default: {
+                printf("%d\n", var_declaration->type);
+                ReportInternalError("CodeGeneratorX86::GenerateFunctionDef - unknown var_decl.decl_spec");
+            } break;
         }
-        else if (var_decl->node.type == AST_DECL_ARRAY) {
-            offset += var_decl->array_size * 8;
-        }
-        else {
-            ReportInternalError("unknown var_decl type");
-        }
-
-        var_decl->rbp_offset = offset;
     }
 
     function->stack_size = Align(offset, 16);
@@ -164,15 +188,17 @@ static void GenerateFunctionDef(struct FunctionDef *function) {
     SetupStackFrame(function->stack_size);
 
     for (int i = 0; i < function->num_params; ++i) {
-        struct Decl *param = (struct Decl *) List_Get(var_decls, i);
-        fprintf(f, "; parameter \"%s\"\n", param->identifier);
-        fprintf(f, "  mov [rbp - %d], %s\n", param->rbp_offset, arg_regs[i]);
+        struct VarDeclaration *param = (struct VarDeclaration *) List_Get(var_decls, i);
+        struct Declarator *declarator = (struct Declarator *) List_Get(&param->declarators, 0);
+
+        fprintf(f, "; parameter \"%s\"\n", declarator->identifier);
+        fprintf(f, "  mov [rbp - %d], %s\n", declarator->rbp_offset, arg_regs[i]);
     }
 
     GenerateCompoundStmt(function->body);
     fprintf(f, "return.%s:\n", function->identifier);
     RestoreStackFrame();
-    current_function = NULL;
+    current_func = NULL;
 }
 
 static void GenerateTranslationUnit(struct TranslationUnit *t_unit) {
@@ -182,20 +208,16 @@ static void GenerateTranslationUnit(struct TranslationUnit *t_unit) {
     }
 }
 
-
-
-//
-// ===
-// == Generate statements
-// ===
-//
-
-
 static void GenerateCompoundStmt(struct CompoundStmt *compound_stmt) {
-    struct List *stmts = &compound_stmt->stmts;
-    for (int i = 0; i < stmts->count; ++i) {
-        struct AstNode *stmt = (struct AstNode *) List_Get(stmts, i);
-        GenerateStmt(stmt);
+    struct List *body = &compound_stmt->body;
+    for (int i = 0; i < body->count; ++i) {
+        struct AstNode *node = (struct AstNode *) List_Get(body, i);
+        if (node->type == AST_VAR_DECLARATION) {
+            GenerateDecl(node);
+        }
+        else {
+            GenerateStmt(node);
+        }
     }
 }
 
@@ -247,7 +269,7 @@ static void GenerateIfStmt(struct IfStmt *if_stmt) {
 
 static void GenerateReturnStmt(struct ReturnStmt *return_stmt) {
     if (return_stmt->expr) GenerateExpr(return_stmt->expr);
-    fprintf(f, "  jmp return.%s\n", current_function->identifier);
+    fprintf(f, "  jmp return.%s\n", current_func->identifier);
 }
 
 static void GenerateWhileStmt(struct WhileStmt *while_stmt) {
@@ -269,16 +291,33 @@ static void GenerateWhileStmt(struct WhileStmt *while_stmt) {
     );
 }
 
+static void GenerateVarDeclaration(struct VarDeclaration *var_declaration) {
+    struct List *declarators = &var_declaration->declarators;
+    for (int i = 0; i < declarators->count; ++i) {
+        struct Declarator *declarator = (struct Declarator *) List_Get(declarators, i);
+        if (declarator->value) {
+            GenerateExpr(declarator->value);
+        }
+    }
+}
+
+static void GenerateDecl(struct AstNode *decl) {
+    switch (decl->type) {
+        case AST_VAR_DECLARATION:   { GenerateVarDeclaration((struct VarDeclaration *) decl); } break;
+        default:                    { ReportInternalError("unknown declaration"); } break;
+    }
+}
+
 static void GenerateStmt(struct AstNode *stmt) {
     switch (stmt->type) {
-        case AST_COMPOUND_STMT:    { GenerateCompoundStmt((struct CompoundStmt *) stmt ); } break;
-        case AST_EXPRESSION_STMT:  { GenerateExpressionStmt((struct ExpressionStmt *) stmt); } break;
-        case AST_FOR_STMT:         { GenerateForStmt((struct ForStmt *) stmt); } break;
-        case AST_IF_STMT:          { GenerateIfStmt((struct IfStmt *) stmt); } break;
-        case AST_NULL_STMT:        { } break;
-        case AST_RETURN_STMT:      { GenerateReturnStmt((struct ReturnStmt *) stmt); } break;
-        case AST_WHILE_STMT:       { GenerateWhileStmt((struct WhileStmt *) stmt); } break;
-        default:                        { ReportInternalError("unknown stmt"); } break;
+        case AST_COMPOUND_STMT:     { GenerateCompoundStmt((struct CompoundStmt *) stmt ); } break;
+        case AST_EXPRESSION_STMT:   { GenerateExpressionStmt((struct ExpressionStmt *) stmt); } break;
+        case AST_FOR_STMT:          { GenerateForStmt((struct ForStmt *) stmt); } break;
+        case AST_IF_STMT:           { GenerateIfStmt((struct IfStmt *) stmt); } break;
+        case AST_NULL_STMT:         { } break;
+        case AST_RETURN_STMT:       { GenerateReturnStmt((struct ReturnStmt *) stmt); } break;
+        case AST_WHILE_STMT:        { GenerateWhileStmt((struct WhileStmt *) stmt); } break;
+        default:                    { ReportInternalError("unknown statement"); } break;
     }
 }
 
@@ -291,7 +330,7 @@ static void GenerateStmt(struct AstNode *stmt) {
 
 
 void CodeGeneratorX86_GenerateCode(FILE *asm_file, struct TranslationUnit *t_unit) {
-    current_function = NULL;
+    current_func = NULL;
     f = asm_file;
 
     SetOutput(asm_file);

@@ -1,6 +1,7 @@
 #include "CodeGeneratorX86.h"
 #include "Lexer.h"
 #include "Parser.h"
+#include "SemanticAnalysis.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,7 +35,11 @@ int main(int num_args, char **args) {
         return 1;
     }
 
+    printf("Parsing...\n");
     struct TranslationUnit *t_unit = Parser_MakeAst(&lexer);
+    printf("Analyzing...\n");
+    SemanticAnalysis_Analyze(t_unit);
+    PrintS(t_unit);
 
     filename = "tmp";
     char asm_filename[MAX_FILENAME_LENGTH];
@@ -42,8 +47,8 @@ int main(int num_args, char **args) {
     FILE *asm_file;
     fopen_s(&asm_file, asm_filename, "w");
 
+    printf("Compiling...\n");
     CodeGeneratorX86_GenerateCode(asm_file, t_unit);
-    PrintS(t_unit);
     fclose(asm_file);
 
     char obj_filename[MAX_FILENAME_LENGTH];

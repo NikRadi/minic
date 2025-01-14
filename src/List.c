@@ -28,17 +28,6 @@ void List_Add(struct List *l, void *element) {
     l->count += 1;
 }
 
-void *List_Find(struct List *l, void *element, ListElementsEqualityFunction AreEquals) {
-    for (int i = 0; i < l->count; ++i) {
-        void *e = List_Get(l, i);
-        if (AreEquals(element, e)) {
-            return e;
-        }
-    }
-
-    return NULL;
-}
-
 void List_Free(struct List *l) {
     free(l->data);
     l->capacity = 0;

@@ -3,15 +3,25 @@
 #include "List.h"
 #include "Token.h"
 
-enum OperandType {
-    OPERAND_INTEGER,
-    OPERAND_POINTER,
+#define MAX_ARRAY_DIMENSIONS 4
+
+
+enum PrimitiveType {
+    PRIMTYPE_INVALID,
+    PRIMTYPE_INT,
+    PRIMTYPE_PTR,
+};
+
+enum DeclarationType {
+    DECLTYPE_INVALID,
+    DECLTYPE_INT,
 };
 
 struct AstNode {
     enum AstNodeType {
-        AST_DECL,
-        AST_DECL_ARRAY,
+        AST_INVALID,
+        AST_DECLARATOR,
+        AST_VAR_DECLARATION,
         AST_FUNCTION_DEF,
         AST_TRANSLATION_UNIT,
 
@@ -30,12 +40,14 @@ struct Expr {
     struct Expr *lhs;
     struct Expr *rhs;
     struct List args;
+    enum PrimitiveType operand_type;
+    enum PrimitiveType base_operand_type;
     int int_value;
     char str_value[TOKEN_MAX_IDENTIFIER_LENGTH];
     int rbp_offset;
-    enum OperandType operand_type;
-    enum OperandType base_operand_type;
     enum ExprType {
+        EXPR_INVALID,
+
         // Literals
         EXPR_NUM,
         EXPR_VAR,
@@ -44,6 +56,7 @@ struct Expr {
         EXPR_FUNC_CALL,
 
         // Unary operators
+        EXPR_PLUS,      // +lhs
         EXPR_NEG,       // -lhs
         EXPR_DEREF,     // *lhs
         EXPR_ADDR,      // &lhs
@@ -63,16 +76,26 @@ struct Expr {
     } type;
 };
 
-struct Decl {
+struct Declarator {
     struct AstNode node;
-    char identifier[TOKEN_MAX_IDENTIFIER_LENGTH];
+    struct Expr *value;
+    int array_dimensions;
+    int array_sizes[MAX_ARRAY_DIMENSIONS];
+    int pointer_inderection;
     int rbp_offset;
-    int array_size;
+    char identifier[TOKEN_MAX_IDENTIFIER_LENGTH];
+};
+
+struct VarDeclaration {
+    struct AstNode node;
+    struct List declarators;
+    enum DeclarationType type;
 };
 
 struct FunctionDef {
     struct AstNode node;
     struct CompoundStmt *body;
+    struct List params;
     struct List var_decls;
     int num_params;
     int stack_size;
@@ -94,7 +117,7 @@ struct TranslationUnit {
 
 struct CompoundStmt {
     struct AstNode node;
-    struct List stmts;
+    struct List body;
 };
 
 struct ExpressionStmt {
@@ -132,13 +155,12 @@ struct WhileStmt {
 bool AreVariablesEquals(void *a, void *b);
 
 struct Expr *NewFunctionCallExpr(char *identifier, struct List args);
-struct Expr *NewOperationAddExpr(struct Expr *lhs, struct Expr *rhs);
-struct Expr *NewOperationAddrExpr(struct Expr *lhs);
 struct Expr *NewOperationExpr(enum ExprType type, struct Expr *lhs, struct Expr *rhs);
-struct Expr *NewOperationSubExpr(struct Expr *lhs, struct Expr *rhs);
 struct Expr *NewNumberExpr(int value);
 struct Expr *NewVariableExpr(char *identifier);
 
+struct Declarator *NewDeclarator();
+struct VarDeclaration *NewVarDeclaration();
 struct FunctionDef *NewFunctionDef(char *identifier);
 struct TranslationUnit *NewTranslationUnit();
 
