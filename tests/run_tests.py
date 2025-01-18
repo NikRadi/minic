@@ -104,6 +104,9 @@ def main():
         ("int main() { int x[3][4]; int *y=x; *(y+3) = 2; return *(*x+2); }", 3),
         ("int main() { int x[3][4]; int *y=x; *(y+4) = 3; return **x; }", 4),
         ("int main() { int x[3][4]; int *y=x; *(y+5) = 4; return **x; }", 5),
+        ("int main() { int x[3]; x[0]=123; x[1]=234; x[2]=345; return x[0]; }", 123),
+        ("int main() { int x[3]; x[0]=123; x[1]=234; x[2]=345; return x[1]; }", 234),
+        ("int main() { int x[3]; x[0]=123; x[1]=234; x[2]=345; return x[2]; }", 345),
     ]
 
     num_failed = 0

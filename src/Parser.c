@@ -122,6 +122,17 @@ static struct Expr *ParseIdentifier(struct OperatorParseData data) {
         return NewFunctionCallExpr(identifier, args);
     }
 
+    // Array subscript
+    if (Lexer_PeekToken(l).type == TOKEN_LEFT_SQUARE_BRACKET) {
+        ExpectAndEat(TOKEN_LEFT_SQUARE_BRACKET);
+        struct Expr *index = ParseExpr(0);
+        ExpectAndEat(TOKEN_RIGHT_SQUARE_BRACKET);
+
+        struct Expr *var = NewVariableExpr(identifier);
+        struct Expr *add = NewOperationExpr(EXPR_ADD, var, index);
+        return NewOperationExpr(EXPR_DEREF, add, NULL);
+    }
+
     return NewVariableExpr(identifier);
 }
 
