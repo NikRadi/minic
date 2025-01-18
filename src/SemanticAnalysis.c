@@ -53,6 +53,7 @@ static void AnalyzeExpr(struct Expr *expr) {
         } break;
         case EXPR_DEREF: {
             AnalyzeExpr(expr->lhs);
+            expr->operand_type = expr->lhs->operand_type;
         } break;
         case EXPR_ADDR: {
             AnalyzeExpr(expr->lhs);
@@ -90,6 +91,14 @@ static void AnalyzeExpr(struct Expr *expr) {
 
 static void AnalyzeVarDecl(struct VarDeclaration *var_declaration) {
     List_Add(&current_func->var_decls, var_declaration);
+
+    struct List *declarators = &var_declaration->declarators;
+    for (int i = 0; i < declarators->count; ++i) {
+        struct Declarator *declarator = (struct Declarator *) List_Get(declarators, i);
+        if (declarator->value) {
+            AnalyzeExpr(declarator->value);
+        }
+    }
 }
 
 static void AnalyzeExpressionStmt(struct ExpressionStmt * expr_stmt) {

@@ -166,8 +166,12 @@ static void GenerateFunctionDef(struct FunctionDef *function) {
                         // While x[0] might seem like it should have the same address as x0,
                         // it's actually x[2] that shares the address with x0.
                         // The rbp_offset is calculated after considering the full array size.
-                        // TODO: only handles 1st dimension of array.
-                        offset += 8 * declarator->array_sizes[0];
+                        int total_vars = 1;
+                        for (int i = 0; i < declarator->array_dimensions; ++i) {
+                            total_vars *= declarator->array_sizes[i];
+                        }
+
+                        offset += 8 * total_vars;
                         declarator->rbp_offset = offset;
                     }
                     else {

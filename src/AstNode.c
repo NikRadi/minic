@@ -175,7 +175,7 @@ void PrintE(struct Expr *expr) {
             fprintf(stdout, "%*s</Neg>\n", indent, "");
         } break;
         case EXPR_DEREF: {
-            fprintf(stdout, "%*s<Deref>\n", indent, "");
+            fprintf(stdout, "%*s<Deref %d>\n", indent, "", expr->operand_type);
             indent += 2;
             PrintE(expr->lhs);
             indent -= 2;
@@ -239,14 +239,24 @@ void PrintS(struct AstNode *node) {
         case AST_DECLARATOR: {
             struct Declarator *d = (struct Declarator *) node;
             if (d->value) {
-                fprintf(stdout, "%*s<Declarator identifier=\"%s\">\n", indent, "", d->identifier);
+                fprintf(stdout, "%*s<Declarator identifier=\"%s\" array_dimensions=\"%d\">\n",
+                    indent,
+                    "",
+                    d->identifier,
+                    d->array_dimensions
+                );
+
                 indent += 2;
                 PrintE(d->value);
                 indent -= 2;
-                fprintf(stdout, "%*s</Declarator>\n", indent, "");
             }
             else {
-                fprintf(stdout, "%*s</Declarator identifier=\"%s\">\n", indent, "", d->identifier);
+                fprintf(stdout, "%*s</Declarator identifier=\"%s\" array_dimensions=\"%d\">\n",
+                    indent,
+                    "",
+                    d->identifier,
+                    d->array_dimensions
+                );
             }
         } break;
         case AST_VAR_DECLARATION: {

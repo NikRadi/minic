@@ -24,13 +24,6 @@ static void ExpectAndEat(enum TokenType type) {
 }
 
 
-//
-// ===
-// == Parse expressions
-// ===
-//
-
-
 struct OperatorParseData;
 typedef struct Expr *(*ParseOperatorFunction)(struct OperatorParseData);
 
@@ -184,13 +177,16 @@ static struct AstNode *ParseDecl() {
 
             if (Lexer_PeekToken(l).type == TOKEN_LEFT_SQUARE_BRACKET) {
                 // Array declarator
-                ExpectAndEat(TOKEN_LEFT_SQUARE_BRACKET);
-                struct Token token = Lexer_PeekToken(l);
-                ExpectAndEat(TOKEN_LITERAL_NUMBER);
-                ExpectAndEat(TOKEN_RIGHT_SQUARE_BRACKET);
+                while (Lexer_PeekToken(l).type == TOKEN_LEFT_SQUARE_BRACKET) {
+                    ExpectAndEat(TOKEN_LEFT_SQUARE_BRACKET);
+                    struct Token token = Lexer_PeekToken(l);
+                    ExpectAndEat(TOKEN_LITERAL_NUMBER);
+                    ExpectAndEat(TOKEN_RIGHT_SQUARE_BRACKET);
 
-                declarator->array_sizes[declarator->array_dimensions] = token.int_value;
-                declarator->array_dimensions += 1;
+                    declarator->array_sizes[declarator->array_dimensions] = token.int_value;
+                    declarator->array_dimensions += 1;
+                }
+
                 break;
             }
             else if (Lexer_PeekToken(l).type == TOKEN_SEMICOLON) {
@@ -206,14 +202,6 @@ static struct AstNode *ParseDecl() {
     ExpectAndEat(TOKEN_SEMICOLON);
     return (struct AstNode *) var_declaration;
 }
-
-
-//
-// ===
-// == Parse statements
-// ===
-//
-
 
 static struct CompoundStmt *ParseCompoundStmt() {
     struct CompoundStmt *compound_stmt = NewCompoundStmt();
@@ -318,14 +306,6 @@ static struct AstNode *ParseStmt() {
         default:                        return (struct AstNode *) ParseExpressionStmt();
     }
 }
-
-
-//
-// ===
-// == Parse statements
-// ===
-//
-
 
 struct FunctionDef *ParseFunctionDef() {
     // Declaration specifiers

@@ -98,6 +98,12 @@ def main():
         ("int main() { int x[3]; *x=3; *(x+1)=5; *(x+2)=8; return *x; }", 3),
         ("int main() { int x[3]; *x=3; *(x+1)=5; *(x+2)=8; return *(x+1); }", 5),
         ("int main() { int x[3]; *x=3; *(x+1)=5; *(x+2)=8; return *(x+2); }", 8),
+        ("int main() { int x[3][4]; int *y=x; *y=123; return **x; }", 123),
+        ("int main() { int x[3][4]; int *y=x; *(y+1) = 0; return **x; }", 1),
+        ("int main() { int x[3][4]; int *y=x; *(y+2) = 1; return *(*x+1); }", 2),
+        ("int main() { int x[3][4]; int *y=x; *(y+3) = 2; return *(*x+2); }", 3),
+        ("int main() { int x[3][4]; int *y=x; *(y+4) = 3; return **x; }", 4),
+        ("int main() { int x[3][4]; int *y=x; *(y+5) = 4; return **x; }", 5),
     ]
 
     num_failed = 0
