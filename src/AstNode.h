@@ -8,13 +8,9 @@
 
 enum PrimitiveType {
     PRIMTYPE_INVALID,
+    PRIMTYPE_CHAR,
     PRIMTYPE_INT,
     PRIMTYPE_PTR,
-};
-
-enum DeclarationType {
-    DECLTYPE_INVALID,
-    DECLTYPE_INT,
 };
 
 struct AstNode {
@@ -90,7 +86,7 @@ struct Declarator {
 struct VarDeclaration {
     struct AstNode node;
     struct List declarators;
-    enum DeclarationType type;
+    enum PrimitiveType type;
 };
 
 struct FunctionDef {

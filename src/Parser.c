@@ -161,11 +161,12 @@ static struct AstNode *ParseDecl() {
     struct Token token = Lexer_PeekToken(l);
     struct VarDeclaration *var_declaration = NULL;
 
-    if (token.type == TOKEN_KEYWORD_INT) {
+    if (token.type == TOKEN_KEYWORD_CHAR || token.type == TOKEN_KEYWORD_INT) {
         // Type
         Lexer_EatToken(l);
         var_declaration = NewVarDeclaration();
-        var_declaration->type = DECLTYPE_INT;
+        if (token.type == TOKEN_KEYWORD_CHAR) var_declaration->type = PRIMTYPE_CHAR;
+        if (token.type == TOKEN_KEYWORD_INT)  var_declaration->type = PRIMTYPE_INT;
 
         do {
             struct Declarator *declarator = NewDeclarator();
@@ -220,7 +221,7 @@ static struct CompoundStmt *ParseCompoundStmt() {
     ExpectAndEat(TOKEN_LEFT_CURLY_BRACKET);
     while (Lexer_PeekToken(l).type != TOKEN_RIGHT_CURLY_BRACKET) {
         struct Token token = Lexer_PeekToken(l);
-        if (token.type == TOKEN_KEYWORD_INT) {
+        if (token.type == TOKEN_KEYWORD_CHAR || token.type == TOKEN_KEYWORD_INT) {
             struct AstNode *decl = ParseDecl();
             List_Add(&compound_stmt->body, decl);
         }
@@ -332,7 +333,7 @@ struct FunctionDef *ParseFunctionDef() {
         // Type
         ExpectAndEat(TOKEN_KEYWORD_INT);
         struct VarDeclaration *var_declaration = NewVarDeclaration();
-        var_declaration->type = DECLTYPE_INT;
+        var_declaration->type = PRIMTYPE_INT;
         List_Add(&function->var_decls, var_declaration);
 
         struct Declarator *declarator = NewDeclarator();

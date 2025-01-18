@@ -72,7 +72,7 @@ struct VarDeclaration *NewVarDeclaration() {
     struct VarDeclaration *var_declaration = NEW_TYPE(VarDeclaration);
     var_declaration->node.type = AST_VAR_DECLARATION;
     List_Init(&var_declaration->declarators);
-    var_declaration->type = DECLTYPE_INVALID;
+    var_declaration->type = PRIMTYPE_INVALID;
     return var_declaration;
 }
 

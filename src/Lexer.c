@@ -90,6 +90,7 @@ static void ReadSequence(struct Lexer *l, char *buffer, IsAllowedInSequenceFunct
 }
 
 static enum TokenType TypeOfIdentifier(char *identifier) {
+    if (strcmp(identifier, "char") == 0)    return TOKEN_KEYWORD_CHAR;
     if (strcmp(identifier, "else") == 0)    return TOKEN_KEYWORD_ELSE;
     if (strcmp(identifier, "for") == 0)     return TOKEN_KEYWORD_FOR;
     if (strcmp(identifier, "int") == 0)     return TOKEN_KEYWORD_INT;

@@ -160,37 +160,39 @@ static void GenerateFunctionDef(struct FunctionDef *function) {
     int offset = 8;
     for (int i = var_decls->count - 1; i >= 0; --i) {
         struct VarDeclaration *var_declaration = (struct VarDeclaration *) List_Get(var_decls, i);
+        int size_in_bytes;
         switch (var_declaration->type) {
-            case DECLTYPE_INT: {
-                struct List *declarators = &var_declaration->declarators;
-                for (int j = 0; j < declarators->count; ++j) {
-                    struct Declarator *declarator = (struct Declarator *) List_Get(declarators, j);
-                    if (declarator->array_dimensions > 0) {
-                        // Consider these two scenarios:
-                        //  1) int x[3];
-                        //  2) int x0, x1, x2;
-                        //
-                        // While x[0] might seem like it should have the same address as x0,
-                        // it's actually x[2] that shares the address with x0.
-                        // The rbp_offset is calculated after considering the full array size.
-                        int total_vars = 1;
-                        for (int i = 0; i < declarator->array_dimensions; ++i) {
-                            total_vars *= declarator->array_sizes[i];
-                        }
-
-                        offset += 8 * total_vars;
-                        declarator->rbp_offset = offset;
-                    }
-                    else {
-                        declarator->rbp_offset = offset;
-                        offset += 8;
-                    }
-                }
-            } break;
+            case PRIMTYPE_CHAR: { size_in_bytes = 1; } break;
+            case PRIMTYPE_INT:  { size_in_bytes = 8; } break;
             default: {
                 printf("%d\n", var_declaration->type);
                 ReportInternalError("CodeGeneratorX86::GenerateFunctionDef - unknown var_decl.decl_spec");
             } break;
+        }
+
+        struct List *declarators = &var_declaration->declarators;
+        for (int j = 0; j < declarators->count; ++j) {
+            struct Declarator *declarator = (struct Declarator *) List_Get(declarators, j);
+            if (declarator->array_dimensions > 0) {
+                // Consider these two scenarios:
+                //  1) int x[3];
+                //  2) int x0, x1, x2;
+                //
+                // While x[0] might seem like it should have the same address as x0,
+                // it's actually x[2] that shares the address with x0.
+                // The rbp_offset is calculated after considering the full array size.
+                int total_vars = 1;
+                for (int i = 0; i < declarator->array_dimensions; ++i) {
+                    total_vars *= declarator->array_sizes[i];
+                }
+
+                offset += size_in_bytes * total_vars;
+                declarator->rbp_offset = offset;
+            }
+            else {
+                declarator->rbp_offset = offset;
+                offset += size_in_bytes;
+            }
         }
     }
 

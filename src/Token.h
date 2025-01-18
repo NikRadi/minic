@@ -42,6 +42,7 @@ enum TokenType {
 
 
     // Keywords
+    TOKEN_KEYWORD_CHAR,
     TOKEN_KEYWORD_ELSE,
     TOKEN_KEYWORD_FOR,
     TOKEN_KEYWORD_INT,

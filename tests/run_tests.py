@@ -113,6 +113,10 @@ def main():
         ("int main() { int x; return sizeof(x+3); }", 8),
         ("int main() { int x=2; return sizeof(x=3); }", 8),
         ("int main() { int x=2; sizeof(x=3); return x; }", 2),
+        ("int main() { char x=2; return x; }", 2),
+        ("int main() { char x=3; char y=123; return x; }", 3),
+        ("int main() { char x=3; return sizeof(x); }", 1),
+        ("int add3(char x1, char x2, char x3) { return x1+x2+x3; } int main() { return add3(2, 3, 4); }", 9),
     ]
 
     num_failed = 0
