@@ -62,6 +62,7 @@ static struct OperatorParseData prefix_operators[TOKEN_COUNT] = {
     [TOKEN_MINUS]                   = { .precedence = 60, .type = EXPR_NEG,     .Parse = ParseUnaryOp },
     [TOKEN_STAR]                    = { .precedence = 60, .type = EXPR_DEREF,   .Parse = ParseUnaryOp },
     [TOKEN_AMPERSAND]               = { .precedence = 60, .type = EXPR_ADDR,    .Parse = ParseUnaryOp },
+    [TOKEN_KEYWORD_SIZEOF]          = { .precedence = 60, .type = EXPR_SIZEOF,  .Parse = ParseUnaryOp },
     [TOKEN_IDENTIFIER]              = {                                         .Parse = ParseIdentifier },
     [TOKEN_LEFT_ROUND_BRACKET]      = {                                         .Parse = ParseBracket },
     [TOKEN_LITERAL_NUMBER]          = {                                         .Parse = ParseNumber },

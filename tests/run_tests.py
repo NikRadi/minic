@@ -107,6 +107,12 @@ def main():
         ("int main() { int x[3]; x[0]=123; x[1]=234; x[2]=345; return x[0]; }", 123),
         ("int main() { int x[3]; x[0]=123; x[1]=234; x[2]=345; return x[1]; }", 234),
         ("int main() { int x[3]; x[0]=123; x[1]=234; x[2]=345; return x[2]; }", 345),
+        ("int main() { int x; return sizeof(x); }", 8),
+        ("int main() { int x; return sizeof x; }", 8),
+        ("int main() { int *x; return sizeof(x); }", 8),
+        ("int main() { int x; return sizeof(x+3); }", 8),
+        ("int main() { int x=2; return sizeof(x=3); }", 8),
+        ("int main() { int x=2; sizeof(x=3); return x; }", 2),
     ]
 
     num_failed = 0

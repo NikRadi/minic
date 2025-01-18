@@ -188,6 +188,13 @@ void PrintE(struct Expr *expr) {
             indent -= 2;
             fprintf(stdout, "%*s</Addr>\n", indent, "");
         } break;
+        case EXPR_SIZEOF: {
+            fprintf(stdout, "%*s<Sizeof %d>\n", indent, "", expr->operand_type);
+            indent += 2;
+            PrintE(expr->lhs);
+            indent -= 2;
+            fprintf(stdout, "%*s</Sizeof>\n", indent, "");
+        } break;
         case EXPR_ADD: {
             fprintf(stdout, "%*s<Add %d>\n", indent, "", expr->operand_type);
             indent += 2;

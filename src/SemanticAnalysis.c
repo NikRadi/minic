@@ -60,6 +60,15 @@ static void AnalyzeExpr(struct Expr *expr) {
             expr->operand_type = PRIMTYPE_PTR;
             expr->base_operand_type = expr->lhs->operand_type;
         } break;
+        case EXPR_SIZEOF: {
+            AnalyzeExpr(expr->lhs);
+            expr->type = EXPR_NUM;
+            switch (expr->lhs->operand_type) {
+                case PRIMTYPE_INT:
+                case PRIMTYPE_PTR: { expr->int_value = 8; } break;
+                default:           { ReportInternalError("SemanticAnalysis::AnalyzeExpr - unexpected sizeof type"); } break;
+            }
+        } break;
         case EXPR_ADD:
         case EXPR_SUB: {
             AnalyzeExpr(expr->lhs);
@@ -81,10 +90,14 @@ static void AnalyzeExpr(struct Expr *expr) {
                 expr->lhs = NewOperationExpr(EXPR_SUB, expr->lhs, expr->rhs);
                 expr->rhs = NewNumberExpr(8);
             }
+            else {
+                expr->operand_type = PRIMTYPE_INT;
+            }
         } break;
         case EXPR_ASSIGN: {
             AnalyzeExpr(expr->lhs);
             AnalyzeExpr(expr->rhs);
+            expr->operand_type = expr->lhs->operand_type;
         } break;
     }
 }

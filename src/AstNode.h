@@ -60,6 +60,7 @@ struct Expr {
         EXPR_NEG,       // -lhs
         EXPR_DEREF,     // *lhs
         EXPR_ADDR,      // &lhs
+        EXPR_SIZEOF,    // sizeof(lhs)
 
         // Binary operators
         EXPR_EQU,       // lhs == rhs

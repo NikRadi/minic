@@ -114,6 +114,13 @@ static void GenerateExpr(struct Expr *expr) {
         case EXPR_ADDR: {
             GenerateAddress(expr->lhs);
         } return;
+        case EXPR_SIZEOF: {
+            ReportInternalError("CodeGeneratorX86::GenerateExpr - unexpected sizeof");
+        } return;
+    }
+
+    if (!expr->rhs) {
+        ReportInternalError("CodeGeneratorX86::GenerateExpr - missing rhs");
     }
 
     // Binary operators

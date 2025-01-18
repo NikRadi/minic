@@ -95,6 +95,7 @@ static enum TokenType TypeOfIdentifier(char *identifier) {
     if (strcmp(identifier, "int") == 0)     return TOKEN_KEYWORD_INT;
     if (strcmp(identifier, "if") == 0)      return TOKEN_KEYWORD_IF;
     if (strcmp(identifier, "return") == 0)  return TOKEN_KEYWORD_RETURN;
+    if (strcmp(identifier, "sizeof") == 0)  return TOKEN_KEYWORD_SIZEOF;
     if (strcmp(identifier, "while") == 0)   return TOKEN_KEYWORD_WHILE;
     return TOKEN_IDENTIFIER;
 }
