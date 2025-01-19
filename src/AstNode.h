@@ -46,6 +46,7 @@ struct Expr {
 
         // Literals
         EXPR_NUM,
+        EXPR_STR,
         EXPR_VAR,
 
         // Others
@@ -154,6 +155,7 @@ bool AreVariablesEquals(void *a, void *b);
 struct Expr *NewFunctionCallExpr(char *identifier, struct List args);
 struct Expr *NewOperationExpr(enum ExprType type, struct Expr *lhs, struct Expr *rhs);
 struct Expr *NewNumberExpr(int value);
+struct Expr *NewStringExpr(char *value);
 struct Expr *NewVariableExpr(char *identifier);
 
 struct Declarator *NewDeclarator();

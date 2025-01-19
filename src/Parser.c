@@ -32,6 +32,7 @@ static struct Expr *ParseBracket(struct OperatorParseData data);
 static struct Expr *ParseExpr(int precedence);
 static struct Expr *ParseIdentifier(struct OperatorParseData data);
 static struct Expr *ParseNumber(struct OperatorParseData data);
+static struct Expr *ParseString(struct OperatorParseData data);
 static struct Expr *ParseUnaryOp(struct OperatorParseData data);
 
 struct OperatorParseData {
@@ -66,6 +67,7 @@ static struct OperatorParseData prefix_operators[TOKEN_COUNT] = {
     [TOKEN_IDENTIFIER]              = {                                         .Parse = ParseIdentifier },
     [TOKEN_LEFT_ROUND_BRACKET]      = {                                         .Parse = ParseBracket },
     [TOKEN_LITERAL_NUMBER]          = {                                         .Parse = ParseNumber },
+    [TOKEN_LITERAL_STRING]          = {                                         .Parse = ParseString },
 };
 
 
@@ -143,19 +145,17 @@ static struct Expr *ParseNumber(struct OperatorParseData data) {
     return NewNumberExpr(value);
 }
 
+static struct Expr *ParseString(struct OperatorParseData data) {
+    int value = Lexer_PeekToken(l).str_value;
+    ExpectAndEat(TOKEN_LITERAL_STRING);
+    return NewStringExpr(value);
+}
+
 static struct Expr *ParseUnaryOp(struct OperatorParseData data) {
     Lexer_EatToken(l);
     struct Expr *lhs = ParseExpr(data.precedence);
     return NewOperationExpr(data.type, lhs, NULL);
 }
-
-
-//
-// ===
-// == Parse statements
-// ===
-//
-
 
 static struct AstNode *ParseDecl() {
     struct Token token = Lexer_PeekToken(l);

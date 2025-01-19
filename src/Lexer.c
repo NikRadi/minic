@@ -50,6 +50,10 @@ static bool IsAllowedInIdentifier(char *c) {
     return IsAlphabetic(*c) || IsDigit(*c) || *c == '_';
 }
 
+static bool IsAllowedInStringLiteral(char *c) {
+    return IsAlphabetic(*c) || IsDigit(*c) || *c != '"' || *c == '%';
+}
+
 static bool IsAlphabetic(char c) {
     return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z');
 }
@@ -183,6 +187,12 @@ void Lexer_EatToken(struct Lexer *l) {
             else {
                 token.type = TOKEN_GREATER_THAN;
             }
+        } break;
+        case '"': {
+            EatChar(l);
+            ReadSequence(l, token.str_value, IsAllowedInStringLiteral);
+            token.type = TOKEN_LITERAL_STRING;
+            EatChar(l);
         } break;
         default: {
             if (IsAlphabetic(c) || c == '_') {

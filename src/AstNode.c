@@ -53,6 +53,12 @@ struct Expr *NewNumberExpr(int value) {
     return expr;
 }
 
+struct Expr *NewStringExpr(char *value) {
+    struct Expr *expr = NewExpr(EXPR_STR);
+    strncpy(expr->str_value, value, TOKEN_MAX_IDENTIFIER_LENGTH);
+    return expr;
+}
+
 struct Expr *NewVariableExpr(char *identifier) {
     struct Expr *expr = NewExpr(EXPR_VAR);
     strncpy(expr->str_value, identifier, TOKEN_MAX_IDENTIFIER_LENGTH);

@@ -11,6 +11,7 @@ enum TokenType {
 
     // Literals
     TOKEN_LITERAL_NUMBER,
+    TOKEN_LITERAL_STRING,
 
 
     // Signs
