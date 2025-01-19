@@ -67,4 +67,7 @@ struct Token {
     };
 };
 
+
+char *TokenTypeToStr(enum TokenType type);
+
 #endif // MINIC_TOKEN_H
