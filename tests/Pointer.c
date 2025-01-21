@@ -9,15 +9,12 @@ int main() {
     printf("%d\n", **x4);
 
     int x5 = 321;
-    int x6 = &x5;
-    int x7 = &x6;
+    int *x6 = &x5;
+    int **x7 = &x6;
     printf("%d\n", **x7);
 
     int x8 = 3;
     int x9 = 5;
-    printf("%d\n", *(&x8 + 1));
-    printf("%d\n", *(&x9 - 1));
-    printf("%d\n", *(&x8 - (-1)));
     *(&x8 + 1) = 7;
     printf("%d\n", x9);
     *(&x9 - 2 + 1) = 6;

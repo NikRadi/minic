@@ -14,9 +14,9 @@ int main() {
     x1[0] = 11;
     x1[1] = 22;
     x1[2] = 33;
-    printf("%d\n", x[0]);
-    printf("%d\n", x[1]);
-    printf("%d\n", x[2]);
+    printf("%d\n", x1[0]);
+    printf("%d\n", x1[1]);
+    printf("%d\n", x1[2]);
 
     int x2[3][4];
     int *y2 = x2;

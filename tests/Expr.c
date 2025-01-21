@@ -9,8 +9,8 @@ int main() {
     printf("%d\n", 5 * (9 - 6));
     printf("%d\n", (3 + 5) / 2);
     printf("%d\n", -10 + 20);
-    printf("%d\n", --10);
-    printf("%d\n", --+10);
+    printf("%d\n", - -10);
+    printf("%d\n", - - +10);
     printf("%d\n", 0 == 1);
     printf("%d\n", 0 != 1);
     printf("%d\n", 0 < 1);

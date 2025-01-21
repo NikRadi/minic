@@ -51,7 +51,7 @@ int main() {
     x1 = sub2(10, add2(1, add2(1, 1)));
     printf("%d\n", x1);
 
-    x1 = add6(1, 2, 3, 4, 5 6);
+    x1 = add6(1, 2, 3, 4, 5, 6);
     printf("%d\n", x1);
 
     x1 = fib(9);
