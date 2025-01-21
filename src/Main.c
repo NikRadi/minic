@@ -57,9 +57,12 @@ int main(int num_args, char **args) {
     char command[256];
     sprintf(command, "nasm -f win64 %s -o %s", asm_filename, obj_filename);
     printf("%s\n", command);
-    system(command);
+    int nasm_result = system(command);
+    if (nasm_result == 1) {
+        return 1;
+    }
 
-    sprintf(command, "link /nologo /subsystem:console /entry:main %s", obj_filename);
+    sprintf(command, "link /nologo /subsystem:console /entry:main %s msvcrt.lib legacy_stdio_definitions.lib kernel32.lib ucrt.lib", obj_filename);
     printf("%s\n", command);
     system(command);
     printf("Compiled successfully.");

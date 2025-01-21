@@ -12,7 +12,9 @@ static void GenerateStmt(struct AstNode *stmt);
 
 static struct FunctionDef *current_func;
 static FILE *f;
-static char *arg_regs[] = { "rdi", "rsi", "rdx", "rcx", "r8", "r9" };
+
+// MSVC printf uses rcx and rdx as the two first arguments. They need to be first in this array.
+static char *arg_regs[] = { "rcx", "rdx", "rdi", "rsi", "r8", "r9" };
 
 static int Align(int n, int offset) {
     return (n + offset - 1) / offset * offset;
@@ -69,6 +71,9 @@ static void GenerateExpr(struct Expr *expr) {
     switch (expr->type) {
         case EXPR_NUM: {
             MovImm("rax", expr->int_value);
+        } return;
+        case EXPR_STR: {
+            fprintf(f, "  mov rax, fmt_%d\n", expr->id);
         } return;
         case EXPR_VAR: {
             GenerateAddress(expr);
@@ -157,7 +162,7 @@ static void GenerateFunctionDef(struct FunctionDef *function) {
     current_func = function;
 
     struct List *var_decls = &current_func->var_decls;
-    int offset = 8;
+    int offset = 32; // Reserve 32 bytes for the shadow space.
     for (int i = var_decls->count - 1; i >= 0; --i) {
         struct VarDeclaration *var_declaration = (struct VarDeclaration *) List_Get(var_decls, i);
         int size_in_bytes;
@@ -347,7 +352,41 @@ void CodeGeneratorX86_GenerateCode(FILE *asm_file, struct TranslationUnit *t_uni
     f = asm_file;
 
     SetOutput(asm_file);
-    SetupAssemblyFile("main");
+    SetupAssemblyFile();
+
+    struct List *data_fields = &t_unit->data_fields;
+    if (data_fields->count > 0) {
+        // TODO: Improve this spaghetti.
+        fprintf(f, "segment .data\n");
+        for (int i = 0; i < data_fields->count; ++i) {
+            struct Expr *expr = (struct Expr *) List_Get(data_fields, i);
+            expr->id = i;
+            char *str = expr->str_value;
+            fprintf(f, "  fmt_%d db \"", i);
+            for (int j = 0; str[j] != '\0'; ++j) {
+                if (str[j] == '\\') {
+                    j += 1;
+                    switch (str[j]) {
+                        case 'n': { fprintf(f, "\", 10, 0"); } break;
+                    }
+                }
+                else {
+                    fprintf(f, "%c", str[j]);
+                }
+            }
+
+            fprintf(f, "\n");
+        }
+    }
+
+    fprintf(f,
+        "\n"
+        "segment .text\n"
+        "  extern printf\n"
+        // Declare the main function as the entry point of the program.
+        "  global main\n"
+        "\n"
+    );
 
     GenerateTranslationUnit(t_unit);
 }

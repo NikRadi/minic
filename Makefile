@@ -24,4 +24,4 @@ test_file:
 
 asm:
 	nasm -f win64 tmp.asm -o tmp.obj
-	link /nologo /subsystem:console /entry:main tmp.obj
+	link /nologo /subsystem:console /entry:main tmp.obj ucrt.lib vcruntime.lib legacy_stdio_definitions.lib

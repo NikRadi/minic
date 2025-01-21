@@ -100,6 +100,7 @@ struct TranslationUnit *NewTranslationUnit() {
     struct TranslationUnit *translation_unit = NEW_TYPE(TranslationUnit);
     translation_unit->node.type = AST_TRANSLATION_UNIT;
     List_Init(&translation_unit->functions);
+    List_Init(&translation_unit->data_fields);
     return translation_unit;
 }
 
@@ -163,8 +164,23 @@ void PrintE(struct Expr *expr) {
         case EXPR_NUM: {
             fprintf(stdout, "%*s<Num int_value=\"%d\" %d />\n", indent, "", expr->int_value, expr->operand_type);
         } break;
+        case EXPR_STR: {
+            fprintf(stdout, "%*s<Str str_value=\"%s\" />\n", indent, "", expr->str_value);
+        } break;
         case EXPR_VAR: {
             fprintf(stdout, "%*s<Var str_value=\"%s\" %d />\n", indent, "", expr->str_value, expr->operand_type);
+        } break;
+        case EXPR_FUNC_CALL: {
+            fprintf(stdout, "%*s<FuncCall identifier=\"%s\">\n", indent, "", expr->str_value);
+            indent += 2;
+            struct List *args = &expr->args;
+            for (int i = 0; i < args->count; ++i) {
+                struct Expr *arg = (struct Expr *) List_Get(args, i);
+                PrintE(arg);
+            }
+
+            indent -= 2;
+            fprintf(stdout, "%*s</FuncCall>\n", indent, "");
         } break;
         case EXPR_PLUS: {
             fprintf(stdout, "%*s<UnaryPlus>\n", indent, "");

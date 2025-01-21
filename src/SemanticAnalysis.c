@@ -5,7 +5,11 @@
 #include <string.h>
 
 
+static void AnalyzeStmt(struct AstNode *stmt);
+
+
 static struct FunctionDef *current_func;
+static struct TranslationUnit *current_t_unit;
 
 
 static struct Declarator *FindDeclarator(struct List *var_declarations, char *identifier) {
@@ -28,6 +32,9 @@ static void AnalyzeExpr(struct Expr *expr) {
         case EXPR_NUM: {
             expr->operand_type = PRIMTYPE_INT;
         } break;
+        case EXPR_STR: {
+            List_Add(&current_t_unit->data_fields, expr);
+        } break;
         case EXPR_VAR: {
             struct Declarator *decl = FindDeclarator(&current_func->var_decls, expr->str_value);
             if (!decl) {
@@ -45,6 +52,13 @@ static void AnalyzeExpr(struct Expr *expr) {
             }
             else {
                 expr->operand_type = PRIMTYPE_INT;
+            }
+        } break;
+        case EXPR_FUNC_CALL: {
+            struct List *args = &expr->args;
+            for (int i = 0; i < args->count; ++i) {
+                struct Expr *arg = (struct Expr *) List_Get(args, i);
+                AnalyzeExpr(arg);
             }
         } break;
         case EXPR_NEG: {
@@ -114,8 +128,13 @@ static void AnalyzeVarDecl(struct VarDeclaration *var_declaration) {
     }
 }
 
-static void AnalyzeExpressionStmt(struct ExpressionStmt * expr_stmt) {
+static void AnalyzeExpressionStmt(struct ExpressionStmt *expr_stmt) {
     AnalyzeExpr(expr_stmt->expr);
+}
+
+static void AnalyzeIfStmt(struct IfStmt *if_stmt) {
+    AnalyzeExpr(if_stmt->condition);
+    AnalyzeStmt(if_stmt->stmt);
 }
 
 static void AnalyzeReturnStmt(struct ReturnStmt *return_stmt) {
@@ -132,7 +151,8 @@ static void AnalyzeDecl(struct AstNode *decl) {
 
 static void AnalyzeStmt(struct AstNode *stmt) {
     switch (stmt->type) {
-        case AST_EXPRESSION_STMT:   { AnalyzeExpressionStmt((struct ExpressionStmt *) stmt); }
+        case AST_EXPRESSION_STMT:   { AnalyzeExpressionStmt((struct ExpressionStmt *) stmt); } break;
+        case AST_IF_STMT:           { AnalyzeIfStmt((struct IfStmt *) stmt); } break;
         case AST_RETURN_STMT:       { AnalyzeReturnStmt((struct ReturnStmt *) stmt); } break;
     }
 }
@@ -156,6 +176,17 @@ static void AnalyzeFunctionDef(struct FunctionDef *func) {
     current_func = 0;
 }
 
+static void AnalyzeTranslationUnit(struct TranslationUnit *t_unit) {
+    current_t_unit = t_unit;
+    struct List *functions = &t_unit->functions;
+    for (int i = 0; i < functions->count; ++i) {
+        struct FunctionDef *func = (struct FunctionDef *) List_Get(functions, i);
+        AnalyzeFunctionDef(func);
+    }
+
+    current_t_unit = 0;
+}
+
 //
 // ===
 // == Functions defined in SemanticAnalysis.h
@@ -163,9 +194,5 @@ static void AnalyzeFunctionDef(struct FunctionDef *func) {
 //
 
 void SemanticAnalysis_Analyze(struct TranslationUnit *t_unit) {
-    struct List *functions = &t_unit->functions;
-    for (int i = 0; i < functions->count; ++i) {
-        struct FunctionDef *func = (struct FunctionDef *) List_Get(functions, i);
-        AnalyzeFunctionDef(func);
-    }
+    AnalyzeTranslationUnit(t_unit);
 }

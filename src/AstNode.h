@@ -35,10 +35,11 @@ struct AstNode {
 struct Expr {
     struct Expr *lhs;
     struct Expr *rhs;
-    struct List args;
+    struct List args; // Used for EXPR_FUNC_CALL.
     enum PrimitiveType operand_type;
     enum PrimitiveType base_operand_type;
     int int_value;
+    int id; // Temporarily used for string ids
     char str_value[TOKEN_MAX_IDENTIFIER_LENGTH];
     int rbp_offset;
     enum ExprType {
@@ -103,6 +104,7 @@ struct FunctionDef {
 struct TranslationUnit {
     struct AstNode node;
     struct List functions;
+    struct List data_fields;
 };
 
 

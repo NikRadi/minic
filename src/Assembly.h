@@ -32,7 +32,7 @@ void RestoreStackFrame();
 
 void SetOutput(FILE *file);
 
-void SetupAssemblyFile(char *entry);
+void SetupAssemblyFile();
 
 void SetupStackFrame(int size);
 

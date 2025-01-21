@@ -146,7 +146,7 @@ static struct Expr *ParseNumber(struct OperatorParseData data) {
 }
 
 static struct Expr *ParseString(struct OperatorParseData data) {
-    int value = Lexer_PeekToken(l).str_value;
+    char * value = Lexer_PeekToken(l).str_value;
     ExpectAndEat(TOKEN_LITERAL_STRING);
     return NewStringExpr(value);
 }

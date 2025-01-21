@@ -32,7 +32,8 @@ static void EatWhitespace(struct Lexer *l) {
     bool is_done = false;
     while (!is_done) {
         switch (PeekChar(l)) {
-            case '\n': {
+            case '\n':
+            case '\r': {
                 l->line += 1;
                 EatChar(l);
             } break;
@@ -192,6 +193,11 @@ void Lexer_EatToken(struct Lexer *l) {
             EatChar(l);
             ReadSequence(l, token.str_value, IsAllowedInStringLiteral);
             token.type = TOKEN_LITERAL_STRING;
+            if (PeekChar(l) != '"') {
+                char *location = l->code + l->code_index;
+                ReportErrorAt(l, location, "expected end of string \"");
+            }
+
             EatChar(l);
         } break;
         default: {
@@ -220,14 +226,14 @@ void Lexer_EatToken(struct Lexer *l) {
 
 bool Lexer_Init(struct Lexer *l, char *filename) {
     struct File file;
-//    enum FileIOStatus status = FileIO_ReadFile(&file, filename);
-//    if (status == FILE_IO_ERROR_FILE_NOT_FOUND) {
-//        fprintf(stderr, "input file not found: %s", filename);
-//        return false;
-//    }
+    enum FileIOStatus status = FileIO_ReadFile(&file, filename);
+    if (status == FILE_IO_ERROR_FILE_NOT_FOUND) {
+        fprintf(stderr, "input file not found: %s", filename);
+        return false;
+    }
 
-    file.content = filename;
-    file.length = strlen(filename);
+//    file.content = filename;
+//    file.length = strlen(filename);
 
     l->code = file.content;
     l->code_index = 0;

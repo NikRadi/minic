@@ -80,19 +80,13 @@ void SetOutput(FILE *file) {
     f = file;
 }
 
-void SetupAssemblyFile(char *entry) {
+void SetupAssemblyFile() {
     fprintf(f,
         // Set the assembly to use 64-bit mode.
         "bits 64\n"
         // Set the ddefault operand size to be relative.
         "default rel\n"
         "\n"
-        // Define the .text segment, which stores the instruction code.
-        "segment .text\n"
-        // Declare the main function as the entry point of the program.
-        "  global %s\n"
-        "\n",
-        entry
     );
 }
 
