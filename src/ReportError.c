@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 void ReportError(char *code, char *location, char *format, va_list args) {
-    int position = code - location;
+    int position = (int) (code - location);
     vfprintf(stderr, format, args);
     fprintf(stderr, "\n");
     fprintf(stderr, "%s\n", code);

@@ -211,7 +211,7 @@ void Lexer_EatToken(struct Lexer *l) {
                 token.int_value = strtoul(p, &p, 10);
                 token.type = TOKEN_LITERAL_NUMBER;
 
-                int len = p - q;
+                int len = (int) (p - q);
                 l->code_index += len;
             }
             else {

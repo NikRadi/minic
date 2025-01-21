@@ -7,6 +7,7 @@
 #include <string.h>
 
 #define NEW_TYPE(type) ((struct type *) malloc(sizeof(struct type)))
+#define UNUSED(x) ((void) x)
 
 static struct CompoundStmt *ParseCompoundStmt();
 static struct ExpressionStmt *ParseExpressionStmt();
@@ -78,6 +79,7 @@ static struct Expr *ParseBinaryOp(struct OperatorParseData data) {
 }
 
 static struct Expr *ParseBracket(struct OperatorParseData data) {
+    UNUSED(data);
     ExpectAndEat(TOKEN_LEFT_ROUND_BRACKET);
     struct Expr *expr = ParseExpr(0);
     ExpectAndEat(TOKEN_RIGHT_ROUND_BRACKET);
@@ -105,7 +107,8 @@ static struct Expr *ParseExpr(int precedence) {
 }
 
 static struct Expr *ParseIdentifier(struct OperatorParseData data) {
-    char *identifier = Lexer_PeekToken(l).str_value;
+    UNUSED(data);
+    struct Token identifier = Lexer_PeekToken(l);
     ExpectAndEat(TOKEN_IDENTIFIER);
 
     // Function call
@@ -122,7 +125,7 @@ static struct Expr *ParseIdentifier(struct OperatorParseData data) {
         }
 
         ExpectAndEat(TOKEN_RIGHT_ROUND_BRACKET);
-        return NewFunctionCallExpr(identifier, args);
+        return NewFunctionCallExpr(identifier.str_value, args);
     }
 
     // Array subscript
@@ -131,24 +134,26 @@ static struct Expr *ParseIdentifier(struct OperatorParseData data) {
         struct Expr *index = ParseExpr(0);
         ExpectAndEat(TOKEN_RIGHT_SQUARE_BRACKET);
 
-        struct Expr *var = NewVariableExpr(identifier);
+        struct Expr *var = NewVariableExpr(identifier.str_value);
         struct Expr *add = NewOperationExpr(EXPR_ADD, var, index);
         return NewOperationExpr(EXPR_DEREF, add, NULL);
     }
 
-    return NewVariableExpr(identifier);
+    return NewVariableExpr(identifier.str_value);
 }
 
 static struct Expr *ParseNumber(struct OperatorParseData data) {
+    UNUSED(data);
     int value = Lexer_PeekToken(l).int_value;
     ExpectAndEat(TOKEN_LITERAL_NUMBER);
     return NewNumberExpr(value);
 }
 
 static struct Expr *ParseString(struct OperatorParseData data) {
-    char * value = Lexer_PeekToken(l).str_value;
+    UNUSED(data);
+    struct Token value = Lexer_PeekToken(l);
     ExpectAndEat(TOKEN_LITERAL_STRING);
-    return NewStringExpr(value);
+    return NewStringExpr(value.str_value);
 }
 
 static struct Expr *ParseUnaryOp(struct OperatorParseData data) {
@@ -192,7 +197,7 @@ static struct AstNode *ParseDecl() {
                 // Array declarator
                 while (Lexer_PeekToken(l).type == TOKEN_LEFT_SQUARE_BRACKET) {
                     ExpectAndEat(TOKEN_LEFT_SQUARE_BRACKET);
-                    struct Token token = Lexer_PeekToken(l);
+                    token = Lexer_PeekToken(l);
                     ExpectAndEat(TOKEN_LITERAL_NUMBER);
                     ExpectAndEat(TOKEN_RIGHT_SQUARE_BRACKET);
 
@@ -324,8 +329,8 @@ struct FunctionDef *ParseFunctionDef() {
     // Declaration specifiers
     ExpectAndEat(TOKEN_KEYWORD_INT);
 
-    char *identifier = Lexer_PeekToken(l).str_value;
-    struct FunctionDef *function = NewFunctionDef(identifier);
+    struct Token identifier = Lexer_PeekToken(l);
+    struct FunctionDef *function = NewFunctionDef(identifier.str_value);
 
     ExpectAndEat(TOKEN_IDENTIFIER);
     ExpectAndEat(TOKEN_LEFT_ROUND_BRACKET);

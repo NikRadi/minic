@@ -165,7 +165,7 @@ static void GenerateFunctionDef(struct FunctionDef *function) {
     int offset = 32; // Reserve 32 bytes for the shadow space.
     for (int i = var_decls->count - 1; i >= 0; --i) {
         struct VarDeclaration *var_declaration = (struct VarDeclaration *) List_Get(var_decls, i);
-        int size_in_bytes;
+        int size_in_bytes = 0;
         switch (var_declaration->type) {
             case PRIMTYPE_CHAR: { size_in_bytes = 1; } break;
             case PRIMTYPE_INT:  { size_in_bytes = 8; } break;
@@ -187,8 +187,8 @@ static void GenerateFunctionDef(struct FunctionDef *function) {
                 // it's actually x[2] that shares the address with x0.
                 // The rbp_offset is calculated after considering the full array size.
                 int total_vars = 1;
-                for (int i = 0; i < declarator->array_dimensions; ++i) {
-                    total_vars *= declarator->array_sizes[i];
+                for (int k = 0; k < declarator->array_dimensions; ++k) {
+                    total_vars *= declarator->array_sizes[k];
                 }
 
                 offset += size_in_bytes * total_vars;
