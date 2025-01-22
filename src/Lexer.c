@@ -28,7 +28,7 @@ static void EatChar(struct Lexer *l) {
     l->code_index += 1;
 }
 
-static void EatWhitespace(struct Lexer *l) {
+static void EatWhitespaceAndComments(struct Lexer *l) {
     bool is_done = false;
     while (!is_done) {
         switch (PeekChar(l)) {
@@ -39,6 +39,25 @@ static void EatWhitespace(struct Lexer *l) {
             } break;
             case ' ': {
                 EatChar(l);
+            } break;
+            case '/': {
+                // TODO: This is an unsafe access to code. Might be out of bound.
+                if (l->code[l->code_index + 1] == '/') {
+                    while (PeekChar(l) != '\n') {
+                        EatChar(l);
+                    }
+                }
+                else if (l->code[l->code_index + 1] == '*') {
+                    while (!(PeekChar(l) == '*' && l->code[l->code_index + 1] == '/')) {
+                        EatChar(l);
+                    }
+
+                    EatChar(l);
+                    EatChar(l);
+                }
+                else {
+                    is_done = true;
+                }
             } break;
             default: {
                 is_done = true;
@@ -115,7 +134,7 @@ static enum TokenType TypeOfIdentifier(char *identifier) {
 
 
 void Lexer_EatToken(struct Lexer *l) {
-    EatWhitespace(l);
+    EatWhitespaceAndComments(l);
     if (NumCharsLeft(l) == 0) {
         AddTokenWithType(l, TOKEN_END_OF_FILE);
         return;

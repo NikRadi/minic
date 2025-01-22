@@ -2,6 +2,8 @@ int add3(char x, char y, char z) {
     return x + y + z;
 }
 
+// Expect test to fail.
+/* Because char isn't implemented properly. */
 int main() {
     char x1 = 11;
     char x2 = 22;
