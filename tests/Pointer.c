@@ -13,13 +13,7 @@ int main() {
     int **x7 = &x6;
     printf("%d\n", **x7);
 
-    int x8 = 3;
     int x9 = 5;
-    *(&x8 + 1) = 7;
-    printf("%d\n", x9);
-    *(&x9 - 2 + 1) = 6;
-    printf("%d\n", x8);
-
     int *x10 = &x9;
     *x10 = 123;
     printf("%d\n", x9);
