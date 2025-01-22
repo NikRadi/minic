@@ -161,8 +161,9 @@ static void GenerateExpr(struct Expr *expr) {
 static void GenerateFunctionDef(struct FunctionDef *function) {
     current_func = function;
 
+    // Start offset at 8 bits so we don't collide with RBP.
+    int offset = 8;
     struct List *var_decls = &current_func->var_decls;
-    int offset = 32; // Reserve 32 bytes for the shadow space.
     for (int i = var_decls->count - 1; i >= 0; --i) {
         struct VarDeclaration *var_declaration = (struct VarDeclaration *) List_Get(var_decls, i);
         int size_in_bytes = 0;
@@ -201,7 +202,10 @@ static void GenerateFunctionDef(struct FunctionDef *function) {
         }
     }
 
-    function->stack_size = Align(offset, 16);
+    // Reserve 32 bytes for the shadow space.
+    // https://stackoverflow.com/questions/30190132/what-is-the-shadow-space-in-x64-assembly/30191127#30191127
+    const int shadow_space = 32;
+    function->stack_size = Align(offset + shadow_space, 16);
     Label(function->identifier);
     SetupStackFrame(function->stack_size);
 
@@ -357,12 +361,12 @@ void CodeGeneratorX86_GenerateCode(FILE *asm_file, struct TranslationUnit *t_uni
     struct List *data_fields = &t_unit->data_fields;
     if (data_fields->count > 0) {
         // TODO: Improve this spaghetti.
-        fprintf(f, "segment .data\n");
+        fprintf(f, "section .data\n");
         for (int i = 0; i < data_fields->count; ++i) {
             struct Expr *expr = (struct Expr *) List_Get(data_fields, i);
             expr->id = i;
             char *str = expr->str_value;
-            fprintf(f, "  fmt_%d db \"", i);
+            fprintf(f, "  fmt_%d: db \"", i);
             for (int j = 0; str[j] != '\0'; ++j) {
                 if (str[j] == '\\') {
                     j += 1;
@@ -381,7 +385,7 @@ void CodeGeneratorX86_GenerateCode(FILE *asm_file, struct TranslationUnit *t_uni
 
     fprintf(f,
         "\n"
-        "segment .text\n"
+        "section .text\n"
         "  extern printf\n"
         // Declare the main function as the entry point of the program.
         "  global main\n"
