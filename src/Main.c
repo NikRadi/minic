@@ -39,7 +39,7 @@ int main(int num_args, char **args) {
     struct TranslationUnit *t_unit = Parser_MakeAst(&lexer);
     printf("Analyzing...\n");
     SemanticAnalysis_Analyze(t_unit);
-    PrintS(t_unit);
+    PrintS((struct AstNode *) t_unit);
 
     filename = "tmp";
     char asm_filename[MAX_FILENAME_LENGTH];
