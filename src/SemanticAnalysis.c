@@ -27,6 +27,21 @@ static struct Declarator *FindDeclarator(struct List *var_declarations, char *id
     return NULL;
 }
 
+static struct VarDeclaration *FindVarDeclaration(struct List *var_declarations, char *identifier) {
+    for (int i = 0; i < var_declarations->count; ++i) {
+        struct VarDeclaration *var_declaration = (struct VarDeclaration *) List_Get(var_declarations, i);
+        struct List *declarators = &var_declaration->declarators;
+        for (int j = 0; j < declarators->count; ++j) {
+            struct Declarator *declarator = (struct Declarator *) List_Get(declarators, j);
+            if (strcmp(declarator->identifier, identifier) == 0) {
+                return var_declaration;
+            }
+        }
+    }
+
+    return NULL;
+}
+
 static void AnalyzeExpr(struct Expr *expr) {
     switch (expr->type) {
         case EXPR_NUM: {
@@ -51,7 +66,8 @@ static void AnalyzeExpr(struct Expr *expr) {
                 }
             }
             else {
-                expr->operand_type = PRIMTYPE_INT;
+                struct VarDeclaration *var_decl = FindVarDeclaration(&current_func->var_decls, expr->str_value);
+                expr->operand_type = var_decl->type;
             }
         } break;
         case EXPR_FUNC_CALL: {
@@ -78,9 +94,10 @@ static void AnalyzeExpr(struct Expr *expr) {
             AnalyzeExpr(expr->lhs);
             expr->type = EXPR_NUM;
             switch (expr->lhs->operand_type) {
+                case PRIMTYPE_CHAR: { expr->int_value = 1; } break;
                 case PRIMTYPE_INT:
-                case PRIMTYPE_PTR: { expr->int_value = 8; } break;
-                default:           { ReportInternalError("SemanticAnalysis::AnalyzeExpr - unexpected sizeof type"); } break;
+                case PRIMTYPE_PTR:  { expr->int_value = 8; } break;
+                default:            { ReportInternalError("SemanticAnalysis::AnalyzeExpr - unexpected sizeof type"); } break;
             }
         } break;
         case EXPR_ADD:
