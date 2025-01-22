@@ -335,11 +335,16 @@ struct FunctionDef *ParseFunctionDef() {
     ExpectAndEat(TOKEN_IDENTIFIER);
     ExpectAndEat(TOKEN_LEFT_ROUND_BRACKET);
     while (Lexer_PeekToken(l).type != TOKEN_RIGHT_ROUND_BRACKET) {
-        // Type
-        ExpectAndEat(TOKEN_KEYWORD_INT);
         struct VarDeclaration *var_declaration = NewVarDeclaration();
-        var_declaration->type = PRIMTYPE_INT;
         List_Add(&function->var_decls, var_declaration);
+        switch (Lexer_PeekToken(l).type) {
+            case TOKEN_KEYWORD_CHAR: { var_declaration->type = PRIMTYPE_CHAR; } break;
+            case TOKEN_KEYWORD_INT:  { var_declaration->type = PRIMTYPE_INT; } break;
+            default: { ReportInternalError("Parser::ParseFunctionDef - unknown vardecl type"); } break;
+        }
+
+        // Eat type
+        Lexer_EatToken(l);
 
         struct Declarator *declarator = NewDeclarator();
         List_Add(&var_declaration->declarators, declarator);
