@@ -12,6 +12,7 @@ static struct Expr *NewExpr(enum ExprType type) {
     expr->lhs = NULL;
     expr->rhs = NULL;
     expr->int_value = 0;
+    expr->id = -1;
     expr->rbp_offset = 0;
     expr->type = type;
     expr->operand_type = PRIMTYPE_INVALID;

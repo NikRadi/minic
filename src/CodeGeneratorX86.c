@@ -11,6 +11,7 @@ static void GenerateDecl(struct AstNode *decl);
 static void GenerateStmt(struct AstNode *stmt);
 
 static struct FunctionDef *current_func;
+static struct TranslationUnit *current_t_unit;
 static FILE *f;
 
 // MSVC printf uses rcx and rdx as the two first arguments. They need to be first in this array.
@@ -73,7 +74,14 @@ static void GenerateExpr(struct Expr *expr) {
             MovImm("rax", expr->int_value);
         } return;
         case EXPR_STR: {
-            fprintf(f, "  mov rax, fmt_%d\n", expr->id);
+            struct List *data_fields = &current_t_unit->data_fields;
+            for (int i = 0; i < data_fields->count; ++i) {
+                struct Expr *data_field = (struct Expr *) List_Get(data_fields, i);
+                if (strcmp(expr->str_value, data_field->str_value) == 0) {
+                    fprintf(f, "  mov rax, fmt_%d\n", data_field->id);
+                    break;
+                }
+            }
         } return;
         case EXPR_VAR: {
             GenerateAddress(expr);
@@ -224,10 +232,13 @@ static void GenerateFunctionDef(struct FunctionDef *function) {
 }
 
 static void GenerateTranslationUnit(struct TranslationUnit *t_unit) {
+    current_t_unit = t_unit;
     for (int i = 0; i < t_unit->functions.count; ++i) {
         struct FunctionDef *function = (struct FunctionDef *) List_Get(&t_unit->functions, i);
         GenerateFunctionDef(function);
     }
+
+    current_t_unit = 0;
 }
 
 static void GenerateCompoundStmt(struct CompoundStmt *compound_stmt) {

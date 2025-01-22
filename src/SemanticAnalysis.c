@@ -48,7 +48,19 @@ static void AnalyzeExpr(struct Expr *expr) {
             expr->operand_type = PRIMTYPE_INT;
         } break;
         case EXPR_STR: {
-            List_Add(&current_t_unit->data_fields, expr);
+            bool string_exists = false;
+            struct List *data_fields = &current_t_unit->data_fields;
+            for (int i = 0; i < data_fields->count; ++i) {
+                struct Expr *data_field = (struct Expr *) List_Get(data_fields, i);
+                if (strcmp(expr->str_value, data_field->str_value) == 0) {
+                    string_exists = true;
+                    break;
+                }
+            }
+
+            if (!string_exists) {
+                List_Add(data_fields, expr);
+            }
         } break;
         case EXPR_VAR: {
             struct Declarator *decl = FindDeclarator(&current_func->var_decls, expr->str_value);
