@@ -10,6 +10,10 @@ void Call(char *label) {
     fprintf(f, "  call %s\n", label);
 }
 
+void Comment(char *comment) {
+    fprintf(f, "  ; %s\n", comment);
+}
+
 void Compare(char *a, char *b, char *comparison) {
     fprintf(f,
         "  cmp %s, %s\n"

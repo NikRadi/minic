@@ -144,7 +144,7 @@ static void GenerateExpr(struct Expr *expr) {
 
     // Binary operators
     if (expr->type == EXPR_ASSIGN) {
-        fprintf(f, "  ; assignment\n");
+        Comment("assignment");
         GenerateAddress(expr->lhs);
         Push("rax");
         GenerateExpr(expr->rhs);
