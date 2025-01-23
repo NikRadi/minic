@@ -53,7 +53,7 @@ enum TokenType {
     TOKEN_KEYWORD_WHILE,
 
 
-    // Utility
+    // Count
     TOKEN_COUNT,
 };
 

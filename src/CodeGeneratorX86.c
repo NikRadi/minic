@@ -1,6 +1,7 @@
 #include "CodeGeneratorX86.h"
 #include "Assembly.h"
 #include "ReportError.h"
+#include "Sizes.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,8 +15,13 @@ static struct FunctionDef *current_func;
 static struct TranslationUnit *current_t_unit;
 static FILE *f;
 
-// MSVC printf uses rcx and rdx as the two first arguments. They need to be first in this array.
-static char *arg_regs[] = { "rcx", "rdx", "rdi", "rsi", "r8", "r9" };
+// The first 4 Win64 function parameters go to these registers.
+// Additional parameters must be pushed to the stack.
+// https://www.cs.uaf.edu/2017/fall/cs301/reference/x86_64.html
+static char *arg_regs1[] = {  "cl",  "dl", "r8b", "r9b" };
+static char *arg_regs2[] = {  "cx",  "dx", "r8w", "r9w" };
+static char *arg_regs4[] = { "ecx", "edx", "r8d", "r9d" };
+static char *arg_regs8[] = { "rcx", "rdx", "r8",  "r9"  };
 
 static int Align(int n, int offset) {
     return (n + offset - 1) / offset * offset;
@@ -104,7 +110,7 @@ static void GenerateExpr(struct Expr *expr) {
         }
 
         for (int i = args->count - 1; i >= 0; --i) {
-            Pop(arg_regs[i]);
+            Pop(arg_regs8[i]);
         }
 
         Call(expr->str_value);
@@ -174,14 +180,9 @@ static void GenerateFunctionDef(struct FunctionDef *function) {
     struct List *var_decls = &current_func->var_decls;
     for (int i = var_decls->count - 1; i >= 0; --i) {
         struct VarDeclaration *var_declaration = (struct VarDeclaration *) List_Get(var_decls, i);
-        int size_in_bytes = 0;
-        switch (var_declaration->type) {
-            case PRIMTYPE_CHAR: { size_in_bytes = 1; } break;
-            case PRIMTYPE_INT:  { size_in_bytes = 8; } break;
-            default: {
-                printf("%d\n", var_declaration->type);
-                ReportInternalError("CodeGeneratorX86::GenerateFunctionDef - unknown var_decl.decl_spec");
-            } break;
+        int size_in_bytes = bytes[var_declaration->type];
+        if (size_in_bytes == 0) {
+            ReportInternalError("SemanticAnalysis::AnalyzeExpr - unexpected sizeof type");
         }
 
         struct List *declarators = &var_declaration->declarators;
@@ -222,7 +223,7 @@ static void GenerateFunctionDef(struct FunctionDef *function) {
         struct Declarator *declarator = (struct Declarator *) List_Get(&param->declarators, 0);
 
         fprintf(f, "; parameter \"%s\"\n", declarator->identifier);
-        fprintf(f, "  mov [rbp - %d], %s\n", declarator->rbp_offset, arg_regs[i]);
+        fprintf(f, "  mov [rbp - %d], %s\n", declarator->rbp_offset, arg_regs8[i]);
     }
 
     GenerateCompoundStmt(function->body);

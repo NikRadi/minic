@@ -1,4 +1,5 @@
 #include "SemanticAnalysis.h"
+#include "Sizes.h"
 #include "ReportError.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -105,11 +106,9 @@ static void AnalyzeExpr(struct Expr *expr) {
         case EXPR_SIZEOF: {
             AnalyzeExpr(expr->lhs);
             expr->type = EXPR_NUM;
-            switch (expr->lhs->operand_type) {
-                case PRIMTYPE_CHAR: { expr->int_value = 1; } break;
-                case PRIMTYPE_INT:
-                case PRIMTYPE_PTR:  { expr->int_value = 8; } break;
-                default:            { ReportInternalError("SemanticAnalysis::AnalyzeExpr - unexpected sizeof type"); } break;
+            expr->int_value = bytes[expr->lhs->operand_type];
+            if (expr->int_value == 0) {
+                ReportInternalError("SemanticAnalysis::AnalyzeExpr - unexpected sizeof type");
             }
         } break;
         case EXPR_ADD:

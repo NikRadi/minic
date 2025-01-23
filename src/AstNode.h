@@ -11,6 +11,7 @@ enum PrimitiveType {
     PRIMTYPE_CHAR,
     PRIMTYPE_INT,
     PRIMTYPE_PTR,
+    PRIMTYPE_COUNT,
 };
 
 struct AstNode {
