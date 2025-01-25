@@ -1,6 +1,6 @@
 #ifndef MINIC_ASSEMBLY_H
 #define MINIC_ASSEMBLY_H
-#include "Sizes.h"
+#include "Register.h"
 #include <stdio.h>
 
 

@@ -1,5 +1,5 @@
 #include "SemanticAnalysis.h"
-#include "Sizes.h"
+#include "Register.h"
 #include "ReportError.h"
 #include <stdio.h>
 #include <stdlib.h>

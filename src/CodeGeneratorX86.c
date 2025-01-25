@@ -1,7 +1,7 @@
 #include "CodeGeneratorX86.h"
 #include "Assembly.h"
+#include "Register.h"
 #include "ReportError.h"
-#include "Sizes.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
