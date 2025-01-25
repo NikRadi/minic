@@ -7,6 +7,7 @@
 
 
 static void AnalyzeStmt(struct AstNode *stmt);
+static void AnalyzeCompoundStmt(struct CompoundStmt *compound_stmt);
 
 
 static struct FunctionDef *current_func;
@@ -160,6 +161,13 @@ static void AnalyzeExpressionStmt(struct ExpressionStmt *expr_stmt) {
     AnalyzeExpr(expr_stmt->expr);
 }
 
+static void AnalyzeForStmt(struct ForStmt *for_stmt) {
+    AnalyzeExpr(for_stmt->init_expr);
+    AnalyzeExpr(for_stmt->cond_expr);
+    AnalyzeExpr(for_stmt->loop_expr);
+    AnalyzeStmt(for_stmt->stmt);
+}
+
 static void AnalyzeIfStmt(struct IfStmt *if_stmt) {
     AnalyzeExpr(if_stmt->condition);
     AnalyzeStmt(if_stmt->stmt);
@@ -171,6 +179,11 @@ static void AnalyzeReturnStmt(struct ReturnStmt *return_stmt) {
     }
 }
 
+static void AnalyzeWhileStmt(struct WhileStmt *while_stmt) {
+    AnalyzeExpr(while_stmt->condition);
+    AnalyzeStmt(while_stmt->stmt);
+}
+
 static void AnalyzeDecl(struct AstNode *decl) {
     switch (decl->type) {
         case AST_VAR_DECLARATION:   { AnalyzeVarDecl((struct VarDeclaration *) decl); } break;
@@ -180,8 +193,11 @@ static void AnalyzeDecl(struct AstNode *decl) {
 static void AnalyzeStmt(struct AstNode *stmt) {
     switch (stmt->type) {
         case AST_EXPRESSION_STMT:   { AnalyzeExpressionStmt((struct ExpressionStmt *) stmt); } break;
+        case AST_COMPOUND_STMT:     { AnalyzeCompoundStmt((struct CompoundStmt *) stmt); } break;
+        case AST_FOR_STMT:          { AnalyzeForStmt((struct ForStmt *) stmt); } break;
         case AST_IF_STMT:           { AnalyzeIfStmt((struct IfStmt *) stmt); } break;
         case AST_RETURN_STMT:       { AnalyzeReturnStmt((struct ReturnStmt *) stmt); } break;
+        case AST_WHILE_STMT:        { AnalyzeWhileStmt((struct WhileStmt *) stmt); } break;
     }
 }
 

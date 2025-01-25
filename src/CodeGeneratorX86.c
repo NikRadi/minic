@@ -15,14 +15,6 @@ static struct FunctionDef *current_func;
 static struct TranslationUnit *current_t_unit;
 static FILE *f;
 
-// The first 4 Win64 function parameters go to these registers.
-// Additional parameters must be pushed to the stack.
-// https://www.cs.uaf.edu/2017/fall/cs301/reference/x86_64.html
-static char *arg_regs1[] = {  "cl",  "dl", "r8b", "r9b" };
-static char *arg_regs2[] = {  "cx",  "dx", "r8w", "r9w" };
-static char *arg_regs4[] = { "ecx", "edx", "r8d", "r9d" };
-static char *arg_regs8[] = { "rcx", "rdx", "r8",  "r9"  };
-
 static int Align(int n, int offset) {
     return (n + offset - 1) / offset * offset;
 }
@@ -49,11 +41,30 @@ static struct Declarator *FindDeclarator(struct List *var_declarations, char *id
     return NULL;
 }
 
-static bool IsArray(struct Declarator *declarator) {
-    return declarator->array_dimensions > 0;
+static struct VarDeclaration *FindVarDeclaration(struct List *var_declarations, char *identifier) {
+    for (int i = 0; i < var_declarations->count; ++i) {
+        struct VarDeclaration *var_declaration = (struct VarDeclaration *) List_Get(var_declarations, i);
+        struct List *declarators = &var_declaration->declarators;
+        for (int j = 0; j < declarators->count; ++j) {
+            struct Declarator *declarator = (struct Declarator *) List_Get(declarators, j);
+            if (strcmp(declarator->identifier, identifier) == 0) {
+                return var_declaration;
+            }
+        }
+    }
+
+    return NULL;
 }
 
-static void GenerateAddress(struct Expr *expr) {
+static bool IsArray(struct Declarator *decl) {
+    return decl->array_dimensions > 0;
+}
+
+static bool IsPointer(struct Declarator *decl) {
+    return decl->pointer_inderection > 0;
+}
+
+static void LoadAddress(struct Expr *expr) {
     // Literals
     if (expr->type == EXPR_VAR) {
         struct List *var_decls = &current_func->var_decls;
@@ -62,7 +73,7 @@ static void GenerateAddress(struct Expr *expr) {
             ReportInternalError("variable address of '%s'", declarator->identifier);
         }
 
-        Lea("rax", declarator->rbp_offset);
+        Lea(RAX, declarator->rbp_offset);
         return;
     }
 
@@ -77,7 +88,7 @@ static void GenerateExpr(struct Expr *expr) {
     // Literals
     switch (expr->type) {
         case EXPR_NUM: {
-            MovImm("rax", expr->int_value);
+            MovImm(RAX, expr->int_value);
         } return;
         case EXPR_STR: {
             struct List *data_fields = &current_t_unit->data_fields;
@@ -90,12 +101,18 @@ static void GenerateExpr(struct Expr *expr) {
             }
         } return;
         case EXPR_VAR: {
-            GenerateAddress(expr);
+            LoadAddress(expr);
 
             struct List *var_decls = &current_func->var_decls;
             struct Declarator *declarator = FindDeclarator(var_decls, expr->str_value);
             if (!IsArray(declarator)) {
-                Mov("rax", "[rax]");
+                struct VarDeclaration *var_decl = FindVarDeclaration(var_decls, expr->str_value);
+                if (IsPointer(declarator)) {
+                    LoadMem(PRIMTYPE_PTR);
+                }
+                else {
+                    LoadMem(var_decl->type);
+                }
             }
         } return;
     }
@@ -106,11 +123,12 @@ static void GenerateExpr(struct Expr *expr) {
         for (int i = 0; i < args->count; ++i) {
             struct Expr *arg = (struct Expr *) List_Get(args, i);
             GenerateExpr(arg);
-            Push("rax");
+            Push(RAX);
         }
 
         for (int i = args->count - 1; i >= 0; --i) {
-            Pop(arg_regs8[i]);
+            char **param_reg = param_regs[i];
+            Pop(param_reg[PRIMTYPE_PTR]);
         }
 
         Call(expr->str_value);
@@ -124,14 +142,14 @@ static void GenerateExpr(struct Expr *expr) {
         } return;
         case EXPR_NEG: {
             GenerateExpr(expr->lhs);
-            Neg("rax");
+            Neg(RAX);
         } return;
         case EXPR_DEREF: {
             GenerateExpr(expr->lhs);
-            Mov("rax", "[rax]");
+            Mov(RAX, "[rax]");
         } return;
         case EXPR_ADDR: {
-            GenerateAddress(expr->lhs);
+            LoadAddress(expr->lhs);
         } return;
         case EXPR_SIZEOF: {
             ReportInternalError("CodeGeneratorX86::GenerateExpr - unexpected sizeof");
@@ -145,29 +163,34 @@ static void GenerateExpr(struct Expr *expr) {
     // Binary operators
     if (expr->type == EXPR_ASSIGN) {
         Comment("assignment");
-        GenerateAddress(expr->lhs);
-        Push("rax");
+
+        LoadAddress(expr->lhs);
+        Push(RAX);
         GenerateExpr(expr->rhs);
-        Pop("rdi");
-        Mov("[rdi]", "rax");
+        Pop(RDI);
+        WriteMemToReg(RDI, rax[expr->lhs->operand_type]);
+        if (expr->lhs->operand_type == PRIMTYPE_INVALID) {
+            ReportInternalError("CodeGeneratorX86::GenerateExpr - missing operand type");
+        }
+
         return;
     }
 
     GenerateExpr(expr->rhs);
-    Push("rax");
+    Push(RAX);
     GenerateExpr(expr->lhs);
-    Pop("rdi");
+    Pop(RDI);
     switch (expr->type) {
-        case EXPR_EQU: { Compare("rax", "rdi", "sete"); } break;
-        case EXPR_NEQ: { Compare("rax", "rdi", "setne"); } break;
-        case EXPR_LT:  { Compare("rax", "rdi", "setl"); } break;
-        case EXPR_GT:  { Compare("rax", "rdi", "setg"); } break;
-        case EXPR_LTE: { Compare("rax", "rdi", "setle"); } break;
-        case EXPR_GTE: { Compare("rax", "rdi", "setge"); } break;
-        case EXPR_ADD: { Add("rax", "rdi"); } break;
-        case EXPR_SUB: { Sub("rax", "rdi"); } break;
-        case EXPR_MUL: { Mul("rax", "rdi"); } break;
-        case EXPR_DIV: { Div("rdi"); } break;
+        case EXPR_EQU: { Compare(RAX, RDI, "sete"); } break;
+        case EXPR_NEQ: { Compare(RAX, RDI, "setne"); } break;
+        case EXPR_LT:  { Compare(RAX, RDI, "setl"); } break;
+        case EXPR_GT:  { Compare(RAX, RDI, "setg"); } break;
+        case EXPR_LTE: { Compare(RAX, RDI, "setle"); } break;
+        case EXPR_GTE: { Compare(RAX, RDI, "setge"); } break;
+        case EXPR_ADD: { Add(RAX, RDI); } break;
+        case EXPR_SUB: { Sub(RAX, RDI); } break;
+        case EXPR_MUL: { Mul(RAX, RDI); } break;
+        case EXPR_DIV: { Div(RDI); } break;
         default: { ReportInternalError("CodeGeneratorX86::GenerateExpr - not implemented"); } break;
     }
 }
@@ -175,10 +198,10 @@ static void GenerateExpr(struct Expr *expr) {
 static void GenerateFunctionDef(struct FunctionDef *function) {
     current_func = function;
 
-    // Start offset at 8 bits so we don't collide with RBP.
+    // Start at 8 because we call other functions.
     int offset = 8;
     struct List *var_decls = &current_func->var_decls;
-    for (int i = var_decls->count - 1; i >= 0; --i) {
+    for (int i = 0; i < var_decls->count; ++i) {
         struct VarDeclaration *var_declaration = (struct VarDeclaration *) List_Get(var_decls, i);
         int size_in_bytes = bytes[var_declaration->type];
         if (size_in_bytes == 0) {
@@ -188,7 +211,7 @@ static void GenerateFunctionDef(struct FunctionDef *function) {
         struct List *declarators = &var_declaration->declarators;
         for (int j = 0; j < declarators->count; ++j) {
             struct Declarator *declarator = (struct Declarator *) List_Get(declarators, j);
-            if (declarator->array_dimensions > 0) {
+            if (IsArray(declarator)) {
                 // Consider these two scenarios:
                 //  1) int x[3];
                 //  2) int x0, x1, x2;
@@ -204,10 +227,16 @@ static void GenerateFunctionDef(struct FunctionDef *function) {
                 offset += size_in_bytes * total_vars;
                 declarator->rbp_offset = offset;
             }
-            else {
+            else if (IsPointer(declarator)) {
+                offset += bytes[PRIMTYPE_PTR];
                 declarator->rbp_offset = offset;
-                offset += size_in_bytes;
             }
+            else {
+                offset += size_in_bytes;
+                declarator->rbp_offset = offset;
+            }
+
+            fprintf(f, "; %s: %d\n", declarator->identifier, declarator->rbp_offset);
         }
     }
 
@@ -219,16 +248,17 @@ static void GenerateFunctionDef(struct FunctionDef *function) {
     SetupStackFrame(function->stack_size);
 
     for (int i = 0; i < function->num_params; ++i) {
-        struct VarDeclaration *param = (struct VarDeclaration *) List_Get(var_decls, i);
-        struct Declarator *declarator = (struct Declarator *) List_Get(&param->declarators, 0);
+        struct VarDeclaration *var_decl = (struct VarDeclaration *) List_Get(var_decls, i);
+        struct Declarator *decl = (struct Declarator *) List_Get(&var_decl->declarators, 0);
 
-        fprintf(f, "; parameter \"%s\"\n", declarator->identifier);
-        fprintf(f, "  mov [rbp - %d], %s\n", declarator->rbp_offset, arg_regs8[i]);
+        fprintf(f, "  ; parameter \"%s\"\n", decl->identifier);
+        WriteMemOffset(decl->rbp_offset, i, var_decl->type);
     }
 
     GenerateCompoundStmt(function->body);
     fprintf(f, "return.%s:\n", function->identifier);
     RestoreStackFrame();
+    fprintf(f, "\n");
     current_func = NULL;
 }
 
@@ -274,7 +304,7 @@ static void GenerateForStmt(struct ForStmt *for_stmt) {
     if (for_stmt->loop_expr) GenerateExpr(for_stmt->loop_expr);
     fprintf(f,
         "  jmp forstart%d\n"
-        "  forend%d\n",
+        "forend%d:\n",
         label_id,
         label_id
     );

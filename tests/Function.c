@@ -2,8 +2,8 @@ int add2(int x, int y) {
     return x + y;
 }
 
-int add6(int x1, int x2, int x3, int x4, int x5, int x6) {
-    return x1 + x2 + x3 + x4 + x5 + x6;
+int add4(int x1, int x2, int x3, int x4) {
+    return x1 + x2 + x3 + x4;
 }
 
 int sub2(int x, int y) {
@@ -51,7 +51,7 @@ int main() {
     x1 = sub2(10, add2(1, add2(1, 1)));
     printf("%d\n", x1);
 
-    x1 = add6(1, 2, 3, 4, 5, 6);
+    x1 = add4(1, 2, 3, 4);
     printf("%d\n", x1);
 
     x1 = fib(9);

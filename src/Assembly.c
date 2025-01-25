@@ -1,4 +1,5 @@
 #include "Assembly.h"
+#include <assert.h>
 
 static FILE *f;
 
@@ -44,8 +45,17 @@ void Label(char *name) {
     fprintf(f, "%s:\n", name);
 }
 
-void Lea(char *destination, int rbp_offset) {
-    fprintf(f, "  lea %s, [rbp - %d]\n", destination, rbp_offset);
+void Lea(char *dest, int rbp_offset) {
+    fprintf(f, "  lea %s, [rbp - %d]\n", dest, rbp_offset);
+}
+
+void LoadMem(enum PrimitiveType primtype) {
+    if (primtype == PRIMTYPE_CHAR) {
+        fprintf(f, "  movzx rax, %s [rax]\n", size[primtype]);
+    }
+    else {
+        fprintf(f, "  mov %s, %s [rax]\n", rax[primtype], size[primtype]);
+    }
 }
 
 void Mov(char *destination, char *source) {
@@ -94,17 +104,28 @@ void SetupAssemblyFile() {
     );
 }
 
-void SetupStackFrame(int size) {
+void SetupStackFrame(int stack_size) {
     fprintf(f,
         "  push rbp\n"
         "  mov rbp, rsp\n"
     );
 
-    if (size > 0) {
-        fprintf(f, "  sub rsp, %d\n", size);
+    if (stack_size > 0) {
+        fprintf(f, "  sub rsp, %d\n", stack_size);
     }
 }
 
 void Sub(char *destination, char *source) {
     fprintf(f, "  sub %s, %s\n", destination, source);
+}
+
+void WriteMemOffset(int rbp_offset, int reg_idx, enum PrimitiveType primtype) {
+    assert(0 <= reg_idx && reg_idx < 4);
+    char **param_reg = param_regs[reg_idx];
+    char *reg = param_reg[primtype];
+    fprintf(f, "  mov [rbp - %d], %s\n", rbp_offset, reg);
+}
+
+void WriteMemToReg(char *dest, char *src) {
+    fprintf(f, "  mov [%s], %s\n", dest, src);
 }

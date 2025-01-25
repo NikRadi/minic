@@ -269,11 +269,12 @@ void PrintS(struct AstNode *node) {
         case AST_DECLARATOR: {
             struct Declarator *d = (struct Declarator *) node;
             if (d->value) {
-                fprintf(stdout, "%*s<Declarator identifier=\"%s\" array_dimensions=\"%d\">\n",
+                fprintf(stdout, "%*s<Declarator identifier=\"%s\" array_dimensions=\"%d\" pointer_inderection=\"%d\">\n",
                     indent,
                     "",
                     d->identifier,
-                    d->array_dimensions
+                    d->array_dimensions,
+                    d->pointer_inderection
                 );
 
                 indent += 2;
@@ -281,11 +282,12 @@ void PrintS(struct AstNode *node) {
                 indent -= 2;
             }
             else {
-                fprintf(stdout, "%*s</Declarator identifier=\"%s\" array_dimensions=\"%d\">\n",
+                fprintf(stdout, "%*s</Declarator identifier=\"%s\" array_dimensions=\"%d\" pointer_inderection=\"%d\">\n",
                     indent,
                     "",
                     d->identifier,
-                    d->array_dimensions
+                    d->array_dimensions,
+                    d->pointer_inderection
                 );
             }
         } break;
@@ -333,6 +335,17 @@ void PrintS(struct AstNode *node) {
             PrintE(e->expr);
             indent -= 2;
             fprintf(stdout, "%*s</ExpressionStmt>\n", indent, "");
+        } break;
+        case AST_FOR_STMT: {
+            struct ForStmt *f = (struct ForStmt *) node;
+            fprintf(stdout, "%*s<ForStmt>\n", indent, "");
+            indent += 2;
+            PrintE(f->init_expr);
+            PrintE(f->cond_expr);
+            PrintE(f->loop_expr);
+            PrintS(f->stmt);
+            indent -= 2;
+            fprintf(stdout, "%*s</ForStmt>\n", indent, "");
         } break;
         case AST_RETURN_STMT: {
             struct ReturnStmt *r = (struct ReturnStmt *) node;

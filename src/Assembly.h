@@ -1,6 +1,8 @@
 #ifndef MINIC_ASSEMBLY_H
 #define MINIC_ASSEMBLY_H
+#include "Sizes.h"
 #include <stdio.h>
+
 
 void Add(char *destination, char *source);
 
@@ -16,7 +18,9 @@ void Jmp(char *label);
 
 void Label(char *name);
 
-void Lea(char *destination, int rbp_offset);
+void Lea(char *dest, int rbp_offset);
+
+void LoadMem(enum PrimitiveType primtype);
 
 void Mov(char *destination, char *source);
 
@@ -36,8 +40,13 @@ void SetOutput(FILE *file);
 
 void SetupAssemblyFile();
 
-void SetupStackFrame(int size);
+void SetupStackFrame(int stack_size);
 
 void Sub(char *destination, char *source);
+
+void WriteMemOffset(int rbp_offset, int reg_idx, enum PrimitiveType primtype);
+
+void WriteMemToReg(char *dest, char *src);
+
 
 #endif // MINIC_ASSEMBLY_H
