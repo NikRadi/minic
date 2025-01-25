@@ -5,12 +5,17 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define NEW_TYPE(type) ((struct type *) malloc(sizeof(struct type)))
+
+
 typedef bool (*IsAllowedInSequenceFunction)(char *);
 
 static bool IsAlphabetic(char c);
 static bool IsDigit(char c);
 static char PeekChar(struct Lexer *l);
 static struct Token MakeToken(struct Lexer *l);
+static void ReadSequence(struct Lexer *l, char *buffer, IsAllowedInSequenceFunction IsAllowed);
+static enum TokenType TypeOfIdentifier(char *identifier);
 
 static void AddToken(struct Lexer *l, struct Token token) {
     token.line = l->line;
@@ -66,12 +71,27 @@ static void EatWhitespaceAndComments(struct Lexer *l) {
     }
 }
 
+static struct Directive *FindDirectiveByIdentifier(struct Lexer *l, char *identifier) {
+    for (int i = 0; i < l->directives.count; ++i) {
+        struct Directive *directive = (struct Directive *) List_Get(&l->directives, i);
+        if (strcmp(directive->identifier, identifier) == 0) {
+            return directive;
+        }
+    }
+
+    return NULL;
+}
+
 static bool IsAllowedInIdentifier(char *c) {
     return IsAlphabetic(*c) || IsDigit(*c) || *c == '_';
 }
 
 static bool IsAllowedInStringLiteral(char *c) {
     return IsAlphabetic(*c) || IsDigit(*c) || *c != '"' || *c == '%';
+}
+
+static bool IsNotNewline(char *c) {
+    return *c != '\n';
 }
 
 static bool IsAlphabetic(char c) {
@@ -97,6 +117,35 @@ static char PeekChar(struct Lexer *l) {
     return l->code[l->code_index];
 }
 
+static void PreprocessDefine(struct Lexer *l) {
+    struct Directive *directive = NEW_TYPE(Directive);
+    directive->type = TOKEN_KEYWORD_DEFINE;
+
+    ReadSequence(l, directive->identifier, IsAllowedInIdentifier);
+    EatWhitespaceAndComments(l);
+    ReadSequence(l, directive->value, IsNotNewline);
+    List_Add(&l->directives, directive);
+}
+
+static void Preprocess(struct Lexer *l) {
+    if (PeekChar(l) == '#') {
+        EatChar(l);
+        char identifier[TOKEN_MAX_IDENTIFIER_LENGTH];
+        ReadSequence(l, identifier, IsAllowedInIdentifier);
+        EatWhitespaceAndComments(l);
+
+        enum TokenType keyword = TypeOfIdentifier(identifier);
+        switch (keyword) {
+            case TOKEN_KEYWORD_DEFINE: { PreprocessDefine(l); } break;
+            default: {
+                char *location = l->code + l->code_index;
+                printf("%s\n", TokenTypeToStr(keyword));
+                ReportErrorAt(l, location, "unknown preprocess character");
+            } break;
+        }
+    }
+}
+
 static void ReadSequence(struct Lexer *l, char *buffer, IsAllowedInSequenceFunction IsAllowed) {
     int length = 0;
     while (NumCharsLeft(l) > 0) {
@@ -115,6 +164,7 @@ static void ReadSequence(struct Lexer *l, char *buffer, IsAllowedInSequenceFunct
 
 static enum TokenType TypeOfIdentifier(char *identifier) {
     if (strcmp(identifier, "char") == 0)    return TOKEN_KEYWORD_CHAR;
+    if (strcmp(identifier, "define") == 0)  return TOKEN_KEYWORD_DEFINE;
     if (strcmp(identifier, "else") == 0)    return TOKEN_KEYWORD_ELSE;
     if (strcmp(identifier, "for") == 0)     return TOKEN_KEYWORD_FOR;
     if (strcmp(identifier, "int") == 0)     return TOKEN_KEYWORD_INT;
@@ -135,6 +185,7 @@ static enum TokenType TypeOfIdentifier(char *identifier) {
 
 
 void Lexer_EatToken(struct Lexer *l) {
+    Preprocess(l);
     EatWhitespaceAndComments(l);
     if (NumCharsLeft(l) == 0) {
         AddTokenWithType(l, TOKEN_END_OF_FILE);
@@ -224,7 +275,13 @@ void Lexer_EatToken(struct Lexer *l) {
         default: {
             if (IsAlphabetic(c) || c == '_') {
                 ReadSequence(l, token.str_value, IsAllowedInIdentifier);
-                token.type = TypeOfIdentifier(token.str_value);
+                struct Directive *directive = FindDirectiveByIdentifier(l, token.str_value);
+                if (directive) {
+
+                }
+                else {
+                    token.type = TypeOfIdentifier(token.str_value);
+                }
             }
             else if (IsDigit(c)) {
                 char *p = l->code + l->code_index;
@@ -256,6 +313,7 @@ bool Lexer_Init(struct Lexer *l, char *filename) {
 //    file.content = filename;
 //    file.length = strlen(filename);
 
+    List_Init(&l->directives);
     l->code = file.content;
     l->code_index = 0;
     l->code_length = file.length;
