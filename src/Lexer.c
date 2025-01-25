@@ -121,6 +121,7 @@ static enum TokenType TypeOfIdentifier(char *identifier) {
     if (strcmp(identifier, "if") == 0)      return TOKEN_KEYWORD_IF;
     if (strcmp(identifier, "return") == 0)  return TOKEN_KEYWORD_RETURN;
     if (strcmp(identifier, "sizeof") == 0)  return TOKEN_KEYWORD_SIZEOF;
+    if (strcmp(identifier, "struct") == 0)  return TOKEN_KEYWORD_STRUCT;
     if (strcmp(identifier, "while") == 0)   return TOKEN_KEYWORD_WHILE;
     return TOKEN_IDENTIFIER;
 }
@@ -144,6 +145,7 @@ void Lexer_EatToken(struct Lexer *l) {
     char c = PeekChar(l);
     switch (c) {
         case ',': { EatChar(l); token.type = TOKEN_COMMA; } break;
+        case '.': { EatChar(l); token.type = TOKEN_DOT; } break;
         case ';': { EatChar(l); token.type = TOKEN_SEMICOLON; } break;
         case '(': { EatChar(l); token.type = TOKEN_LEFT_ROUND_BRACKET; } break;
         case ')': { EatChar(l); token.type = TOKEN_RIGHT_ROUND_BRACKET; } break;

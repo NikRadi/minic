@@ -16,6 +16,7 @@ enum TokenType {
 
     // Signs
     TOKEN_COMMA,                    // ,
+    TOKEN_DOT,                      // .
     TOKEN_SEMICOLON,                // ;
     TOKEN_LEFT_ROUND_BRACKET,       // (
     TOKEN_RIGHT_ROUND_BRACKET,      // )
@@ -50,6 +51,7 @@ enum TokenType {
     TOKEN_KEYWORD_IF,
     TOKEN_KEYWORD_RETURN,
     TOKEN_KEYWORD_SIZEOF,
+    TOKEN_KEYWORD_STRUCT,
     TOKEN_KEYWORD_WHILE,
 
 
