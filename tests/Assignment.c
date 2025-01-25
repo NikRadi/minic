@@ -9,6 +9,11 @@ int main() {
     printf("%d\n", x2 + x3);
 
 
+    char x9 = 10;
+    char x10 = x9 + 20;
+    printf("%d %d\n", x9, x10);
+
+
     int x4;
     int x5;
     x4 = x5 = 3;

@@ -26,6 +26,10 @@ int ret14() {
     return ret7() + ret7();
 }
 
+int add3c(char x1, char x2, char x3) {
+    return x1 + x2 + x3;
+}
+
 int main() {
     int x1 = ret7();
     printf("%d\n", x1);
@@ -56,4 +60,10 @@ int main() {
 
     x1 = fib(9);
     printf("%d\n", x1);
+
+    char x2 = 11,
+         x3 = 22,
+         x4 = 33;
+    int x5 = add3c(x2, x3, x4);
+    printf("%d\n", x5);
 }

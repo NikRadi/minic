@@ -5,5 +5,7 @@ int main() {
     printf("%d\n", x1);
 
     int *x2;
-    printf("%d\n", sizeof(x2));
+    char x3;
+    printf("%d %d\n", sizeof(x2), sizeof(x3));
+
 }
