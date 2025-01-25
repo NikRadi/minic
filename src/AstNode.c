@@ -83,12 +83,13 @@ struct VarDeclaration *NewVarDeclaration() {
     return var_declaration;
 }
 
-struct FunctionDef *NewFunctionDef(char *identifier) {
+struct FunctionDef *NewFunctionDef(char *identifier, enum PrimitiveType return_type) {
     struct FunctionDef *function = NEW_TYPE(FunctionDef);
     function->node.type = AST_FUNCTION_DEF;
 
     function->num_params = 0;
     function->stack_size = 0;
+    function->return_type = return_type;
     strncpy(function->identifier, identifier, TOKEN_MAX_IDENTIFIER_LENGTH);
     function->body = NewCompoundStmt();
     List_Init(&function->var_decls);

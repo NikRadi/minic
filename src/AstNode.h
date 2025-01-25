@@ -97,6 +97,7 @@ struct FunctionDef {
     struct CompoundStmt *body;
     struct List params;
     struct List var_decls;
+    enum PrimitiveType return_type;
     int num_params;
     int stack_size;
     char identifier[TOKEN_MAX_IDENTIFIER_LENGTH];
@@ -163,7 +164,7 @@ struct Expr *NewVariableExpr(char *identifier);
 
 struct Declarator *NewDeclarator();
 struct VarDeclaration *NewVarDeclaration();
-struct FunctionDef *NewFunctionDef(char *identifier);
+struct FunctionDef *NewFunctionDef(char *identifier, enum PrimitiveType return_type);
 struct TranslationUnit *NewTranslationUnit();
 
 struct CompoundStmt *NewCompoundStmt();

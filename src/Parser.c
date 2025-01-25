@@ -162,16 +162,25 @@ static struct Expr *ParseUnaryOp(struct OperatorParseData data) {
     return NewOperationExpr(data.type, lhs, NULL);
 }
 
+static enum PrimitiveType ParsePrimitiveType() {
+    struct Token token = Lexer_PeekToken(l);
+    enum PrimitiveType type = PRIMTYPE_INVALID;
+    switch (token.type) {
+        case TOKEN_KEYWORD_CHAR:    { type = PRIMTYPE_CHAR; } break;
+        case TOKEN_KEYWORD_INT:     { type = PRIMTYPE_INT; } break;
+    }
+
+    Lexer_EatToken(l);
+    return type;
+}
+
 static struct AstNode *ParseDecl() {
     struct Token token = Lexer_PeekToken(l);
     struct VarDeclaration *var_declaration = NULL;
 
     if (token.type == TOKEN_KEYWORD_CHAR || token.type == TOKEN_KEYWORD_INT) {
-        // Type
-        Lexer_EatToken(l);
         var_declaration = NewVarDeclaration();
-        if (token.type == TOKEN_KEYWORD_CHAR) var_declaration->type = PRIMTYPE_CHAR;
-        if (token.type == TOKEN_KEYWORD_INT)  var_declaration->type = PRIMTYPE_INT;
+        var_declaration->type = ParsePrimitiveType();
 
         do {
             struct Declarator *declarator = NewDeclarator();
@@ -326,25 +335,16 @@ static struct AstNode *ParseStmt() {
 }
 
 struct FunctionDef *ParseFunctionDef() {
-    // Declaration specifiers
-    ExpectAndEat(TOKEN_KEYWORD_INT);
-
+    enum PrimitiveType return_type = ParsePrimitiveType();
     struct Token identifier = Lexer_PeekToken(l);
-    struct FunctionDef *function = NewFunctionDef(identifier.str_value);
+    struct FunctionDef *function = NewFunctionDef(identifier.str_value, return_type);
 
     ExpectAndEat(TOKEN_IDENTIFIER);
     ExpectAndEat(TOKEN_LEFT_ROUND_BRACKET);
     while (Lexer_PeekToken(l).type != TOKEN_RIGHT_ROUND_BRACKET) {
         struct VarDeclaration *var_declaration = NewVarDeclaration();
         List_Add(&function->var_decls, var_declaration);
-        switch (Lexer_PeekToken(l).type) {
-            case TOKEN_KEYWORD_CHAR: { var_declaration->type = PRIMTYPE_CHAR; } break;
-            case TOKEN_KEYWORD_INT:  { var_declaration->type = PRIMTYPE_INT; } break;
-            default: { ReportInternalError("Parser::ParseFunctionDef - unknown vardecl type"); } break;
-        }
-
-        // Eat type
-        Lexer_EatToken(l);
+        var_declaration->type = ParsePrimitiveType();
 
         struct Declarator *declarator = NewDeclarator();
         List_Add(&var_declaration->declarators, declarator);

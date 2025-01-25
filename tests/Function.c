@@ -26,7 +26,7 @@ int ret14() {
     return ret7() + ret7();
 }
 
-int add3c(char x1, char x2, char x3) {
+char add3c(char x1, char x2, char x3) {
     return x1 + x2 + x3;
 }
 
@@ -62,8 +62,10 @@ int main() {
     printf("%d\n", x1);
 
     char x2 = 11,
-         x3 = 22,
-         x4 = 33;
-    int x5 = add3c(x2, x3, x4);
-    printf("%d\n", x5);
+         x3 = 22;
+    char x4 = add3c(x2, x3, 33);
+    printf("%d\n", x4);
+
+    x4 = add3c(1, 2, 3);
+    printf("%d\n", x4);
 }
