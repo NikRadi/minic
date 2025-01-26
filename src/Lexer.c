@@ -1,5 +1,6 @@
 #include "Lexer.h"
 #include "ReportError.h"
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -210,22 +211,34 @@ static void ParseDirectiveValue(struct Lexer *l, char *value) {
 
 
 void Lexer_EatToken(struct Lexer *l) {
-    Preprocess(l);
-    EatWhitespaceAndComments(l);
-    if (l->token_queue_tail < l->token_queue.count) {
-        struct Token *t = PopTokenQueue(l);
-        l->token_queue_tail += 1;
-        AddToken(l, *t);
-        return;
+    char c = PeekChar(l);
+    while (c == '#') {
+        Preprocess(l);
+        EatWhitespaceAndComments(l);
+        if (l->token_queue_tail < l->token_queue.count) {
+            struct Token *t = PopTokenQueue(l);
+            AddToken(l, *t);
+            return;
+        }
+        else if (l->token_queue_tail == l->token_queue.count) {
+            l->token_queue_tail = 0;
+            l->token_queue.count = 0;
+        }
+        else {
+            assert(false);
+        }
+
+        c = PeekChar(l);
     }
 
+    EatWhitespaceAndComments(l);
     if (NumCharsLeft(l) == 0) {
         AddTokenWithType(l, TOKEN_END_OF_FILE);
         return;
     }
 
     struct Token token = MakeToken(l);
-    char c = PeekChar(l);
+    c = PeekChar(l);
     switch (c) {
         case ',': { EatChar(l); token.type = TOKEN_COMMA; } break;
         case '.': { EatChar(l); token.type = TOKEN_DOT; } break;
@@ -312,13 +325,12 @@ void Lexer_EatToken(struct Lexer *l) {
                     ParseDirectiveValue(l, directive->value);
                     if (l->token_queue_tail < l->token_queue.count) {
                         struct Token *t = PopTokenQueue(l);
-                        l->token_queue_tail += 1;
                         AddToken(l, *t);
                         return;
                     }
-//                    else {
-//                        ReportInternalError("error with directive???");
-//                    }
+                    else {
+                        ReportInternalError("error with directive???");
+                    }
                 }
                 else {
                     token.type = TypeOfIdentifier(token.str_value);
