@@ -154,8 +154,6 @@ struct WhileStmt {
 };
 
 
-bool AreVariablesEquals(void *a, void *b);
-
 struct Expr *NewFunctionCallExpr(char *identifier, struct List args);
 struct Expr *NewOperationExpr(enum ExprType type, struct Expr *lhs, struct Expr *rhs);
 struct Expr *NewNumberExpr(int value);

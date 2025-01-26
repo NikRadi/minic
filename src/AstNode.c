@@ -28,12 +28,6 @@ static struct Expr *NewExpr(enum ExprType type) {
 //
 
 
-bool AreVariablesEquals(void *a, void *b) {
-    struct Expr *e1 = (struct Expr *) a;
-    struct Expr *e2 = (struct Expr *) b;
-    return strcmp(e1->str_value, e2->str_value) == 0;
-}
-
 struct Expr *NewFunctionCallExpr(char *identifier, struct List args) {
     struct Expr *expr = NewExpr(EXPR_FUNC_CALL);
     strncpy(expr->str_value, identifier, TOKEN_MAX_IDENTIFIER_LENGTH);
