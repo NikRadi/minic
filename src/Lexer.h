@@ -16,18 +16,19 @@ struct Directive {
 
 struct Lexer {
     struct Token tokens[LEXER_TOKEN_CACHE_SIZE];
+    struct List token_queue;
     struct List directives;
     char *code;
     int code_index;
     int code_length;
-    char *filename;
     int line;
     int token_index;
+    int token_queue_tail;
 };
 
 void Lexer_EatToken(struct Lexer *l);
 
-bool Lexer_Init(struct Lexer *l, char *filename);
+void Lexer_Init(struct Lexer *l, char *code, int code_len);
 
 struct Token Lexer_PeekToken(struct Lexer *l);
 

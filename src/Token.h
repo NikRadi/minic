@@ -73,4 +73,7 @@ struct Token {
 
 char *TokenTypeToStr(enum TokenType type);
 
+void PrintToken(struct Token token);
+
+
 #endif // MINIC_TOKEN_H

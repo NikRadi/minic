@@ -1,4 +1,5 @@
 #include "CodeGeneratorX86.h"
+#include "FileIO.h"
 #include "Lexer.h"
 #include "Parser.h"
 #include "SemanticAnalysis.h"
@@ -30,10 +31,15 @@ int main(int num_args, char **args) {
     }
 
     char *filename = args[1];
-    struct Lexer lexer;
-    if (!Lexer_Init(&lexer, filename)) {
-        return 1;
+    struct File file;
+    enum FileIOStatus status = FileIO_ReadFile(&file, filename);
+    if (status == FILE_IO_ERROR_FILE_NOT_FOUND) {
+        fprintf(stderr, "input file not found: %s", filename);
+        return false;
     }
+
+    struct Lexer lexer;
+    Lexer_Init(&lexer, file.content, file.length);
 
     printf("Parsing...\n");
     struct TranslationUnit *t_unit = Parser_MakeAst(&lexer);

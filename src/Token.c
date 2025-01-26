@@ -1,5 +1,5 @@
 #include "Token.h"
-
+#include <stdio.h>
 
 char *TokenTypeToStr(enum TokenType type) {
 #define RETURN_STR(x) case x: return #x;
@@ -43,4 +43,14 @@ char *TokenTypeToStr(enum TokenType type) {
     }
 
     return 0;
+}
+
+void PrintToken(struct Token token) {
+    printf("<Token\n");
+    printf("  int_value=\"%d\"\n", token.int_value);
+    printf("  line=\"%d\"\n", token.line);
+//    printf("  location=\"%s\"\n", token.location);
+    printf("  str_value=\"%s\"\n", token.str_value);
+    printf("  type=\"%s\"\n", TokenTypeToStr(token.type));
+    printf(">\n");
 }

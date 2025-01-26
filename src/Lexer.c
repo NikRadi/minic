@@ -1,5 +1,4 @@
 #include "Lexer.h"
-#include "FileIO.h"
 #include "ReportError.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -176,6 +175,32 @@ static enum TokenType TypeOfIdentifier(char *identifier) {
     return TOKEN_IDENTIFIER;
 }
 
+static struct Token *PopTokenQueue(struct Lexer *l) {
+    struct Token *token = (struct Token *) List_Get(&l->token_queue, l->token_queue_tail);
+    l->token_queue_tail += 1;
+    return token;
+}
+
+static void ParseDirectiveValue(struct Lexer *l, char *value) {
+    struct Lexer temp_l;
+    Lexer_Init(&temp_l, value, (int) strlen(value));
+    while (true) {
+        struct Token token = Lexer_PeekToken(&temp_l);
+        if (token.type == TOKEN_END_OF_FILE) {
+            break;
+        }
+
+        struct Token *t = (struct Token *) malloc(sizeof(struct Token));
+        t->int_value = token.int_value;
+        t->line = token.line;
+        t->location = token.location;
+        strcpy(t->str_value, token.str_value);
+        t->type = token.type;
+        List_Add(&l->token_queue, t);
+        Lexer_EatToken(&temp_l);
+    }
+}
+
 
 //
 // ===
@@ -187,6 +212,13 @@ static enum TokenType TypeOfIdentifier(char *identifier) {
 void Lexer_EatToken(struct Lexer *l) {
     Preprocess(l);
     EatWhitespaceAndComments(l);
+    if (l->token_queue_tail < l->token_queue.count) {
+        struct Token *t = PopTokenQueue(l);
+        l->token_queue_tail += 1;
+        AddToken(l, *t);
+        return;
+    }
+
     if (NumCharsLeft(l) == 0) {
         AddTokenWithType(l, TOKEN_END_OF_FILE);
         return;
@@ -277,7 +309,16 @@ void Lexer_EatToken(struct Lexer *l) {
                 ReadSequence(l, token.str_value, IsAllowedInIdentifier);
                 struct Directive *directive = FindDirectiveByIdentifier(l, token.str_value);
                 if (directive) {
-
+                    ParseDirectiveValue(l, directive->value);
+                    if (l->token_queue_tail < l->token_queue.count) {
+                        struct Token *t = PopTokenQueue(l);
+                        l->token_queue_tail += 1;
+                        AddToken(l, *t);
+                        return;
+                    }
+//                    else {
+//                        ReportInternalError("error with directive???");
+//                    }
                 }
                 else {
                     token.type = TypeOfIdentifier(token.str_value);
@@ -302,29 +343,18 @@ void Lexer_EatToken(struct Lexer *l) {
     AddToken(l, token);
 }
 
-bool Lexer_Init(struct Lexer *l, char *filename) {
-    struct File file;
-    enum FileIOStatus status = FileIO_ReadFile(&file, filename);
-    if (status == FILE_IO_ERROR_FILE_NOT_FOUND) {
-        fprintf(stderr, "input file not found: %s", filename);
-        return false;
-    }
-
-//    file.content = filename;
-//    file.length = strlen(filename);
-
+void Lexer_Init(struct Lexer *l, char *code, int code_len) {
+    List_Init(&l->token_queue);
     List_Init(&l->directives);
-    l->code = file.content;
+    l->code = code;
     l->code_index = 0;
-    l->code_length = file.length;
-    l->filename = filename;
+    l->code_length = code_len;
     l->line = 1;
     l->token_index = 0;
+    l->token_queue_tail = 0;
     for (int i = 0; i < LEXER_TOKEN_CACHE_SIZE; ++i) {
         Lexer_EatToken(l);
     }
-
-    return true;
 }
 
 struct Token Lexer_PeekToken(struct Lexer *l) {
