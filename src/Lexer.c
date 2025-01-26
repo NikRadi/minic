@@ -215,20 +215,20 @@ void Lexer_EatToken(struct Lexer *l) {
     while (c == '#') {
         Preprocess(l);
         EatWhitespaceAndComments(l);
-        if (l->token_queue_tail < l->token_queue.count) {
-            struct Token *t = PopTokenQueue(l);
-            AddToken(l, *t);
-            return;
-        }
-        else if (l->token_queue_tail == l->token_queue.count) {
-            l->token_queue_tail = 0;
-            l->token_queue.count = 0;
-        }
-        else {
-            assert(false);
-        }
-
         c = PeekChar(l);
+    }
+
+    if (l->token_queue_tail < l->token_queue.count) {
+        struct Token *t = PopTokenQueue(l);
+        AddToken(l, *t);
+        return;
+    }
+    else if (l->token_queue_tail == l->token_queue.count) {
+        l->token_queue_tail = 0;
+        l->token_queue.count = 0;
+    }
+    else {
+        assert(false);
     }
 
     EatWhitespaceAndComments(l);

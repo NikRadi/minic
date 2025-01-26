@@ -18,7 +18,7 @@ static struct Lexer *l;
 static void ExpectAndEat(enum TokenType type) {
     struct Token token = Lexer_PeekToken(l);
     if (token.type != type) {
-        ReportErrorAtToken(l, token, "expected %d but got %d", type, token.type);
+        ReportErrorAtToken(l, token, "expected %s but got %s", TokenTypeToStr(type), TokenTypeToStr(token.type));
     }
 
     Lexer_EatToken(l);

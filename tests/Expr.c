@@ -3,6 +3,7 @@ int main() {
     { 1; { 2; }}
     printf("%d\n", 0);
     printf("%d\n", 42);
+    printf("%d\n", (((((1 + 2))) + 3)));
     printf("%d\n", 5 + 20 - 4);
     printf("%d\n", 12 + 34 - 5);
     printf("%d\n", 5 + 6 * 7);
